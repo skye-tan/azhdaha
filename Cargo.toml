@@ -13,6 +13,10 @@ edition = "2021"
 anyhow = "1.0.96"
 
 [workspace.lints.clippy]
+
+print_stdout = "deny"
+print_stderr = "deny"
+
 missing_panics_doc = "deny"
 missing_errors_doc = "warn"
 missing_docs_in_private_items = "warn"

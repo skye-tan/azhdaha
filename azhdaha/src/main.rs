@@ -1,7 +1,7 @@
+#![allow(clippy::missing_docs_in_private_items)]
 use cli::Cli;
 
 fn main() -> anyhow::Result<()> {
-    let cli = Cli::read();
-    println!("{:#?}", cli);
+    let _cli = Cli::read();
     Ok(())
 }

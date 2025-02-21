@@ -1,0 +1,8 @@
+[package]
+name = "azhdaha"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+cli = { version = "0.1.0", path = "../cli" }
+anyhow.workspace = true

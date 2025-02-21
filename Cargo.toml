@@ -1,0 +1,18 @@
+[workspace]
+members = [
+    "azhdaha",
+    "cli"
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+
+[workspace.dependencies]
+cc = "1.2.15"
+anyhow = "1.0.96"
+
+[workspace.lints.clippy]
+missing_panics_doc = "deny"
+missing_errors_doc = "warn"
+missing_docs_in_private_items = "warn"

@@ -16,7 +16,7 @@ pub struct Args {
     pub annotate: bool,
 }
 
-/// Parse compile-commands into [`CompilationDatabase`].
+/// Parse compile-commands into a [`CompilationDatabase`].
 ///
 /// # Errors
 ///

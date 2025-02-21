@@ -12,7 +12,7 @@ enum Command {
     Annotate,
 }
 
-/// A cli to interact with Azhdaha.
+/// A cli to interact with azhdaha.
 #[derive(Parser, Debug)]
 #[command(version)]
 pub struct Cli {

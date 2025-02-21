@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "azhdaha",
-    "cli"
+    "cli",
+    "analyzer"
 ]
 resolver = "2"
 
@@ -9,7 +10,6 @@ resolver = "2"
 edition = "2021"
 
 [workspace.dependencies]
-cc = "1.2.15"
 anyhow = "1.0.96"
 
 [workspace.lints.clippy]

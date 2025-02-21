@@ -1,0 +1,11 @@
+[package]
+name = "analyzer"
+version = "0.1.0"
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+tree-sitter = "0.25.2"
+tree-sitter-c = "0.23.4"

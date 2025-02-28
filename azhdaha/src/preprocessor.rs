@@ -12,9 +12,9 @@ const PREPROCESS_ONLY_FLAG: &str = "-E";
 /// is appended to the arguments.
 ///
 /// Headers used in the source code must be replaced with annotated versions which is accomplished by
-/// inserting -I flag pointing to a directory containing the edited headers.
+/// inserting -I flag pointing to a directory containing the annotated headers.
 ///
-/// The LINEAR macro used in the source codes must be replaced by `linear` key-word which is accomplished by
+/// The LINEAR macro used in the source codes must be replaced by `_Linear` type qualifier which is accomplished by
 /// inserting -I flag pointing to a directory containing the edited header.
 ///
 pub fn expand(compile_commands: &CompilationDatabase) -> anyhow::Result<Vec<String>> {

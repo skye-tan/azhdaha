@@ -10,6 +10,7 @@ resolver = "2"
 edition = "2024"
 
 [workspace.dependencies]
+log = "0.4.26"
 anyhow = "1.0.96"
 compile_commands = "0.3.0"
 

@@ -28,7 +28,14 @@ pub fn expand(compile_commands: &CompilationDatabase) -> anyhow::Result<Vec<Stri
         let directory = compile_command
             .directory
             .to_str()
-            .context("Invalid directory in compile-commands.")?;
+            .context("UTF-8 validity failed for compile-commands.")?;
+
+        if !compile_command.directory.exists() {
+            log::error!(
+                "Directory '{}' used in compile-commands does not exist.",
+                directory
+            )
+        }
 
         let (command, args) = match compile_command
             .arguments

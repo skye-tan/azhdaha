@@ -11,5 +11,5 @@ cli-utils = { version = "0.1.0", path = "../cli-utils" }
 log.workspace = true
 anyhow.workspace = true
 compile_commands.workspace = true
-tree-sitter = "0.25.2"
+tree-sitter.workspace = true
 tree-sitter-c = { git = "https://github.com/skye-tan/tree-sitter-c.git", version = "0.23.5" }

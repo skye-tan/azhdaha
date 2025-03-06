@@ -2,7 +2,9 @@
 members = [
     "azhdaha",
     "cli-utils",
-    "analyzer"
+    "analyzer",
+    "hir-rep",
+    "mir-rep"
 ]
 resolver = "2"
 
@@ -13,6 +15,7 @@ edition = "2024"
 log = "0.4.26"
 anyhow = "1.0.96"
 compile_commands = "0.3.0"
+tree-sitter = "0.25.2"
 
 [workspace.lints.clippy]
 

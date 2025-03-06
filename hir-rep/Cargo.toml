@@ -1,0 +1,10 @@
+[package]
+name = "hir-rep"
+version = "0.1.0"
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+tree-sitter.workspace = true

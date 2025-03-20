@@ -3,8 +3,8 @@ members = [
     "azhdaha",
     "cli-utils",
     "analyzer",
-    "hir-rep",
-    "mir-rep"
+    "hir-repr",
+    "mir-repr"
 ]
 resolver = "2"
 

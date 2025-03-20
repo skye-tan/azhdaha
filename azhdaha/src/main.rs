@@ -2,7 +2,7 @@
 //! in order to detect memory leakage by applying linear type system principles.
 
 use anyhow::Context;
-use tree_sitter::Parser;
+use tree_sitter::{Parser, Tree};
 
 /// Contains functions used for preprocessing source code.
 mod preprocessor;
@@ -17,7 +17,7 @@ fn main() -> anyhow::Result<()> {
         .set_language(&tree_sitter_c::LANGUAGE.into())
         .context("Failed to load C grammar.")?;
 
-    let _trees: Vec<_> = source_codes
+    let trees: Vec<Tree> = source_codes
         .iter()
         .map(|source_code| parser.parse(source_code, None).unwrap())
         .collect();

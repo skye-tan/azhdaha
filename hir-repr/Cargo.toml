@@ -1,5 +1,5 @@
 [package]
-name = "mir-rep"
+name = "hir-repr"
 version = "0.1.0"
 edition.workspace = true
 
@@ -7,3 +7,4 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
+tree-sitter.workspace = true

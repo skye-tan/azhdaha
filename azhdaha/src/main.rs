@@ -5,12 +5,33 @@ use anyhow::Context;
 use tree_sitter::{Parser, Tree};
 
 /// Contains functions used for preprocessing source code.
-mod preprocessor;
+mod preprocess;
+
+// fn traverse_tree(cursor: &mut TreeCursor) {
+//     let mut traversed = false;
+//     loop {
+//         if traversed {
+//             if cursor.goto_next_sibling() {
+//                 traversed = false;
+//             } else {
+//                 if !cursor.goto_parent() {
+//                     break;
+//                 }
+//             }
+//         } else {
+//             let node = cursor.node();
+//             println!("{}", node.kind());
+//             if !cursor.goto_first_child() {
+//                 traversed = true;
+//             }
+//         }
+//     }
+// }
 
 fn main() -> anyhow::Result<()> {
     let args = cli_utils::parse_args();
 
-    let source_codes = preprocessor::expand(&args.compile_commands)?;
+    let source_codes = preprocess::expand(&args.compile_commands)?;
 
     let mut parser = Parser::new();
     parser
@@ -21,6 +42,11 @@ fn main() -> anyhow::Result<()> {
         .iter()
         .map(|source_code| parser.parse(source_code, None).unwrap())
         .collect();
+
+    println!(
+        "{:#?}",
+        hir_repr::construct_hir(&source_codes[0], &mut trees[0].walk()).unwrap()
+    );
 
     Ok(())
 }

@@ -21,7 +21,7 @@ const INCLUDE_FLAG: &str = "-I";
 /// The LINEAR macro used in the source codes must be replaced by `_Linear` type qualifier which is accomplished by
 /// inserting [`INCLUDE_FLAG`] flag pointing to a directory containing the edited header.
 ///
-pub fn expand(compile_commands: &CompilationDatabase) -> anyhow::Result<Vec<String>> {
+pub fn expand(compile_commands: &CompilationDatabase) -> anyhow::Result<Vec<Vec<u8>>> {
     let mut results = vec![];
 
     for compile_command in compile_commands {
@@ -49,14 +49,14 @@ pub fn expand(compile_commands: &CompilationDatabase) -> anyhow::Result<Vec<Stri
             }
         };
 
-        results.push(String::from_utf8(
+        results.push(
             Command::new(command)
                 .args(args)
                 .arg(PREPROCESS_ONLY_FLAG)
                 .current_dir(directory)
                 .output()?
                 .stdout,
-        )?);
+        );
     }
 
     Ok(results)

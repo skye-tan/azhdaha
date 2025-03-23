@@ -7,5 +7,6 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
+log.workspace = true
 anyhow.workspace = true
 tree-sitter.workspace = true

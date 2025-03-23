@@ -1,9 +1,10 @@
 use anyhow::Context;
+use log::trace;
 use tree_sitter::TreeCursor;
 
 use crate::datatype::{
-    Block, DeclStmt, Expr, ExprKind, Ident, Lit, LitKind, PrimTyKind, Span, Stmt, StmtKind, Ty,
-    TyKind,
+    Block, DeclStmt, Expr, ExprKind, Ident, Lit, LitKind, Path, PrimTyKind, Span, Stmt, StmtKind,
+    Ty, TyKind,
 };
 
 pub trait Constructable {
@@ -15,6 +16,7 @@ pub trait Constructable {
 impl Constructable for PrimTyKind {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
+        trace!("Construct [PrimTyKind] from node: {}", node.kind());
 
         Ok(
             match std::str::from_utf8(&source_code[node.start_byte()..node.end_byte()])? {
@@ -31,6 +33,7 @@ impl Constructable for PrimTyKind {
 impl Constructable for TyKind {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
+        trace!("Construct [TyKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
             "primitive_type" => TyKind::PrimTy(PrimTyKind::construct(source_code, cursor)?),
@@ -42,13 +45,13 @@ impl Constructable for TyKind {
 impl Constructable for Ty {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
+        trace!("Construct [Ty] from node: {}", node.kind());
 
         Ok(Self {
             kind: TyKind::construct(source_code, cursor)?,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),
-                ctxt: node.kind().to_owned(),
             },
         })
     }
@@ -57,6 +60,7 @@ impl Constructable for Ty {
 impl Constructable for Ident {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
+        trace!("Construct [Ident] from node: {}", node.kind());
 
         Ok(Self {
             name: std::str::from_utf8(
@@ -66,7 +70,6 @@ impl Constructable for Ident {
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),
-                ctxt: node.kind().to_owned(),
             },
         })
     }
@@ -75,6 +78,7 @@ impl Constructable for Ident {
 impl Constructable for DeclStmt {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
+        trace!("Construct [DeclStmt] from node: {}", node.kind());
 
         cursor.goto_first_child();
         let ty = Ty::construct(source_code, cursor)?;
@@ -97,7 +101,6 @@ impl Constructable for DeclStmt {
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),
-                ctxt: node.kind().to_owned(),
             },
         })
     }
@@ -106,10 +109,12 @@ impl Constructable for DeclStmt {
 impl Constructable for StmtKind {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
+        trace!("Construct [StmtKind] from node: {}", node.kind());
 
         Ok({
             match node.kind() {
                 "declaration" => Self::Decl(DeclStmt::construct(source_code, cursor)?),
+                "return_statement" => Self::Expr(Expr::construct(source_code, cursor)?),
                 _ => todo!(),
             }
         })
@@ -119,13 +124,13 @@ impl Constructable for StmtKind {
 impl Constructable for Stmt {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
+        trace!("Construct [Stmt] from node: {}", node.kind());
 
         Ok(Self {
             kind: StmtKind::construct(source_code, cursor)?,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),
-                ctxt: node.kind().to_owned(),
             },
         })
     }
@@ -134,6 +139,7 @@ impl Constructable for Stmt {
 impl Constructable for Block {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
+        trace!("Construct [Block] from node: {}", node.kind());
         cursor.goto_first_child();
         cursor.goto_next_sibling();
 
@@ -143,15 +149,13 @@ impl Constructable for Block {
             stmts.push(Stmt::construct(source_code, cursor)?);
             cursor.goto_next_sibling();
         }
-
-        cursor.goto_descendant(node.id());
+        cursor.goto_parent();
 
         Ok(Self {
             stmts,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),
-                ctxt: node.kind().to_owned(),
             },
         })
     }
@@ -160,6 +164,7 @@ impl Constructable for Block {
 impl Constructable for LitKind {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
+        trace!("Construct [LitKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
             "string_literal" => {
@@ -188,13 +193,28 @@ impl Constructable for LitKind {
 impl Constructable for Lit {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
+        trace!("Construct [Lit] from node: {}", node.kind());
 
         Ok(Self {
             kind: LitKind::construct(source_code, cursor)?,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),
-                ctxt: node.kind().to_owned(),
+            },
+        })
+    }
+}
+
+impl Constructable for Path {
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+        let node = cursor.node();
+        trace!("Construct [Path] from node: {}", node.kind());
+
+        Ok(Self {
+            res: Ident::construct(source_code, cursor)?,
+            span: Span {
+                lo: node.start_byte(),
+                hi: node.end_byte(),
             },
         })
     }
@@ -203,10 +223,22 @@ impl Constructable for Lit {
 impl Constructable for ExprKind {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
+        trace!("Construct [ExprKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
             kind if kind.contains("literal") => Self::Lit(Lit::construct(source_code, cursor)?),
             "compound_statement" => Self::Block(Block::construct(source_code, cursor)?),
+            "return_statement" => {
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                let expr_kind = Self::Ret(Box::new(Expr::construct(source_code, cursor)?));
+
+                cursor.goto_parent();
+
+                expr_kind
+            }
+            "identifier" => Self::Path(Path::construct(source_code, cursor)?),
             _ => todo!(),
         })
     }
@@ -215,13 +247,13 @@ impl Constructable for ExprKind {
 impl Constructable for Expr {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
+        trace!("Construct [Expr] from node: {}", node.kind());
 
         Ok(Self {
             kind: ExprKind::construct(source_code, cursor)?,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),
-                ctxt: node.kind().to_owned(),
             },
         })
     }

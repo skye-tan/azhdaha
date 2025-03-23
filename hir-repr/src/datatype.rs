@@ -2,7 +2,6 @@
 pub struct Span {
     pub lo: usize,
     pub hi: usize,
-    pub ctxt: String,
 }
 
 #[derive(Debug)]
@@ -71,9 +70,17 @@ pub struct Lit {
 }
 
 #[derive(Debug)]
+pub struct Path {
+    pub res: Ident, // TODO: use Res instead of Ident
+    pub span: Span,
+}
+
+#[derive(Debug)]
 pub enum ExprKind {
     Block(Block),
     Lit(Lit),
+    Ret(Box<Expr>),
+    Path(Path),
 }
 
 #[derive(Debug)]

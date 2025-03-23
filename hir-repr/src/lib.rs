@@ -14,10 +14,8 @@ pub fn construct_hir(
         if is_traversed {
             if cursor.goto_next_sibling() {
                 is_traversed = false;
-            } else {
-                if !cursor.goto_parent() {
-                    break;
-                }
+            } else if !cursor.goto_parent() {
+                break;
             }
         } else {
             let node = cursor.node();

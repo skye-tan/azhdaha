@@ -1,7 +1,8 @@
 #[derive(Debug)]
 pub struct Span {
-    pub lo: u32,
-    pub len: u16,
+    pub lo: usize,
+    pub hi: usize,
+    pub ctxt: String,
 }
 
 #[derive(Debug)]
@@ -56,14 +57,11 @@ pub struct Block {
 }
 
 #[derive(Debug)]
-pub enum LitIntType {
-    Signed,
-    Unsigned,
-}
-
-#[derive(Debug)]
 pub enum LitKind {
-    Int(i128, LitIntType),
+    Str(String),
+    Char(char),
+    Int(i64),
+    Float(f64),
 }
 
 #[derive(Debug)]

@@ -1,6 +1,8 @@
 //! A compiler frontend tool for C programming language which analyzes the sources code
 //! in order to detect memory leakage by applying linear type system principles.
 
+use std::{fs::File, io::Write, os::fd::AsRawFd};
+
 use anyhow::Context;
 use tree_sitter::{Parser, Tree};
 
@@ -42,6 +44,12 @@ fn main() -> anyhow::Result<()> {
         .iter()
         .map(|source_code| parser.parse(source_code, None).unwrap())
         .collect();
+
+    {
+        let mut f = File::create("./test").unwrap();
+        trees[0].print_dot_graph(&f.as_raw_fd());
+        f.flush().unwrap();
+    }
 
     println!(
         "{:#?}",

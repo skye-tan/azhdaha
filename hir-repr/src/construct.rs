@@ -2,9 +2,12 @@ use anyhow::Context;
 use log::trace;
 use tree_sitter::TreeCursor;
 
-use crate::datatype::{
-    Block, DeclStmt, Expr, ExprKind, Ident, Lit, LitKind, Path, PrimTyKind, Span, Stmt, StmtKind,
-    Ty, TyKind,
+use crate::{
+    constant,
+    datatype::{
+        Block, DeclStmt, Expr, ExprKind, Ident, Lit, LitKind, Path, PrimTyKind, Span, Stmt,
+        StmtKind, Ty, TyKind,
+    },
 };
 
 pub trait Constructable {
@@ -20,10 +23,10 @@ impl Constructable for PrimTyKind {
 
         Ok(
             match std::str::from_utf8(&source_code[node.start_byte()..node.end_byte()])? {
-                "int" => PrimTyKind::Int,
-                "float" => PrimTyKind::Float,
-                "double" => PrimTyKind::Double,
-                "char" => PrimTyKind::Char,
+                constant::INT => PrimTyKind::Int,
+                constant::FLOAT => PrimTyKind::Float,
+                constant::DOUBLE => PrimTyKind::Double,
+                constant::CHAR => PrimTyKind::Char,
                 _ => todo!(),
             },
         )
@@ -36,7 +39,7 @@ impl Constructable for TyKind {
         trace!("Construct [TyKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            "primitive_type" => TyKind::PrimTy(PrimTyKind::construct(source_code, cursor)?),
+            constant::PRIMITIVE_TYPE => TyKind::PrimTy(PrimTyKind::construct(source_code, cursor)?),
             _ => todo!(),
         })
     }
@@ -116,8 +119,8 @@ impl Constructable for StmtKind {
 
         Ok({
             match node.kind() {
-                "declaration" => Self::Decl(DeclStmt::construct(source_code, cursor)?),
-                "return_statement" => Self::Expr(Expr::construct(source_code, cursor)?),
+                constant::DECLARATION => Self::Decl(DeclStmt::construct(source_code, cursor)?),
+                constant::RETURN_STATEMENT => Self::Expr(Expr::construct(source_code, cursor)?),
                 _ => todo!(),
             }
         })
@@ -173,15 +176,15 @@ impl Constructable for LitKind {
         trace!("Construct [LitKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            "string_literal" => {
+            constant::STRING_LITERAL => {
                 let node = node.child(1).context("")?;
                 Self::Str(
                     std::str::from_utf8(&source_code[node.start_byte()..node.end_byte()])?
                         .to_owned(),
                 )
             }
-            "char_literal" => Self::Char(source_code[node.start_byte() + 1] as char),
-            "number_literal" => {
+            constant::CHAR_LITERAL => Self::Char(source_code[node.start_byte() + 1] as char),
+            constant::NUMBER_LITERAL => {
                 let literal =
                     std::str::from_utf8(&source_code[node.start_byte()..node.end_byte()])?;
 
@@ -233,8 +236,8 @@ impl Constructable for ExprKind {
 
         Ok(match node.kind() {
             kind if kind.contains("literal") => Self::Lit(Lit::construct(source_code, cursor)?),
-            "compound_statement" => Self::Block(Block::construct(source_code, cursor)?),
-            "return_statement" => {
+            constant::COMPOUND_STATEMENT => Self::Block(Block::construct(source_code, cursor)?),
+            constant::RETURN_STATEMENT => {
                 cursor.goto_first_child();
                 cursor.goto_next_sibling();
 
@@ -244,8 +247,8 @@ impl Constructable for ExprKind {
 
                 expr_kind
             }
-            "identifier" => Self::Path(Path::construct(source_code, cursor)?),
-            "call_expression" => {
+            constant::IDENTIFIER => Self::Path(Path::construct(source_code, cursor)?),
+            constant::CALL_EXPRESSION => {
                 cursor.goto_first_child();
 
                 let path = Expr::construct(source_code, cursor)?;

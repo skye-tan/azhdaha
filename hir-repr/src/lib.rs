@@ -1,5 +1,6 @@
 use tree_sitter::TreeCursor;
 
+mod constant;
 mod construct;
 mod datatype;
 

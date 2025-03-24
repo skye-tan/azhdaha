@@ -1,15 +1,23 @@
 //! A compiler frontend tool for C programming language which analyzes the sources code
 //! in order to detect memory leakage by applying linear type system principles.
 
-use std::{fs::File, io::Write, os::fd::AsRawFd};
+use std::{fs::File, os::fd::AsRawFd};
 
 use anyhow::Context;
-use log::trace;
 use tree_sitter::{Parser, Tree};
 
 /// Contains functions used for preprocessing source code.
 mod preprocess;
 
+/// Created the dot-graph files associated with each generated tree.
+fn create_dot_graphs(trees: &[Tree]) {
+    for (index, tree) in trees.iter().enumerate() {
+        let file = File::create(format!("{}.dot", index + 1)).unwrap();
+        tree.print_dot_graph(&file.as_raw_fd());
+    }
+}
+
+#[allow(clippy::print_stdout)]
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
@@ -27,13 +35,11 @@ fn main() -> anyhow::Result<()> {
         .map(|source_code| parser.parse(source_code, None).unwrap())
         .collect();
 
-    {
-        let mut f = File::create("./test").unwrap();
-        trees[0].print_dot_graph(&f.as_raw_fd());
-        f.flush().unwrap();
+    if args.dot_graph {
+        create_dot_graphs(&trees);
     }
 
-    trace!(
+    println!(
         "{:#?}",
         hir_repr::construct_hir(&source_codes[0], &mut trees[0].walk()).unwrap()
     );

@@ -14,6 +14,9 @@ pub struct Args {
     /// Determines whether the source code should be annotated before analyzing or not.
     #[arg(long)]
     pub annotate: bool,
+    /// Determines whether the dot-graph of the source code should be generated or not.
+    #[arg(long)]
+    pub dot_graph: bool,
 }
 
 /// Parse compile-commands into a [`CompilationDatabase`].

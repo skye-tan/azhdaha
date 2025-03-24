@@ -10,9 +10,13 @@ build-release:
 build-debug:
     cargo build --debug
 
-# run using the temp code as input and transform the generated dot file into svg. 
-run-temp: build-release
-    RUST_LOG=trace cargo run --release -- ./temp/compile_commands.json; dot -Tsvg test > test.svg
+@convert-dot-graphs:
+    for file in *.dot; do dot -Tsvg "$file" > "${file%.dot}.svg"; done
+
+# custom test used for debugging the tool.
+custom-test:
+    RUST_LOG=trace cargo run --release -- ./temp/compile_commands.json --dot-graph
+    @just convert-dot-graphs
 
 # check clippy lints.
 clippy:

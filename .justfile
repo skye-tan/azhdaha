@@ -10,7 +10,7 @@ build-release:
 build-debug:
     cargo build --debug
 
-# converts each created dot-graph file into its associated svg image.
+# convert each created dot-graph file into its associated svg image.
 convert-dot-graphs:
     @ for file in *.dot; do dot -Tsvg "$file" > "${file%.dot}.svg"; done
 

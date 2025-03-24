@@ -27,8 +27,8 @@ jobs:
         components: clippy
         override: true
 
-    - name: Install Just
+    - name: Install just
       run: cargo install just
 
-    - name: Check Clippy Lints
+    - name: Check clippy lints
       run: just clippy

@@ -1,6 +1,6 @@
 [private]
 default:
-    @just --choose --unsorted
+    @ just --choose --unsorted
 
 # build release version.
 build-release:
@@ -10,13 +10,14 @@ build-release:
 build-debug:
     cargo build --debug
 
-@convert-dot-graphs:
-    for file in *.dot; do dot -Tsvg "$file" > "${file%.dot}.svg"; done
+# converts each created dot-graph file into its associated svg image.
+convert-dot-graphs:
+    @ for file in *.dot; do dot -Tsvg "$file" > "${file%.dot}.svg"; done
 
 # custom test used for debugging the tool.
 custom-test:
     RUST_LOG=trace cargo run --release -- ./temp/compile_commands.json --dot-graph
-    @just convert-dot-graphs
+    @ just convert-dot-graphs
 
 # check clippy lints.
 clippy:
@@ -24,4 +25,4 @@ clippy:
 
 # print help.
 help:
-    @just --list --unsorted
+    @ just --list --unsorted

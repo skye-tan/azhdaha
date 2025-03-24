@@ -27,5 +27,5 @@ jobs:
         components: clippy
         override: true
 
-    - name: Clippy azhdaha
-      run: cargo clippy -- --deny warnings
+    - name: Check Clippy Lints
+      run: just clippy

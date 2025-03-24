@@ -10,7 +10,9 @@ use crate::{
     },
 };
 
-pub trait Constructable {
+/// Must be implemented by datatypes which are construable from an ast node.
+pub(crate) trait Constructable {
+    /// Construct Self from source code and a the current node pointed by the cursor.
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self>
     where
         Self: Sized;

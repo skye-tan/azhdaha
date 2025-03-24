@@ -4,6 +4,7 @@
 use std::{fs::File, io::Write, os::fd::AsRawFd};
 
 use anyhow::Context;
+use log::trace;
 use tree_sitter::{Parser, Tree};
 
 /// Contains functions used for preprocessing source code.
@@ -32,7 +33,7 @@ fn main() -> anyhow::Result<()> {
         f.flush().unwrap();
     }
 
-    println!(
+    trace!(
         "{:#?}",
         hir_repr::construct_hir(&source_codes[0], &mut trees[0].walk()).unwrap()
     );

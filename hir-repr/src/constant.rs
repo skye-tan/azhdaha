@@ -1,3 +1,5 @@
+//! Words used by tree-sitter-c library as constant variables.
+
 /// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Int`].
 pub(crate) const INT: &str = "int";
 /// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Float`].

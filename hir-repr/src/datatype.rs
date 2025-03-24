@@ -1,3 +1,5 @@
+#![allow(clippy::missing_docs_in_private_items)]
+
 #[derive(Debug)]
 pub struct Span {
     pub lo: usize,

@@ -97,7 +97,7 @@ impl Constructable for DeclStmt {
         cursor.goto_next_sibling();
         cursor.goto_next_sibling();
 
-        let init = Expr::construct(source_code, cursor).map_or(None, |expr| Some(expr));
+        let init = Expr::construct(source_code, cursor).ok();
 
         cursor.goto_parent();
         cursor.goto_parent();

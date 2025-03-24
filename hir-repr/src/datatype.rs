@@ -81,6 +81,7 @@ pub enum ExprKind {
     Lit(Lit),
     Ret(Box<Expr>),
     Path(Path),
+    Call(Box<Expr>, Vec<Expr>),
 }
 
 #[derive(Debug)]

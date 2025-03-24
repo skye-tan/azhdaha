@@ -81,14 +81,17 @@ impl Constructable for DeclStmt {
         trace!("Construct [DeclStmt] from node: {}", node.kind());
 
         cursor.goto_first_child();
+
         let ty = Ty::construct(source_code, cursor)?;
 
         cursor.goto_next_sibling();
         cursor.goto_first_child();
+
         let ident = Ident::construct(source_code, cursor)?;
 
         cursor.goto_next_sibling();
         cursor.goto_next_sibling();
+
         let init = Expr::construct(source_code, cursor).map_or(None, |expr| Some(expr));
 
         cursor.goto_parent();
@@ -140,6 +143,7 @@ impl Constructable for Block {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
         trace!("Construct [Block] from node: {}", node.kind());
+
         cursor.goto_first_child();
         cursor.goto_next_sibling();
 
@@ -147,8 +151,10 @@ impl Constructable for Block {
 
         while cursor.node().kind() != "}" {
             stmts.push(Stmt::construct(source_code, cursor)?);
+
             cursor.goto_next_sibling();
         }
+
         cursor.goto_parent();
 
         Ok(Self {
@@ -239,6 +245,29 @@ impl Constructable for ExprKind {
                 expr_kind
             }
             "identifier" => Self::Path(Path::construct(source_code, cursor)?),
+            "call_expression" => {
+                cursor.goto_first_child();
+
+                let path = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_next_sibling();
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                let mut arguments = vec![];
+
+                while cursor.node().kind() != ")" {
+                    arguments.push(Expr::construct(source_code, cursor)?);
+
+                    cursor.goto_next_sibling();
+                    cursor.goto_next_sibling();
+                }
+
+                cursor.goto_parent();
+                cursor.goto_parent();
+
+                Self::Call(Box::new(path), arguments)
+            }
             _ => todo!(),
         })
     }

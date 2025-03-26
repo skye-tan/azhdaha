@@ -71,3 +71,5 @@ pub(crate) const IDENTIFIER: &str = "identifier";
 pub(crate) const CALL_EXPRESSION: &str = "call_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Binary`].  
 pub(crate) const BINARY_EXPRESSION: &str = "binary_expression";
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Binary`].  
+pub(crate) const PARENTHESIZED_EXPRESSION: &str = "parenthesized_expression";

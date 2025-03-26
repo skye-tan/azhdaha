@@ -347,6 +347,16 @@ impl Constructable for ExprKind {
 
                 ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs))
             }
+            constant::PARENTHESIZED_EXPRESSION => {
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                let expr_kind = ExprKind::construct(source_code, cursor)?;
+
+                cursor.goto_parent();
+
+                expr_kind
+            }
             _ => todo!(),
         })
     }

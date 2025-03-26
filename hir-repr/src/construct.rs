@@ -122,7 +122,9 @@ impl Constructable for StmtKind {
         Ok({
             match node.kind() {
                 constant::DECLARATION => Self::Decl(DeclStmt::construct(source_code, cursor)?),
-                constant::RETURN_STATEMENT => Self::Expr(Expr::construct(source_code, cursor)?),
+                constant::RETURN_STATEMENT | constant::EXPRESSION_STATEMENT => {
+                    Self::Expr(Expr::construct(source_code, cursor)?)
+                }
                 _ => todo!(),
             }
         })
@@ -272,6 +274,15 @@ impl Constructable for ExprKind {
                 cursor.goto_parent();
 
                 Self::Call(Box::new(path), arguments)
+            }
+            constant::EXPRESSION_STATEMENT => {
+                cursor.goto_first_child();
+
+                let expr_kind = ExprKind::construct(source_code, cursor)?;
+
+                cursor.goto_parent();
+
+                expr_kind
             }
             _ => todo!(),
         })

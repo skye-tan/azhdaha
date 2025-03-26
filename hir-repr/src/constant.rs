@@ -16,6 +16,8 @@ pub(crate) const PRIMITIVE_TYPE: &str = "primitive_type";
 pub(crate) const DECLARATION: &str = "declaration";
 /// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Ret`] respectively.
 pub(crate) const RETURN_STATEMENT: &str = "return_statement";
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Call`] respectively.
+pub(crate) const EXPRESSION_STATEMENT: &str = "expression_statement";
 
 /// Constant word used for [`LitKind`]'s construction representing [`LitKind::Str`].
 pub(crate) const STRING_LITERAL: &str = "string_literal";

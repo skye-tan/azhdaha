@@ -12,13 +12,6 @@ pub(crate) const CHAR: &str = "char";
 /// Constant word used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
 pub(crate) const PRIMITIVE_TYPE: &str = "primitive_type";
 
-/// Constant word used for [`StmtKind`]'s construction representing [`StmtKind::Decl`].
-pub(crate) const DECLARATION: &str = "declaration";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Ret`] respectively.
-pub(crate) const RETURN_STATEMENT: &str = "return_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Call`] respectively.
-pub(crate) const EXPRESSION_STATEMENT: &str = "expression_statement";
-
 /// Constant word used for [`LitKind`]'s construction representing [`LitKind::Str`].
 pub(crate) const STRING_LITERAL: &str = "string_literal";
 /// Constant word used for [`LitKind`]'s construction representing [`LitKind::Char`].
@@ -63,6 +56,18 @@ pub(crate) const GE: &str = ">=";
 /// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Gt`].
 pub(crate) const GT: &str = ">";
 
+/// Constant word used for [`StmtKind`]'s construction representing [`StmtKind::Decl`].
+pub(crate) const DECLARATION: &str = "declaration";
+
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Ret`] respectively.
+pub(crate) const RETURN_STATEMENT: &str = "return_statement";
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Call`] respectively.
+pub(crate) const EXPRESSION_STATEMENT: &str = "expression_statement";
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::If`] respectively.  
+pub(crate) const IF_STATEMENT: &str = "if_statement";
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Loop`] respectively.  
+pub(crate) const WHILE_STATEMENT: &str = "while_statement";
+
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Block`].
 pub(crate) const COMPOUND_STATEMENT: &str = "compound_statement";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Path`].  
@@ -73,5 +78,3 @@ pub(crate) const CALL_EXPRESSION: &str = "call_expression";
 pub(crate) const BINARY_EXPRESSION: &str = "binary_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Binary`].  
 pub(crate) const PARENTHESIZED_EXPRESSION: &str = "parenthesized_expression";
-/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::If`].  
-pub(crate) const IF_STATEMENT: &str = "if_statement";

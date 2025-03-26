@@ -106,6 +106,12 @@ pub struct BinOp {
 }
 
 #[derive(Debug)]
+pub enum LoopSource {
+    While,
+    For,
+}
+
+#[derive(Debug)]
 pub enum ExprKind {
     Block(Block),
     Lit(Lit),
@@ -114,6 +120,8 @@ pub enum ExprKind {
     Call(Box<Expr>, Vec<Expr>),
     Binary(BinOp, Box<Expr>, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Option<Box<Expr>>),
+    Loop(LoopSource, Box<Expr>),
+    Break,
 }
 
 #[derive(Debug)]

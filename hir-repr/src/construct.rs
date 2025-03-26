@@ -5,8 +5,8 @@ use tree_sitter::TreeCursor;
 use crate::{
     constant,
     datatype::{
-        BinOp, BinOpKind, Block, DeclStmt, Expr, ExprKind, Ident, Lit, LitKind, Path, PrimTyKind,
-        Span, Stmt, StmtKind, Ty, TyKind,
+        BinOp, BinOpKind, Block, DeclStmt, Expr, ExprKind, Ident, Lit, LitKind, LoopSource, Path,
+        PrimTyKind, Span, Stmt, StmtKind, Ty, TyKind,
     },
 };
 
@@ -124,7 +124,8 @@ impl Constructable for StmtKind {
                 constant::DECLARATION => Self::Decl(DeclStmt::construct(source_code, cursor)?),
                 constant::RETURN_STATEMENT
                 | constant::EXPRESSION_STATEMENT
-                | constant::IF_STATEMENT => Self::Expr(Expr::construct(source_code, cursor)?),
+                | constant::IF_STATEMENT
+                | constant::WHILE_STATEMENT => Self::Expr(Expr::construct(source_code, cursor)?),
                 _ => todo!(),
             }
         })
@@ -383,6 +384,39 @@ impl Constructable for ExprKind {
                 cursor.goto_parent();
 
                 Self::If(Box::new(condition), Box::new(body), else_clause)
+            }
+            constant::WHILE_STATEMENT => {
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                let condition = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_next_sibling();
+
+                let body = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_parent();
+
+                Self::Loop(
+                    LoopSource::While,
+                    Box::new(Expr {
+                        kind: Self::If(
+                            Box::new(condition),
+                            Box::new(body),
+                            Some(Box::new(Expr {
+                                kind: Self::Break,
+                                span: Span {
+                                    lo: node.start_byte(),
+                                    hi: node.end_byte(),
+                                },
+                            })),
+                        ),
+                        span: Span {
+                            lo: node.start_byte(),
+                            hi: node.end_byte(),
+                        },
+                    }),
+                )
             }
             _ => todo!(),
         })

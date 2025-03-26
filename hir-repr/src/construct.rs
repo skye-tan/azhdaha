@@ -122,9 +122,9 @@ impl Constructable for StmtKind {
         Ok({
             match node.kind() {
                 constant::DECLARATION => Self::Decl(DeclStmt::construct(source_code, cursor)?),
-                constant::RETURN_STATEMENT | constant::EXPRESSION_STATEMENT => {
-                    Self::Expr(Expr::construct(source_code, cursor)?)
-                }
+                constant::RETURN_STATEMENT
+                | constant::EXPRESSION_STATEMENT
+                | constant::IF_STATEMENT => Self::Expr(Expr::construct(source_code, cursor)?),
                 _ => todo!(),
             }
         })
@@ -356,6 +356,33 @@ impl Constructable for ExprKind {
                 cursor.goto_parent();
 
                 expr_kind
+            }
+            constant::IF_STATEMENT => {
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                let condition = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_next_sibling();
+
+                let body = Expr::construct(source_code, cursor)?;
+
+                let else_clause = if cursor.goto_next_sibling() {
+                    cursor.goto_first_child();
+                    cursor.goto_next_sibling();
+
+                    let x = Expr::construct(source_code, cursor)?;
+
+                    cursor.goto_parent();
+
+                    Some(Box::new(x))
+                } else {
+                    None
+                };
+
+                cursor.goto_parent();
+
+                Self::If(Box::new(condition), Box::new(body), else_clause)
             }
             _ => todo!(),
         })

@@ -113,6 +113,7 @@ pub enum ExprKind {
     Path(Path),
     Call(Box<Expr>, Vec<Expr>),
     Binary(BinOp, Box<Expr>, Box<Expr>),
+    If(Box<Expr>, Box<Expr>, Option<Box<Expr>>),
 }
 
 #[derive(Debug)]

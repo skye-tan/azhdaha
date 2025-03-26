@@ -5,8 +5,8 @@ use tree_sitter::TreeCursor;
 use crate::{
     constant,
     datatype::{
-        Block, DeclStmt, Expr, ExprKind, Ident, Lit, LitKind, Path, PrimTyKind, Span, Stmt,
-        StmtKind, Ty, TyKind,
+        BinOp, BinOpKind, Block, DeclStmt, Expr, ExprKind, Ident, Lit, LitKind, Path, PrimTyKind,
+        Span, Stmt, StmtKind, Ty, TyKind,
     },
 };
 
@@ -233,6 +233,52 @@ impl Constructable for Path {
     }
 }
 
+impl Constructable for BinOpKind {
+    fn construct(_source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+        let node = cursor.node();
+        trace!("Construct [BinOpKind] from node: {}", node.kind());
+
+        Ok({
+            match node.kind() {
+                constant::ADD => Self::Add,
+                constant::SUB => Self::Sub,
+                constant::MUL => Self::Mul,
+                constant::DIV => Self::Div,
+                constant::REM => Self::Rem,
+                constant::AND => Self::And,
+                constant::OR => Self::Or,
+                constant::BIT_XOR => Self::BitXor,
+                constant::BIT_AND => Self::BitAnd,
+                constant::BIT_OR => Self::BitOr,
+                constant::SHL => Self::Shl,
+                constant::SHR => Self::Shr,
+                constant::EQ => Self::Eq,
+                constant::LT => Self::Lt,
+                constant::LE => Self::Le,
+                constant::NE => Self::Ne,
+                constant::GE => Self::Ge,
+                constant::GT => Self::Gt,
+                _ => unreachable!(),
+            }
+        })
+    }
+}
+
+impl Constructable for BinOp {
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+        let node = cursor.node();
+        trace!("Construct [BinOp] from node: {}", node.kind());
+
+        Ok(Self {
+            node: BinOpKind::construct(source_code, cursor)?,
+            span: Span {
+                lo: node.start_byte(),
+                hi: node.end_byte(),
+            },
+        })
+    }
+}
+
 impl Constructable for ExprKind {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
@@ -283,6 +329,23 @@ impl Constructable for ExprKind {
                 cursor.goto_parent();
 
                 expr_kind
+            }
+            constant::BINARY_EXPRESSION => {
+                cursor.goto_first_child();
+
+                let lhs = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_next_sibling();
+
+                let bin_op = BinOp::construct(source_code, cursor)?;
+
+                cursor.goto_next_sibling();
+
+                let rhs = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_parent();
+
+                ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs))
             }
             _ => todo!(),
         })

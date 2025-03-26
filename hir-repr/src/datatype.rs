@@ -78,12 +78,41 @@ pub struct Path {
 }
 
 #[derive(Debug)]
+pub enum BinOpKind {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+    And,
+    Or,
+    BitXor,
+    BitAnd,
+    BitOr,
+    Shl,
+    Shr,
+    Eq,
+    Lt,
+    Le,
+    Ne,
+    Ge,
+    Gt,
+}
+
+#[derive(Debug)]
+pub struct BinOp {
+    pub node: BinOpKind,
+    pub span: Span,
+}
+
+#[derive(Debug)]
 pub enum ExprKind {
     Block(Block),
     Lit(Lit),
     Ret(Box<Expr>),
     Path(Path),
     Call(Box<Expr>, Vec<Expr>),
+    Binary(BinOp, Box<Expr>, Box<Expr>),
 }
 
 #[derive(Debug)]

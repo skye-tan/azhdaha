@@ -97,6 +97,7 @@ pub enum BinOpKind {
     Ne,
     Ge,
     Gt,
+    Assign,
 }
 
 #[derive(Debug)]
@@ -132,6 +133,7 @@ pub enum ExprKind {
     Loop(LoopSource, Box<Expr>),
     Break,
     Assign(Box<Expr>, Box<Expr>),
+    AssignOp(BinOp, Box<Expr>, Box<Expr>),
 }
 
 #[derive(Debug)]

@@ -254,24 +254,25 @@ impl Constructable for BinOpKind {
 
         Ok({
             match node.kind() {
-                constant::ADD => Self::Add,
-                constant::SUB => Self::Sub,
-                constant::MUL => Self::Mul,
-                constant::DIV => Self::Div,
-                constant::REM => Self::Rem,
+                constant::ADD | constant::ASSIGN_ADD => Self::Add,
+                constant::SUB | constant::ASSIGN_SUB => Self::Sub,
+                constant::MUL | constant::ASSIGN_MUL => Self::Mul,
+                constant::DIV | constant::ASSIGN_DIV => Self::Div,
+                constant::REM | constant::ASSIGN_REM => Self::Rem,
                 constant::AND => Self::And,
                 constant::OR => Self::Or,
-                constant::BIT_XOR => Self::BitXor,
-                constant::BIT_AND => Self::BitAnd,
-                constant::BIT_OR => Self::BitOr,
-                constant::SHL => Self::Shl,
-                constant::SHR => Self::Shr,
+                constant::BIT_XOR | constant::ASSIGN_BIT_XOR => Self::BitXor,
+                constant::BIT_AND | constant::ASSIGN_BIT_AND => Self::BitAnd,
+                constant::BIT_OR | constant::ASSIGN_BIT_OR => Self::BitOr,
+                constant::SHL | constant::ASSIGN_SHL => Self::Shl,
+                constant::SHR | constant::ASSIGN_SHR => Self::Shr,
                 constant::EQ => Self::Eq,
                 constant::LT => Self::Lt,
                 constant::LE => Self::Le,
                 constant::NE => Self::Ne,
                 constant::GE => Self::Ge,
                 constant::GT => Self::Gt,
+                constant::ASSIGN => Self::Assign,
                 _ => unreachable!(),
             }
         })
@@ -471,13 +472,19 @@ impl Constructable for ExprKind {
                 let lhs = Expr::construct(source_code, cursor)?;
 
                 cursor.goto_next_sibling();
+
+                let bin_op = BinOp::construct(source_code, cursor)?;
+
                 cursor.goto_next_sibling();
 
                 let rhs = Expr::construct(source_code, cursor)?;
 
                 cursor.goto_parent();
 
-                ExprKind::Assign(Box::new(lhs), Box::new(rhs))
+                match bin_op.node {
+                    BinOpKind::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
+                    _ => ExprKind::AssignOp(bin_op, Box::new(lhs), Box::new(rhs)),
+                }
             }
             _ => todo!(),
         })

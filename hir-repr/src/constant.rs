@@ -37,6 +37,29 @@ pub(crate) const GE: &str = ">=";
 /// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Gt`].
 pub(crate) const GT: &str = ">";
 
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Assign`].
+pub(crate) const ASSIGN: &str = "=";
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Add`].
+pub(crate) const ASSIGN_ADD: &str = "+=";
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Sub`].
+pub(crate) const ASSIGN_SUB: &str = "-=";
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Mul`].
+pub(crate) const ASSIGN_MUL: &str = "*=";
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Div`].
+pub(crate) const ASSIGN_DIV: &str = "/=";
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Rem`].
+pub(crate) const ASSIGN_REM: &str = "%=";
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::BitXor`].
+pub(crate) const ASSIGN_BIT_XOR: &str = "^=";
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::BitAnd`].
+pub(crate) const ASSIGN_BIT_AND: &str = "&=";
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::BitOr`].
+pub(crate) const ASSIGN_BIT_OR: &str = "|=";
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Shl`].
+pub(crate) const ASSIGN_SHL: &str = "<<=";
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Eq`].
+pub(crate) const ASSIGN_SHR: &str = ">>=";
+
 /// Constant word used for [`UnOp`]'s construction representing [`UnOp::Not`].
 pub(crate) const NOT: &str = "!";
 /// Constant word used for [`UnOp`]'s construction representing [`UnOp::Neg`].
@@ -91,5 +114,5 @@ pub(crate) const BINARY_EXPRESSION: &str = "binary_expression";
 pub(crate) const UNARY_EXPRESSION: &str = "unary_expression";
 /// Constant word used for [`ExprKind`]'s construction representing an [`ExprKind`].  
 pub(crate) const PARENTHESIZED_EXPRESSION: &str = "parenthesized_expression";
-/// Constant word used for [`ExprKind`]'s construction representing an [`ExprKind::Assign`].  
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Assign`] or [`ExprKind::AssignOp`].  
 pub(crate) const ASSIGNMENT_EXPRESSION: &str = "assignment_expression";

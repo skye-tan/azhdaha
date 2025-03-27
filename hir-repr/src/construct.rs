@@ -751,6 +751,24 @@ impl Constructable for ExprKind {
 
                 Self::Array(elements)
             }
+            constant::COMMA_EXPRESSION => {
+                cursor.goto_first_child();
+
+                let mut exprs = vec![];
+
+                loop {
+                    exprs.push(Expr::construct(source_code, cursor)?);
+
+                    cursor.goto_next_sibling();
+                    if !cursor.goto_next_sibling() {
+                        break;
+                    }
+                }
+
+                cursor.goto_parent();
+
+                Self::Comma(exprs)
+            }
             _ => todo!(),
         })
     }

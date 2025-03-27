@@ -145,6 +145,7 @@ pub enum ExprKind {
     Cast(Box<Expr>, Ty),
     Array(Vec<Expr>),
     AddrOf(Box<Expr>),
+    Comma(Vec<Expr>),
 }
 
 #[derive(Debug, Clone)]

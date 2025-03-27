@@ -142,3 +142,5 @@ pub(crate) const SUBSCRIPT_EXPRESSION: &str = "subscript_expression";
 pub(crate) const CAST_EXPRESSION: &str = "cast_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Array`].  
 pub(crate) const INITIALIZER_LIST: &str = "initializer_list";
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Array`].  
+pub(crate) const COMMA_EXPRESSION: &str = "comma_expression";

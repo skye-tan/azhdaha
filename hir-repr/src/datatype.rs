@@ -134,6 +134,7 @@ pub enum ExprKind {
     Break,
     Assign(Box<Expr>, Box<Expr>),
     AssignOp(BinOp, Box<Expr>, Box<Expr>),
+    Field(Box<Expr>, Ident),
 }
 
 #[derive(Debug)]

@@ -486,6 +486,20 @@ impl Constructable for ExprKind {
                     _ => ExprKind::AssignOp(bin_op, Box::new(lhs), Box::new(rhs)),
                 }
             }
+            constant::FIELD_EXPRESSION => {
+                cursor.goto_first_child();
+
+                let expr = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_next_sibling();
+                cursor.goto_next_sibling();
+
+                let field = Ident::construct(source_code, cursor)?;
+
+                cursor.goto_parent();
+
+                Self::Field(Box::new(expr), field)
+            }
             _ => todo!(),
         })
     }

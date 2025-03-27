@@ -138,7 +138,9 @@ impl Constructable for StmtKind {
                 constant::RETURN_STATEMENT
                 | constant::EXPRESSION_STATEMENT
                 | constant::IF_STATEMENT
-                | constant::WHILE_STATEMENT => Self::Semi(Expr::construct(source_code, cursor)?),
+                | constant::WHILE_STATEMENT
+                | constant::BREAK_STATEMENT
+                | constant::CONTINUE_STATEMENT => Self::Semi(Expr::construct(source_code, cursor)?),
                 _ => todo!(),
             }
         })
@@ -521,6 +523,8 @@ impl Constructable for ExprKind {
                     },
                 )
             }
+            constant::BREAK_STATEMENT => Self::Break,
+            constant::CONTINUE_STATEMENT => Self::Continue,
             _ => todo!(),
         })
     }

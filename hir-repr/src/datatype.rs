@@ -132,6 +132,7 @@ pub enum ExprKind {
     If(Box<Expr>, Box<Expr>, Option<Box<Expr>>),
     Loop(LoopSource, Box<Expr>),
     Break,
+    Continue,
     Assign(Box<Expr>, Box<Expr>),
     AssignOp(BinOp, Box<Expr>, Box<Expr>),
     Field(Box<Expr>, Ident),

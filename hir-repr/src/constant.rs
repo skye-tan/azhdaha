@@ -101,6 +101,10 @@ pub(crate) const EXPRESSION_STATEMENT: &str = "expression_statement";
 pub(crate) const IF_STATEMENT: &str = "if_statement";
 /// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Loop`] respectively.  
 pub(crate) const WHILE_STATEMENT: &str = "while_statement";
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Break`] respectively.  
+pub(crate) const BREAK_STATEMENT: &str = "break_statement";
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Continue`] respectively.  
+pub(crate) const CONTINUE_STATEMENT: &str = "continue_statement";
 
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Block`].
 pub(crate) const COMPOUND_STATEMENT: &str = "compound_statement";

@@ -103,17 +103,19 @@ pub(crate) const ARRAY_DECLARATOR: &str = "array_declarator";
 /// Constant word used for [`DeclStmt`]'s construction the type to be [`Ty::Ptr`].
 pub(crate) const POINTER_DECLARATOR: &str = "pointer_declarator";
 
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Ret`] respectively.
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Ret`] respectively.
 pub(crate) const RETURN_STATEMENT: &str = "return_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Call`] respectively.
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Call`] respectively.
 pub(crate) const EXPRESSION_STATEMENT: &str = "expression_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::If`] respectively.  
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::If`] respectively.  
 pub(crate) const IF_STATEMENT: &str = "if_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Loop`] respectively.  
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Loop`] respectively.  
 pub(crate) const WHILE_STATEMENT: &str = "while_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Break`] respectively.  
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Loop`] respectively.  
+pub(crate) const FOR_STATEMENT: &str = "for_statement";
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Break`] respectively.  
 pub(crate) const BREAK_STATEMENT: &str = "break_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Continue`] respectively.  
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Continue`] respectively.  
 pub(crate) const CONTINUE_STATEMENT: &str = "continue_statement";
 
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Block`].

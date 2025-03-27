@@ -168,7 +168,7 @@ impl Constructable for DeclStmt {
 
         let mut decl_stmts = vec![];
 
-        while cursor.node().kind() != ";" {
+        loop {
             let ty = ty.clone();
 
             let (ty, ident, init) = match cursor.node().kind() {
@@ -193,9 +193,6 @@ impl Constructable for DeclStmt {
                 }
             };
 
-            cursor.goto_next_sibling();
-            cursor.goto_next_sibling();
-
             decl_stmts.push(Self {
                 ty,
                 ident,
@@ -205,6 +202,11 @@ impl Constructable for DeclStmt {
                     hi: node.end_byte(),
                 },
             });
+
+            cursor.goto_next_sibling();
+            if !cursor.goto_next_sibling() {
+                break;
+            }
         }
 
         cursor.goto_parent();
@@ -273,10 +275,13 @@ impl Constructable for Block {
 
         let mut stmts = vec![];
 
-        while cursor.node().kind() != "}" {
+        loop {
             stmts.extend(Stmt::construct(source_code, cursor)?);
 
             cursor.goto_next_sibling();
+            if !cursor.goto_next_sibling() {
+                break;
+            }
         }
 
         cursor.goto_parent();
@@ -460,11 +465,13 @@ impl Constructable for ExprKind {
 
                 let mut arguments = vec![];
 
-                while cursor.node().kind() != ")" {
+                loop {
                     arguments.push(Expr::construct(source_code, cursor)?);
 
                     cursor.goto_next_sibling();
-                    cursor.goto_next_sibling();
+                    if !cursor.goto_next_sibling() {
+                        break;
+                    }
                 }
 
                 cursor.goto_parent();
@@ -740,11 +747,13 @@ impl Constructable for ExprKind {
 
                 let mut elements = vec![];
 
-                while cursor.node().kind() != "}" {
+                loop {
                     elements.push(Expr::construct(source_code, cursor)?);
 
                     cursor.goto_next_sibling();
-                    cursor.goto_next_sibling();
+                    if !cursor.goto_next_sibling() {
+                        break;
+                    }
                 }
 
                 cursor.goto_parent();

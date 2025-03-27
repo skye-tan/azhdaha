@@ -6,7 +6,7 @@ pub struct Span {
     pub hi: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PrimTyKind {
     Int,
     Float,
@@ -14,26 +14,26 @@ pub enum PrimTyKind {
     Char,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TyKind {
     PrimTy(PrimTyKind),
     Array(Box<Ty>, Box<Expr>),
     Ptr(Box<Ty>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ty {
     pub kind: TyKind,
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ident {
     pub name: String,
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DeclStmt {
     pub ty: Ty,
     pub ident: Ident,
@@ -41,25 +41,25 @@ pub struct DeclStmt {
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum StmtKind {
     Decl(DeclStmt),
     Semi(Expr),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Stmt {
     pub kind: StmtKind,
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Block {
     pub stmts: Vec<Stmt>,
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LitKind {
     Str(String),
     Char(char),
@@ -67,19 +67,19 @@ pub enum LitKind {
     Float(f64),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Lit {
     pub kind: LitKind,
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Path {
     pub res: Ident, // TODO: use Res instead of Ident
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BinOpKind {
     Add,
     Sub,
@@ -102,13 +102,13 @@ pub enum BinOpKind {
     Assign,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BinOp {
     pub node: BinOpKind,
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum UnOp {
     Not,
     Neg,
@@ -118,13 +118,13 @@ pub enum UnOp {
     Deref,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LoopSource {
     While,
     For,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ExprKind {
     Block(Block),
     Lit(Lit),
@@ -146,7 +146,7 @@ pub enum ExprKind {
     AddrOf(Box<Expr>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Expr {
     pub kind: ExprKind,
     pub span: Span,

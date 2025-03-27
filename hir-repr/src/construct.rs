@@ -1,3 +1,5 @@
+use std::vec;
+
 use anyhow::Context;
 use log::trace;
 use tree_sitter::TreeCursor;
@@ -12,14 +14,17 @@ use crate::{
 
 /// Must be implemented by datatypes which are construable from an ast node.
 pub(crate) trait Constructable {
+    /// The constructed type by the [`Constructable::construct`] method.
+    type ConsType;
+
     /// Construct Self from source code and a the current node pointed by the cursor.
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self>
-    where
-        Self: Sized;
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType>;
 }
 
 impl Constructable for PrimTyKind {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [PrimTyKind] from node: {}", node.kind());
 
@@ -36,7 +41,9 @@ impl Constructable for PrimTyKind {
 }
 
 impl Constructable for TyKind {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [TyKind] from node: {}", node.kind());
 
@@ -57,7 +64,9 @@ impl Constructable for TyKind {
 }
 
 impl Constructable for Ty {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [Ty] from node: {}", node.kind());
 
@@ -72,7 +81,9 @@ impl Constructable for Ty {
 }
 
 impl Constructable for Ident {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [Ident] from node: {}", node.kind());
 
@@ -90,7 +101,9 @@ impl Constructable for Ident {
 }
 
 impl Constructable for DeclStmt {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Vec<Self>;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [DeclStmt] from node: {}", node.kind());
 
@@ -153,56 +166,74 @@ impl Constructable for DeclStmt {
             })
         }
 
-        let (ty, ident, init) = match cursor.node().kind() {
-            constant::INIT_DECLARATOR => {
-                cursor.goto_first_child();
+        let mut decl_stmts = vec![];
 
-                let (ty, ident) = process_decl(source_code, cursor, ty)?;
+        while cursor.node().kind() != ";" {
+            let ty = ty.clone();
 
-                cursor.goto_next_sibling();
-                cursor.goto_next_sibling();
+            let (ty, ident, init) = match cursor.node().kind() {
+                constant::INIT_DECLARATOR => {
+                    cursor.goto_first_child();
 
-                let init = Expr::construct(source_code, cursor)?;
+                    let (ty, ident) = process_decl(source_code, cursor, ty)?;
 
-                cursor.goto_parent();
+                    cursor.goto_next_sibling();
+                    cursor.goto_next_sibling();
 
-                (ty, ident, Some(init))
-            }
-            _ => {
-                let (ty, ident) = process_decl(source_code, cursor, ty)?;
+                    let init = Expr::construct(source_code, cursor)?;
 
-                (ty, ident, None)
-            }
-        };
+                    cursor.goto_parent();
+
+                    (ty, ident, Some(init))
+                }
+                _ => {
+                    let (ty, ident) = process_decl(source_code, cursor, ty)?;
+
+                    (ty, ident, None)
+                }
+            };
+
+            cursor.goto_next_sibling();
+            cursor.goto_next_sibling();
+
+            decl_stmts.push(Self {
+                ty,
+                ident,
+                init,
+                span: Span {
+                    lo: node.start_byte(),
+                    hi: node.end_byte(),
+                },
+            });
+        }
 
         cursor.goto_parent();
 
-        Ok(Self {
-            ty,
-            ident,
-            init,
-            span: Span {
-                lo: node.start_byte(),
-                hi: node.end_byte(),
-            },
-        })
+        Ok(decl_stmts)
     }
 }
 
 impl Constructable for StmtKind {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Vec<Self>;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [StmtKind] from node: {}", node.kind());
 
         Ok({
             match node.kind() {
-                constant::DECLARATION => Self::Decl(DeclStmt::construct(source_code, cursor)?),
+                constant::DECLARATION => DeclStmt::construct(source_code, cursor)?
+                    .into_iter()
+                    .map(Self::Decl)
+                    .collect(),
                 constant::RETURN_STATEMENT
                 | constant::EXPRESSION_STATEMENT
                 | constant::IF_STATEMENT
                 | constant::WHILE_STATEMENT
                 | constant::BREAK_STATEMENT
-                | constant::CONTINUE_STATEMENT => Self::Semi(Expr::construct(source_code, cursor)?),
+                | constant::CONTINUE_STATEMENT => {
+                    vec![Self::Semi(Expr::construct(source_code, cursor)?)]
+                }
                 _ => todo!(),
             }
         })
@@ -210,22 +241,29 @@ impl Constructable for StmtKind {
 }
 
 impl Constructable for Stmt {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Vec<Self>;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [Stmt] from node: {}", node.kind());
 
-        Ok(Self {
-            kind: StmtKind::construct(source_code, cursor)?,
-            span: Span {
-                lo: node.start_byte(),
-                hi: node.end_byte(),
-            },
-        })
+        Ok(StmtKind::construct(source_code, cursor)?
+            .into_iter()
+            .map(|stmt_kind| Self {
+                kind: stmt_kind,
+                span: Span {
+                    lo: node.start_byte(),
+                    hi: node.end_byte(),
+                },
+            })
+            .collect())
     }
 }
 
 impl Constructable for Block {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [Block] from node: {}", node.kind());
 
@@ -235,7 +273,7 @@ impl Constructable for Block {
         let mut stmts = vec![];
 
         while cursor.node().kind() != "}" {
-            stmts.push(Stmt::construct(source_code, cursor)?);
+            stmts.extend(Stmt::construct(source_code, cursor)?);
 
             cursor.goto_next_sibling();
         }
@@ -253,7 +291,9 @@ impl Constructable for Block {
 }
 
 impl Constructable for LitKind {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [LitKind] from node: {}", node.kind());
 
@@ -282,7 +322,9 @@ impl Constructable for LitKind {
 }
 
 impl Constructable for Lit {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [Lit] from node: {}", node.kind());
 
@@ -297,7 +339,9 @@ impl Constructable for Lit {
 }
 
 impl Constructable for Path {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [Path] from node: {}", node.kind());
 
@@ -312,7 +356,9 @@ impl Constructable for Path {
 }
 
 impl Constructable for BinOpKind {
-    fn construct(_source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(_source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [BinOpKind] from node: {}", node.kind());
 
@@ -344,7 +390,9 @@ impl Constructable for BinOpKind {
 }
 
 impl Constructable for BinOp {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [BinOp] from node: {}", node.kind());
 
@@ -359,7 +407,9 @@ impl Constructable for BinOp {
 }
 
 impl Constructable for UnOp {
-    fn construct(_source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(_source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [UnOp] from node: {}", node.kind());
 
@@ -378,7 +428,9 @@ impl Constructable for UnOp {
 }
 
 impl Constructable for ExprKind {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [ExprKind] from node: {}", node.kind());
 
@@ -627,7 +679,9 @@ impl Constructable for ExprKind {
 }
 
 impl Constructable for Expr {
-    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [Expr] from node: {}", node.kind());
 

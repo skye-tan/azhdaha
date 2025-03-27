@@ -633,17 +633,12 @@ impl Constructable for ExprKind {
 
                 cursor.goto_parent();
 
-                let mut stmts = match &body.kind {
-                    Self::Block(block) => block.stmts.clone(),
-                    _ => unreachable!(),
-                };
-
                 let loop_expr = Self::Loop(
                     LoopSource::DoWhile,
                     Box::new(Expr {
                         kind: Self::If(
                             Box::new(condition),
-                            Box::new(body),
+                            Box::new(body.clone()),
                             Some(Box::new(Expr {
                                 kind: Self::Break,
                                 span: Span {
@@ -658,6 +653,18 @@ impl Constructable for ExprKind {
                         },
                     }),
                 );
+
+                let mut stmts = match body.kind {
+                    Self::Block(block) => block.stmts.clone(),
+                    _ => {
+                        let span = body.span.clone();
+
+                        vec![Stmt {
+                            kind: StmtKind::Semi(body),
+                            span: span.clone(),
+                        }]
+                    }
+                };
 
                 stmts.push(Stmt {
                     kind: StmtKind::Expr(Expr {
@@ -695,7 +702,13 @@ impl Constructable for ExprKind {
                 cursor.goto_next_sibling();
                 cursor.goto_next_sibling();
 
-                let updatation = Expr::construct(source_code, cursor)?;
+                let update_stmt = Stmt {
+                    kind: StmtKind::Semi(Expr::construct(source_code, cursor)?),
+                    span: Span {
+                        lo: cursor.node().start_byte(),
+                        hi: cursor.node().end_byte(),
+                    },
+                };
 
                 cursor.goto_next_sibling();
                 cursor.goto_next_sibling();
@@ -704,17 +717,29 @@ impl Constructable for ExprKind {
 
                 cursor.goto_parent();
 
-                let span = updatation.span.clone();
-                body.kind = match body.kind {
-                    Self::Block(mut block) => {
-                        block.stmts.push(Stmt {
-                            kind: StmtKind::Semi(updatation),
-                            span,
-                        });
-                        Self::Block(block)
+                match &mut body.kind {
+                    Self::Block(block) => {
+                        block.stmts.push(update_stmt);
                     }
-                    _ => unreachable!(),
-                };
+                    _ => {
+                        let span = body.span.clone();
+
+                        let mut block = Block {
+                            stmts: vec![Stmt {
+                                kind: StmtKind::Semi(body),
+                                span: span.clone(),
+                            }],
+                            span: span.clone(),
+                        };
+
+                        block.stmts.push(update_stmt);
+
+                        body = Expr {
+                            kind: Self::Block(block),
+                            span,
+                        }
+                    }
+                }
 
                 let loop_expr = Self::Loop(
                     LoopSource::For,

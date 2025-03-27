@@ -94,6 +94,8 @@ pub(crate) const NUMBER_LITERAL: &str = "number_literal";
 pub(crate) const DECLARATION: &str = "declaration";
 /// Constant word used for [`DeclStmt`]'s construction determining whether the initialization part exits or not.
 pub(crate) const INIT_DECLARATOR: &str = "init_declarator";
+/// Constant word used for [`DeclStmt`]'s construction determining whether the initialization part exits or not.
+pub(crate) const ARRAY_DECLARATOR: &str = "array_declarator";
 
 /// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Ret`] respectively.
 pub(crate) const RETURN_STATEMENT: &str = "return_statement";
@@ -128,3 +130,5 @@ pub(crate) const FIELD_EXPRESSION: &str = "field_expression";
 pub(crate) const SUBSCRIPT_EXPRESSION: &str = "subscript_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Cast`].  
 pub(crate) const CAST_EXPRESSION: &str = "cast_expression";
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Array`].  
+pub(crate) const INITIALIZER_LIST: &str = "initializer_list";

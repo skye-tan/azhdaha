@@ -1,6 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Span {
     pub lo: usize,
     pub hi: usize,
@@ -17,6 +17,7 @@ pub enum PrimTyKind {
 #[derive(Debug)]
 pub enum TyKind {
     PrimTy(PrimTyKind),
+    Array(Box<Ty>, Box<Expr>),
 }
 
 #[derive(Debug)]
@@ -138,6 +139,7 @@ pub enum ExprKind {
     Field(Box<Expr>, Ident),
     Index(Box<Expr>, Box<Expr>, Span),
     Cast(Box<Expr>, Ty),
+    Array(Vec<Expr>),
 }
 
 #[derive(Debug)]

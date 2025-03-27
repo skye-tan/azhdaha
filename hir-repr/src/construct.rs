@@ -100,11 +100,45 @@ impl Constructable for DeclStmt {
 
         cursor.goto_next_sibling();
 
-        let (ident, init) = match cursor.node().kind() {
+        fn process_decl(
+            source_code: &[u8],
+            cursor: &mut TreeCursor,
+            ty: Ty,
+        ) -> anyhow::Result<(Ty, Ident)> {
+            let node = cursor.node();
+            trace!("Process [DeclStmt] from node: {}", node.kind());
+
+            Ok(match node.kind() {
+                constant::ARRAY_DECLARATOR => {
+                    cursor.goto_first_child();
+
+                    let ident = Ident::construct(source_code, cursor)?;
+
+                    cursor.goto_next_sibling();
+                    cursor.goto_next_sibling();
+
+                    let array_len = Expr::construct(source_code, cursor)?;
+
+                    let span = ty.span.clone();
+
+                    let ty = Ty {
+                        kind: TyKind::Array(Box::new(ty), Box::new(array_len)),
+                        span,
+                    };
+
+                    cursor.goto_parent();
+
+                    (ty, ident)
+                }
+                _ => (ty, Ident::construct(source_code, cursor)?),
+            })
+        }
+
+        let (ty, ident, init) = match cursor.node().kind() {
             constant::INIT_DECLARATOR => {
                 cursor.goto_first_child();
 
-                let ident = Ident::construct(source_code, cursor)?;
+                let (ty, ident) = process_decl(source_code, cursor, ty)?;
 
                 cursor.goto_next_sibling();
                 cursor.goto_next_sibling();
@@ -113,12 +147,12 @@ impl Constructable for DeclStmt {
 
                 cursor.goto_parent();
 
-                (ident, Some(init))
+                (ty, ident, Some(init))
             }
             _ => {
-                let ident = Ident::construct(source_code, cursor)?;
+                let (ty, ident) = process_decl(source_code, cursor, ty)?;
 
-                (ident, None)
+                (ty, ident, None)
             }
         };
 
@@ -334,11 +368,11 @@ impl Constructable for ExprKind {
                 cursor.goto_first_child();
                 cursor.goto_next_sibling();
 
-                let expr_kind = Self::Ret(Box::new(Expr::construct(source_code, cursor)?));
+                let expr = Expr::construct(source_code, cursor)?;
 
                 cursor.goto_parent();
 
-                expr_kind
+                Self::Ret(Box::new(expr))
             }
             constant::IDENTIFIER => Self::Path(Path::construct(source_code, cursor)?),
             constant::CALL_EXPRESSION => {
@@ -388,7 +422,7 @@ impl Constructable for ExprKind {
 
                 cursor.goto_parent();
 
-                ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs))
+                Self::Binary(bin_op, Box::new(lhs), Box::new(rhs))
             }
             constant::UNARY_EXPRESSION => {
                 cursor.goto_first_child();
@@ -404,7 +438,7 @@ impl Constructable for ExprKind {
                 // Ignore [`UnOp::Pos`] because it has no effects.
                 match un_op {
                     UnOp::Pos => expr.kind,
-                    _ => ExprKind::Unary(un_op, Box::new(expr)),
+                    _ => Self::Unary(un_op, Box::new(expr)),
                 }
             }
             constant::PARENTHESIZED_EXPRESSION => {
@@ -493,8 +527,8 @@ impl Constructable for ExprKind {
                 cursor.goto_parent();
 
                 match bin_op.node {
-                    BinOpKind::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
-                    _ => ExprKind::AssignOp(bin_op, Box::new(lhs), Box::new(rhs)),
+                    BinOpKind::Assign => Self::Assign(Box::new(lhs), Box::new(rhs)),
+                    _ => Self::AssignOp(bin_op, Box::new(lhs), Box::new(rhs)),
                 }
             }
             constant::FIELD_EXPRESSION => {
@@ -548,6 +582,23 @@ impl Constructable for ExprKind {
                 cursor.goto_parent();
 
                 Self::Cast(Box::new(target), ty)
+            }
+            constant::INITIALIZER_LIST => {
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                let mut elements = vec![];
+
+                while cursor.node().kind() != "}" {
+                    elements.push(Expr::construct(source_code, cursor)?);
+
+                    cursor.goto_next_sibling();
+                    cursor.goto_next_sibling();
+                }
+
+                cursor.goto_parent();
+
+                Self::Array(elements)
             }
             _ => todo!(),
         })

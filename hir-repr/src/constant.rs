@@ -117,6 +117,8 @@ pub(crate) const IF_STATEMENT: &str = "if_statement";
 /// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Loop`] respectively.  
 pub(crate) const WHILE_STATEMENT: &str = "while_statement";
 /// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Loop`] respectively.  
+pub(crate) const DO_STATEMENT: &str = "do_statement";
+/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Loop`] respectively.  
 pub(crate) const FOR_STATEMENT: &str = "for_statement";
 /// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Break`] respectively.  
 pub(crate) const BREAK_STATEMENT: &str = "break_statement";

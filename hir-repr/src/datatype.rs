@@ -122,6 +122,7 @@ pub enum UnOp {
 #[derive(Debug, Clone)]
 pub enum LoopSource {
     While,
+    DoWhile,
     For,
 }
 

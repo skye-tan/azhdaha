@@ -234,7 +234,10 @@ impl Constructable for StmtKind {
                 | constant::CONTINUE_STATEMENT => {
                     vec![Self::Semi(Expr::construct(source_code, cursor)?)]
                 }
-                constant::IF_STATEMENT | constant::WHILE_STATEMENT | constant::FOR_STATEMENT => {
+                constant::IF_STATEMENT
+                | constant::WHILE_STATEMENT
+                | constant::DO_STATEMENT
+                | constant::FOR_STATEMENT => {
                     vec![Self::Expr(Expr::construct(source_code, cursor)?)]
                 }
                 _ => todo!(),
@@ -617,6 +620,67 @@ impl Constructable for ExprKind {
                     }),
                 )
             }
+            constant::DO_STATEMENT => {
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                let body = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_next_sibling();
+                cursor.goto_next_sibling();
+
+                let condition = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_parent();
+
+                let mut stmts = match &body.kind {
+                    Self::Block(block) => block.stmts.clone(),
+                    _ => unreachable!(),
+                };
+
+                let loop_expr = Self::Loop(
+                    LoopSource::DoWhile,
+                    Box::new(Expr {
+                        kind: Self::If(
+                            Box::new(condition),
+                            Box::new(body),
+                            Some(Box::new(Expr {
+                                kind: Self::Break,
+                                span: Span {
+                                    lo: node.start_byte(),
+                                    hi: node.end_byte(),
+                                },
+                            })),
+                        ),
+                        span: Span {
+                            lo: node.start_byte(),
+                            hi: node.end_byte(),
+                        },
+                    }),
+                );
+
+                stmts.push(Stmt {
+                    kind: StmtKind::Expr(Expr {
+                        kind: loop_expr,
+                        span: Span {
+                            lo: node.start_byte(),
+                            hi: node.end_byte(),
+                        },
+                    }),
+                    span: Span {
+                        lo: node.start_byte(),
+                        hi: node.end_byte(),
+                    },
+                });
+
+                Self::Block(Block {
+                    stmts,
+                    span: Span {
+                        lo: node.start_byte(),
+                        hi: node.end_byte(),
+                    },
+                })
+            }
             constant::FOR_STATEMENT => {
                 cursor.goto_first_child();
                 cursor.goto_next_sibling();
@@ -652,29 +716,31 @@ impl Constructable for ExprKind {
                     _ => unreachable!(),
                 };
 
-                let mut stmts = initialization;
-                stmts.push(Stmt {
-                    kind: StmtKind::Expr(Expr {
-                        kind: Self::Loop(
-                            LoopSource::For,
-                            Box::new(Expr {
-                                kind: Self::If(
-                                    Box::new(condition),
-                                    Box::new(body),
-                                    Some(Box::new(Expr {
-                                        kind: Self::Break,
-                                        span: Span {
-                                            lo: node.start_byte(),
-                                            hi: node.end_byte(),
-                                        },
-                                    })),
-                                ),
+                let loop_expr = Self::Loop(
+                    LoopSource::For,
+                    Box::new(Expr {
+                        kind: Self::If(
+                            Box::new(condition),
+                            Box::new(body),
+                            Some(Box::new(Expr {
+                                kind: Self::Break,
                                 span: Span {
                                     lo: node.start_byte(),
                                     hi: node.end_byte(),
                                 },
-                            }),
+                            })),
                         ),
+                        span: Span {
+                            lo: node.start_byte(),
+                            hi: node.end_byte(),
+                        },
+                    }),
+                );
+
+                let mut stmts = initialization;
+                stmts.push(Stmt {
+                    kind: StmtKind::Expr(Expr {
+                        kind: loop_expr,
                         span: Span {
                             lo: node.start_byte(),
                             hi: node.end_byte(),

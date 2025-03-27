@@ -42,6 +42,15 @@ impl Constructable for TyKind {
 
         Ok(match node.kind() {
             constant::PRIMITIVE_TYPE => TyKind::PrimTy(PrimTyKind::construct(source_code, cursor)?),
+            constant::TYPE_DESCRIPTOR => {
+                cursor.goto_first_child();
+
+                let ty_kind = TyKind::construct(source_code, cursor)?;
+
+                cursor.goto_parent();
+
+                ty_kind
+            }
             _ => todo!(),
         })
     }
@@ -525,6 +534,21 @@ impl Constructable for ExprKind {
             }
             constant::BREAK_STATEMENT => Self::Break,
             constant::CONTINUE_STATEMENT => Self::Continue,
+            constant::CAST_EXPRESSION => {
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                let ty = Ty::construct(source_code, cursor)?;
+
+                cursor.goto_next_sibling();
+                cursor.goto_next_sibling();
+
+                let target = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_parent();
+
+                Self::Cast(Box::new(target), ty)
+            }
             _ => todo!(),
         })
     }

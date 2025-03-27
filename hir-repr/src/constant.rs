@@ -80,6 +80,8 @@ pub(crate) const CHAR: &str = "char";
 
 /// Constant word used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
 pub(crate) const PRIMITIVE_TYPE: &str = "primitive_type";
+/// Constant word used for [`TyKind`]'s construction representing a [`TyKind`].
+pub(crate) const TYPE_DESCRIPTOR: &str = "type_descriptor";
 
 /// Constant word used for [`LitKind`]'s construction representing [`LitKind::Str`].
 pub(crate) const STRING_LITERAL: &str = "string_literal";
@@ -124,3 +126,5 @@ pub(crate) const ASSIGNMENT_EXPRESSION: &str = "assignment_expression";
 pub(crate) const FIELD_EXPRESSION: &str = "field_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Index`].  
 pub(crate) const SUBSCRIPT_EXPRESSION: &str = "subscript_expression";
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Cast`].  
+pub(crate) const CAST_EXPRESSION: &str = "cast_expression";

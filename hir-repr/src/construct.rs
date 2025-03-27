@@ -90,16 +90,29 @@ impl Constructable for DeclStmt {
         let ty = Ty::construct(source_code, cursor)?;
 
         cursor.goto_next_sibling();
-        cursor.goto_first_child();
 
-        let ident = Ident::construct(source_code, cursor)?;
+        let (ident, init) = match cursor.node().kind() {
+            constant::INIT_DECLARATOR => {
+                cursor.goto_first_child();
 
-        cursor.goto_next_sibling();
-        cursor.goto_next_sibling();
+                let ident = Ident::construct(source_code, cursor)?;
 
-        let init = Expr::construct(source_code, cursor).ok();
+                cursor.goto_next_sibling();
+                cursor.goto_next_sibling();
 
-        cursor.goto_parent();
+                let init = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_parent();
+
+                (ident, Some(init))
+            }
+            _ => {
+                let ident = Ident::construct(source_code, cursor)?;
+
+                (ident, None)
+            }
+        };
+
         cursor.goto_parent();
 
         Ok(Self {

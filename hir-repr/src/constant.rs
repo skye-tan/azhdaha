@@ -1,24 +1,5 @@
 //! Words used by tree-sitter-c library as constant variables.
 
-/// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Int`].
-pub(crate) const INT: &str = "int";
-/// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Float`].
-pub(crate) const FLOAT: &str = "float";
-/// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Double`].
-pub(crate) const DOUBLE: &str = "double";
-/// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Char`].
-pub(crate) const CHAR: &str = "char";
-
-/// Constant word used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
-pub(crate) const PRIMITIVE_TYPE: &str = "primitive_type";
-
-/// Constant word used for [`LitKind`]'s construction representing [`LitKind::Str`].
-pub(crate) const STRING_LITERAL: &str = "string_literal";
-/// Constant word used for [`LitKind`]'s construction representing [`LitKind::Char`].
-pub(crate) const CHAR_LITERAL: &str = "char_literal";
-/// Constant word used for [`LitKind`]'s construction representing [`LitKind::Int`] or [`LitKind::Float`].
-pub(crate) const NUMBER_LITERAL: &str = "number_literal";
-
 /// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Add`].
 pub(crate) const ADD: &str = "+";
 /// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Sub`].
@@ -65,8 +46,29 @@ pub(crate) const COM: &str = "~";
 /// Constant word used for [`UnOp`]'s construction representing [`UnOp::Pos`].
 pub(crate) const POS: &str = "+";
 
+/// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Int`].
+pub(crate) const INT: &str = "int";
+/// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Float`].
+pub(crate) const FLOAT: &str = "float";
+/// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Double`].
+pub(crate) const DOUBLE: &str = "double";
+/// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Char`].
+pub(crate) const CHAR: &str = "char";
+
+/// Constant word used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
+pub(crate) const PRIMITIVE_TYPE: &str = "primitive_type";
+
+/// Constant word used for [`LitKind`]'s construction representing [`LitKind::Str`].
+pub(crate) const STRING_LITERAL: &str = "string_literal";
+/// Constant word used for [`LitKind`]'s construction representing [`LitKind::Char`].
+pub(crate) const CHAR_LITERAL: &str = "char_literal";
+/// Constant word used for [`LitKind`]'s construction representing [`LitKind::Int`] or [`LitKind::Float`].
+pub(crate) const NUMBER_LITERAL: &str = "number_literal";
+
 /// Constant word used for [`StmtKind`]'s construction representing [`StmtKind::Decl`].
 pub(crate) const DECLARATION: &str = "declaration";
+/// Constant word used for [`DeclStmt`]'s construction determining whether the initialization part exits or not.
+pub(crate) const INIT_DECLARATOR: &str = "init_declarator";
 
 /// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Ret`] respectively.
 pub(crate) const RETURN_STATEMENT: &str = "return_statement";

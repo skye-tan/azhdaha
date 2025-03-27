@@ -42,7 +42,7 @@ pub struct DeclStmt {
 #[derive(Debug)]
 pub enum StmtKind {
     Decl(DeclStmt),
-    Expr(Expr),
+    Semi(Expr),
 }
 
 #[derive(Debug)]

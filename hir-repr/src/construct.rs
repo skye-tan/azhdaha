@@ -138,7 +138,7 @@ impl Constructable for StmtKind {
                 constant::RETURN_STATEMENT
                 | constant::EXPRESSION_STATEMENT
                 | constant::IF_STATEMENT
-                | constant::WHILE_STATEMENT => Self::Expr(Expr::construct(source_code, cursor)?),
+                | constant::WHILE_STATEMENT => Self::Semi(Expr::construct(source_code, cursor)?),
                 _ => todo!(),
             }
         })

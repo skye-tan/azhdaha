@@ -56,6 +56,15 @@ pub(crate) const GE: &str = ">=";
 /// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Gt`].
 pub(crate) const GT: &str = ">";
 
+/// Constant word used for [`UnOp`]'s construction representing [`UnOp::Not`].
+pub(crate) const NOT: &str = "!";
+/// Constant word used for [`UnOp`]'s construction representing [`UnOp::Neg`].
+pub(crate) const NEG: &str = "-";
+/// Constant word used for [`UnOp`]'s construction representing [`UnOp::Com`].
+pub(crate) const COM: &str = "~";
+/// Constant word used for [`UnOp`]'s construction representing [`UnOp::Pos`].
+pub(crate) const POS: &str = "+";
+
 /// Constant word used for [`StmtKind`]'s construction representing [`StmtKind::Decl`].
 pub(crate) const DECLARATION: &str = "declaration";
 
@@ -76,5 +85,7 @@ pub(crate) const IDENTIFIER: &str = "identifier";
 pub(crate) const CALL_EXPRESSION: &str = "call_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Binary`].  
 pub(crate) const BINARY_EXPRESSION: &str = "binary_expression";
-/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Binary`].  
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Unary`].  
+pub(crate) const UNARY_EXPRESSION: &str = "unary_expression";
+/// Constant word used for [`ExprKind`]'s construction representing an [`ExprKind`].  
 pub(crate) const PARENTHESIZED_EXPRESSION: &str = "parenthesized_expression";

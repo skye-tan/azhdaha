@@ -6,7 +6,7 @@ use crate::{
     constant,
     datatype::{
         BinOp, BinOpKind, Block, DeclStmt, Expr, ExprKind, Ident, Lit, LitKind, LoopSource, Path,
-        PrimTyKind, Span, Stmt, StmtKind, Ty, TyKind,
+        PrimTyKind, Span, Stmt, StmtKind, Ty, TyKind, UnOp,
     },
 };
 
@@ -280,6 +280,23 @@ impl Constructable for BinOp {
     }
 }
 
+impl Constructable for UnOp {
+    fn construct(_source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
+        let node = cursor.node();
+        trace!("Construct [UnOp] from node: {}", node.kind());
+
+        Ok({
+            match node.kind() {
+                constant::NOT => Self::Not,
+                constant::NEG => Self::Neg,
+                constant::COM => Self::Com,
+                constant::POS => Self::Pos,
+                _ => unreachable!(),
+            }
+        })
+    }
+}
+
 impl Constructable for ExprKind {
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self> {
         let node = cursor.node();
@@ -347,6 +364,23 @@ impl Constructable for ExprKind {
                 cursor.goto_parent();
 
                 ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs))
+            }
+            constant::UNARY_EXPRESSION => {
+                cursor.goto_first_child();
+
+                let un_op = UnOp::construct(source_code, cursor)?;
+
+                cursor.goto_next_sibling();
+
+                let expr = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_parent();
+
+                // Ignore [`UnOp::Pos`] because it has no effects.
+                match un_op {
+                    UnOp::Pos => expr.kind,
+                    _ => ExprKind::Unary(un_op, Box::new(expr)),
+                }
             }
             constant::PARENTHESIZED_EXPRESSION => {
                 cursor.goto_first_child();

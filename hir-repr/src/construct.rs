@@ -116,7 +116,7 @@ impl Constructable for DeclStmt {
         fn process_decl(
             source_code: &[u8],
             cursor: &mut TreeCursor,
-            ty: Ty,
+            mut ty: Ty,
         ) -> anyhow::Result<(Ty, Ident)> {
             let node = cursor.node();
             trace!("Process [DeclStmt] from node: {}", node.kind());
@@ -124,25 +124,26 @@ impl Constructable for DeclStmt {
             Ok(match node.kind() {
                 constant::ARRAY_DECLARATOR => {
                     cursor.goto_first_child();
-
-                    let ident = Ident::construct(source_code, cursor)?;
-
                     cursor.goto_next_sibling();
                     cursor.goto_next_sibling();
 
                     let array_len = Expr::construct(source_code, cursor)?;
 
-                    cursor.goto_parent();
-
                     let span = ty.span.clone();
 
-                    (
-                        Ty {
-                            kind: TyKind::Array(Box::new(ty), Box::new(array_len)),
-                            span,
-                        },
-                        ident,
-                    )
+                    ty = Ty {
+                        kind: TyKind::Array(Box::new(ty), Box::new(array_len)),
+                        span,
+                    };
+
+                    cursor.goto_previous_sibling();
+                    cursor.goto_previous_sibling();
+
+                    let result = process_decl(source_code, cursor, ty)?;
+
+                    cursor.goto_parent();
+
+                    result
                 }
                 constant::POINTER_DECLARATOR => {
                     cursor.goto_first_child();

@@ -350,6 +350,8 @@ impl Constructable for UnOp {
                 constant::NEG => Self::Neg,
                 constant::COM => Self::Com,
                 constant::POS => Self::Pos,
+                constant::ADDR_OF => Self::AddrOf,
+                constant::DEREF => Self::Deref,
                 _ => unreachable!(),
             }
         })
@@ -424,7 +426,7 @@ impl Constructable for ExprKind {
 
                 Self::Binary(bin_op, Box::new(lhs), Box::new(rhs))
             }
-            constant::UNARY_EXPRESSION => {
+            constant::UNARY_EXPRESSION | constant::POINTER_EXPRESSION => {
                 cursor.goto_first_child();
 
                 let un_op = UnOp::construct(source_code, cursor)?;

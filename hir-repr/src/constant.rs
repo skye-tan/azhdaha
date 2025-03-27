@@ -68,6 +68,10 @@ pub(crate) const NEG: &str = "-";
 pub(crate) const COM: &str = "~";
 /// Constant word used for [`UnOp`]'s construction representing [`UnOp::Pos`].
 pub(crate) const POS: &str = "+";
+/// Constant word used for [`UnOp`]'s construction representing [`UnOp::AddrOf`].
+pub(crate) const ADDR_OF: &str = "&";
+/// Constant word used for [`UnOp`]'s construction representing [`UnOp::Deref`].
+pub(crate) const DEREF: &str = "*";
 
 /// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Int`].
 pub(crate) const INT: &str = "int";
@@ -120,6 +124,8 @@ pub(crate) const CALL_EXPRESSION: &str = "call_expression";
 pub(crate) const BINARY_EXPRESSION: &str = "binary_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Unary`].  
 pub(crate) const UNARY_EXPRESSION: &str = "unary_expression";
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Unary`].  
+pub(crate) const POINTER_EXPRESSION: &str = "pointer_expression";
 /// Constant word used for [`ExprKind`]'s construction representing an [`ExprKind`].  
 pub(crate) const PARENTHESIZED_EXPRESSION: &str = "parenthesized_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Assign`] or [`ExprKind::AssignOp`].  

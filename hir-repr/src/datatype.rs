@@ -113,6 +113,8 @@ pub enum UnOp {
     Neg,
     Com,
     Pos,
+    AddrOf,
+    Deref,
 }
 
 #[derive(Debug)]
@@ -140,6 +142,7 @@ pub enum ExprKind {
     Index(Box<Expr>, Box<Expr>, Span),
     Cast(Box<Expr>, Ty),
     Array(Vec<Expr>),
+    AddrOf(Box<Expr>),
 }
 
 #[derive(Debug)]

@@ -98,8 +98,10 @@ pub(crate) const NUMBER_LITERAL: &str = "number_literal";
 pub(crate) const DECLARATION: &str = "declaration";
 /// Constant word used for [`DeclStmt`]'s construction determining whether the initialization part exits or not.
 pub(crate) const INIT_DECLARATOR: &str = "init_declarator";
-/// Constant word used for [`DeclStmt`]'s construction determining whether the initialization part exits or not.
+/// Constant word used for [`DeclStmt`]'s construction the type to be [`Ty::Array`].
 pub(crate) const ARRAY_DECLARATOR: &str = "array_declarator";
+/// Constant word used for [`DeclStmt`]'s construction the type to be [`Ty::Ptr`].
+pub(crate) const POINTER_DECLARATOR: &str = "pointer_declarator";
 
 /// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Expr`] and [`ExprKind::Ret`] respectively.
 pub(crate) const RETURN_STATEMENT: &str = "return_statement";

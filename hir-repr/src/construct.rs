@@ -119,16 +119,35 @@ impl Constructable for DeclStmt {
 
                     let array_len = Expr::construct(source_code, cursor)?;
 
+                    cursor.goto_parent();
+
                     let span = ty.span.clone();
 
-                    let ty = Ty {
-                        kind: TyKind::Array(Box::new(ty), Box::new(array_len)),
-                        span,
-                    };
+                    (
+                        Ty {
+                            kind: TyKind::Array(Box::new(ty), Box::new(array_len)),
+                            span,
+                        },
+                        ident,
+                    )
+                }
+                constant::POINTER_DECLARATOR => {
+                    cursor.goto_first_child();
+                    cursor.goto_next_sibling();
+
+                    let ident = Ident::construct(source_code, cursor)?;
 
                     cursor.goto_parent();
 
-                    (ty, ident)
+                    let span = ty.span.clone();
+
+                    (
+                        Ty {
+                            kind: TyKind::Ptr(Box::new(ty)),
+                            span,
+                        },
+                        ident,
+                    )
                 }
                 _ => (ty, Ident::construct(source_code, cursor)?),
             })

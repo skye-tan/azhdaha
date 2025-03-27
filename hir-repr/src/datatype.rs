@@ -18,6 +18,7 @@ pub enum PrimTyKind {
 pub enum TyKind {
     PrimTy(PrimTyKind),
     Array(Box<Ty>, Box<Expr>),
+    Ptr(Box<Ty>),
 }
 
 #[derive(Debug)]

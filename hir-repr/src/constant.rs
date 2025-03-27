@@ -60,6 +60,11 @@ pub(crate) const ASSIGN_SHL: &str = "<<=";
 /// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Eq`].
 pub(crate) const ASSIGN_SHR: &str = ">>=";
 
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Add`].
+pub(crate) const INC: &str = "++";
+/// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Sub`].
+pub(crate) const DEC: &str = "--";
+
 /// Constant word used for [`UnOp`]'s construction representing [`UnOp::Not`].
 pub(crate) const NOT: &str = "!";
 /// Constant word used for [`UnOp`]'s construction representing [`UnOp::Neg`].
@@ -126,6 +131,8 @@ pub(crate) const IDENTIFIER: &str = "identifier";
 pub(crate) const CALL_EXPRESSION: &str = "call_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Binary`].  
 pub(crate) const BINARY_EXPRESSION: &str = "binary_expression";
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Binary`].  
+pub(crate) const UPDATE_EXPRESSION: &str = "update_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Unary`].  
 pub(crate) const UNARY_EXPRESSION: &str = "unary_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Unary`].  
@@ -142,5 +149,5 @@ pub(crate) const SUBSCRIPT_EXPRESSION: &str = "subscript_expression";
 pub(crate) const CAST_EXPRESSION: &str = "cast_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Array`].  
 pub(crate) const INITIALIZER_LIST: &str = "initializer_list";
-/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Array`].  
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Comma`].  
 pub(crate) const COMMA_EXPRESSION: &str = "comma_expression";

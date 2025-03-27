@@ -275,13 +275,10 @@ impl Constructable for Block {
 
         let mut stmts = vec![];
 
-        loop {
-            stmts.extend(Stmt::construct(source_code, cursor)?);
+        while cursor.node().kind() != "}" {
+            stmts.append(&mut Stmt::construct(source_code, cursor)?);
 
             cursor.goto_next_sibling();
-            if !cursor.goto_next_sibling() {
-                break;
-            }
         }
 
         cursor.goto_parent();
@@ -370,8 +367,8 @@ impl Constructable for BinOpKind {
 
         Ok({
             match node.kind() {
-                constant::ADD | constant::ASSIGN_ADD => Self::Add,
-                constant::SUB | constant::ASSIGN_SUB => Self::Sub,
+                constant::ADD | constant::ASSIGN_ADD | constant::INC => Self::Add,
+                constant::SUB | constant::ASSIGN_SUB | constant::DEC => Self::Sub,
                 constant::MUL | constant::ASSIGN_MUL => Self::Mul,
                 constant::DIV | constant::ASSIGN_DIV => Self::Div,
                 constant::REM | constant::ASSIGN_REM => Self::Rem,
@@ -502,6 +499,34 @@ impl Constructable for ExprKind {
                 let rhs = Expr::construct(source_code, cursor)?;
 
                 cursor.goto_parent();
+
+                Self::Binary(bin_op, Box::new(lhs), Box::new(rhs))
+            }
+            constant::UPDATE_EXPRESSION => {
+                cursor.goto_first_child();
+
+                let lhs = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_next_sibling();
+
+                let bin_op = BinOp::construct(source_code, cursor)?;
+                let op_node = cursor.node();
+
+                cursor.goto_parent();
+
+                let rhs = Expr {
+                    kind: Self::Lit(Lit {
+                        kind: LitKind::Int(1),
+                        span: Span {
+                            lo: op_node.start_byte(),
+                            hi: op_node.end_byte(),
+                        },
+                    }),
+                    span: Span {
+                        lo: op_node.start_byte(),
+                        hi: op_node.end_byte(),
+                    },
+                };
 
                 Self::Binary(bin_op, Box::new(lhs), Box::new(rhs))
             }

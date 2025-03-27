@@ -91,3 +91,5 @@ pub(crate) const BINARY_EXPRESSION: &str = "binary_expression";
 pub(crate) const UNARY_EXPRESSION: &str = "unary_expression";
 /// Constant word used for [`ExprKind`]'s construction representing an [`ExprKind`].  
 pub(crate) const PARENTHESIZED_EXPRESSION: &str = "parenthesized_expression";
+/// Constant word used for [`ExprKind`]'s construction representing an [`ExprKind::Assign`].  
+pub(crate) const ASSIGNMENT_EXPRESSION: &str = "assignment_expression";

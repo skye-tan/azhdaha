@@ -131,6 +131,7 @@ pub enum ExprKind {
     If(Box<Expr>, Box<Expr>, Option<Box<Expr>>),
     Loop(LoopSource, Box<Expr>),
     Break,
+    Assign(Box<Expr>, Box<Expr>),
 }
 
 #[derive(Debug)]

@@ -465,6 +465,20 @@ impl Constructable for ExprKind {
                     }),
                 )
             }
+            constant::ASSIGNMENT_EXPRESSION => {
+                cursor.goto_first_child();
+
+                let lhs = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_next_sibling();
+                cursor.goto_next_sibling();
+
+                let rhs = Expr::construct(source_code, cursor)?;
+
+                cursor.goto_parent();
+
+                ExprKind::Assign(Box::new(lhs), Box::new(rhs))
+            }
             _ => todo!(),
         })
     }

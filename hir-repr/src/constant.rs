@@ -118,3 +118,5 @@ pub(crate) const PARENTHESIZED_EXPRESSION: &str = "parenthesized_expression";
 pub(crate) const ASSIGNMENT_EXPRESSION: &str = "assignment_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Field`].  
 pub(crate) const FIELD_EXPRESSION: &str = "field_expression";
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Index`].  
+pub(crate) const SUBSCRIPT_EXPRESSION: &str = "subscript_expression";

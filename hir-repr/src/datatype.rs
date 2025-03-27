@@ -135,6 +135,7 @@ pub enum ExprKind {
     Assign(Box<Expr>, Box<Expr>),
     AssignOp(BinOp, Box<Expr>, Box<Expr>),
     Field(Box<Expr>, Ident),
+    Index(Box<Expr>, Box<Expr>, Span),
 }
 
 #[derive(Debug)]

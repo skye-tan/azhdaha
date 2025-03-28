@@ -2,7 +2,7 @@
 members = [
     "azhdaha",
     "cli-utils",
-    "analyzer",
+    "ast-utils",
     "hir-repr",
     "mir-repr"
 ]

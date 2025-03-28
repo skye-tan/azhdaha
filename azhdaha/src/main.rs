@@ -1,48 +1,25 @@
 //! A compiler frontend tool for C programming language which analyzes the sources code
 //! in order to detect memory leakage by applying linear type system principles.
 
-use std::{fs::File, os::fd::AsRawFd};
-
-use anyhow::Context;
-use tree_sitter::{Parser, Tree};
-
-/// Contains functions used for preprocessing source code.
-mod preprocess;
-
-/// Created the dot-graph files associated with each generated tree.
-fn create_dot_graphs(trees: &[Tree]) {
-    for (index, tree) in trees.iter().enumerate() {
-        let file = File::create(format!("{}.dot", index + 1)).unwrap();
-        tree.print_dot_graph(&file.as_raw_fd());
-    }
-}
-
 #[allow(clippy::print_stdout)]
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let args = cli_utils::parse_args();
 
-    let source_codes = preprocess::expand(&args.compile_commands)?;
-
-    let mut parser = Parser::new();
-    parser
-        .set_language(&tree_sitter_c::LANGUAGE.into())
-        .context("Failed to load C grammar.")?;
-
-    let trees: Vec<Tree> = source_codes
-        .iter()
-        .map(|source_code| parser.parse(source_code, None).unwrap())
-        .collect();
+    let asts = ast_utils::AST::construct(&args.compile_commands)?;
 
     if args.dot_graph {
-        create_dot_graphs(&trees);
+        for (index, ast) in asts.iter().enumerate() {
+            let path = format!("{index}.dot");
+
+            if let Err(error) = ast.create_dot_graph(&path) {
+                log::error!("Failed to create dot graph file '{path}' with error: {error:?}");
+            }
+        }
     }
 
-    println!(
-        "{:#?}",
-        hir_repr::construct_hir(&source_codes[0], &mut trees[0].walk()).unwrap()
-    );
+    println!("{:#?}", hir_repr::construct_hir(&asts[0])?);
 
     Ok(())
 }

@@ -1,6 +1,5 @@
 use std::process::Command;
 
-use anyhow::Context;
 use compile_commands::{CompilationDatabase, CompileArgs};
 
 /// The flag which indicates that only preprocess phase should be done.
@@ -21,27 +20,26 @@ const INCLUDE_FLAG: &str = "-I";
 /// The LINEAR macro used in the source codes must be replaced by `_Linear` type qualifier which is accomplished by
 /// inserting [`INCLUDE_FLAG`] flag pointing to a directory containing the edited header.
 ///
-pub fn expand(compile_commands: &CompilationDatabase) -> anyhow::Result<Vec<Vec<u8>>> {
+pub(crate) fn preprocess(compile_commands: &CompilationDatabase) -> anyhow::Result<Vec<Vec<u8>>> {
     let mut results = vec![];
 
     for compile_command in compile_commands {
-        let directory = compile_command
-            .directory
-            .to_str()
-            .context("UTF-8 validity failed for compile-commands.")?;
+        let Some(directory) = compile_command.directory.to_str() else {
+            log::warn!("UTF-8 validity failed.");
+            continue;
+        };
 
         if !compile_command.directory.exists() {
-            log::error!(
-                "Directory '{}' used in compile-commands does not exist.",
-                directory
-            )
+            log::warn!("Directory '{}' does not exist.", directory);
+            continue;
         }
 
-        let (command, args) = match compile_command
-            .arguments
-            .as_ref()
-            .context("Arguments section was not found in compile-commands.")?
-        {
+        let Some(arguments) = compile_command.arguments.as_ref() else {
+            log::warn!("Arguments section was not found.");
+            continue;
+        };
+
+        let (command, args) = match arguments {
             CompileArgs::Arguments(args) => (args[0].clone(), args[1..].to_vec()),
             CompileArgs::Flags(_) => {
                 // Arguments might be read from compile-flags which is not currently supported.

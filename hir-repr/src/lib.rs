@@ -4,8 +4,6 @@
 //! This implementation has been modeled after rustc's HIR.
 //!
 
-use tree_sitter::TreeCursor;
-
 /// Contains constant values used to generate the HIR.
 mod constant;
 /// Contains implementation of the [`Constructable`] trait for datatypes.
@@ -15,10 +13,9 @@ mod datatype;
 
 use construct::Constructable;
 
-pub fn construct_hir(
-    source_code: &[u8],
-    cursor: &mut TreeCursor,
-) -> anyhow::Result<datatype::Expr> {
+pub fn construct_hir(ast: &ast_utils::AST) -> anyhow::Result<datatype::Expr> {
+    let mut cursor = ast.tree.walk();
+
     let mut is_traversed = false;
     loop {
         if is_traversed {
@@ -30,7 +27,7 @@ pub fn construct_hir(
         } else {
             let node = cursor.node();
             if node.kind() == "compound_statement" {
-                return datatype::Expr::construct(source_code, cursor);
+                return datatype::Expr::construct(&ast.source_code, &mut cursor);
             }
             if !cursor.goto_first_child() {
                 is_traversed = true;

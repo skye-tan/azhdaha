@@ -7,11 +7,9 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
-cli-utils = { version = "0.1.0", path = "../cli-utils" }
-hir-repr = { version = "0.1.0", path = "../hir-repr" }
 log.workspace = true
+cli-utils = { version = "0.1.0", path = "../cli-utils" }
+ast-utils = { version = "0.1.0", path = "../ast-utils" }
+hir-repr = { version = "0.1.0", path = "../hir-repr" }
 anyhow.workspace = true
-compile_commands.workspace = true
-tree-sitter.workspace = true
-tree-sitter-c = { git = "https://github.com/skye-tan/tree-sitter-c.git", version = "0.23.5" }
 env_logger = "0.11.7"

@@ -154,3 +154,34 @@ pub struct Expr {
     pub kind: ExprKind,
     pub span: Span,
 }
+
+#[derive(Debug, Clone)]
+pub struct Param {
+    pub ty: Ty,
+    pub ident: Ident,
+}
+
+#[derive(Debug, Clone)]
+pub struct Body {
+    params: Param,
+    value: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub enum ItemKind {
+    Fn(Body),
+    Union,
+    Struct,
+    GlobalVar,
+}
+
+#[derive(Debug, Clone)]
+pub struct Item {
+    pub kind: ItemKind,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct Hir {
+    pub items: Vec<Item>,
+}

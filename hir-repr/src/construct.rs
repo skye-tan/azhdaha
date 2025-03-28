@@ -14,7 +14,7 @@ use crate::{
 
 /// Must be implemented by datatypes which are construable from an ast node.
 pub(crate) trait Constructable {
-    /// The constructed type by the [`Constructable::construct`] method.
+    /// The returned type by the [`Constructable::construct`] method.
     type ConsType;
 
     /// Construct Self from source code and a the current node pointed by the cursor.
@@ -34,7 +34,7 @@ impl Constructable for PrimTyKind {
                 constant::FLOAT => PrimTyKind::Float,
                 constant::DOUBLE => PrimTyKind::Double,
                 constant::CHAR => PrimTyKind::Char,
-                _ => todo!(),
+                _ => unreachable!(),
             },
         )
     }
@@ -58,7 +58,7 @@ impl Constructable for TyKind {
 
                 ty_kind
             }
-            _ => todo!(),
+            _ => unreachable!(),
         })
     }
 }
@@ -241,7 +241,7 @@ impl Constructable for StmtKind {
                 | constant::FOR_STATEMENT => {
                     vec![Self::Expr(Expr::construct(source_code, cursor)?)]
                 }
-                _ => todo!(),
+                _ => unreachable!(),
             }
         })
     }
@@ -323,7 +323,7 @@ impl Constructable for LitKind {
                     Self::Float(literal.parse()?)
                 }
             }
-            _ => todo!(),
+            _ => unreachable!(),
         })
     }
 }
@@ -895,7 +895,7 @@ impl Constructable for ExprKind {
 
                 Self::Comma(exprs)
             }
-            _ => todo!(),
+            _ => unreachable!(),
         })
     }
 }

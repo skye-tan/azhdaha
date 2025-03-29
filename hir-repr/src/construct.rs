@@ -1,4 +1,4 @@
-use anyhow::{Context, bail};
+use anyhow::bail;
 use log::trace;
 use tree_sitter::TreeCursor;
 
@@ -296,13 +296,10 @@ impl Constructable for LitKind {
         trace!("Construct [LitKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constant::STRING_LITERAL => {
-                let node = node.child(1).context("")?;
-                Self::Str(
-                    std::str::from_utf8(&source_code[node.start_byte()..node.end_byte()])?
-                        .to_owned(),
-                )
-            }
+            constant::STRING_LITERAL => Self::Str(
+                std::str::from_utf8(&source_code[node.start_byte() + 1..node.end_byte() - 1])?
+                    .to_owned(),
+            ),
             constant::CHAR_LITERAL => Self::Char(source_code[node.start_byte() + 1] as char),
             constant::NUMBER_LITERAL => {
                 let literal =
@@ -417,6 +414,50 @@ impl Constructable for UnOp {
             constant::ADDR_OF => Self::AddrOf,
             constant::DEREF => Self::Deref,
             kind => bail!("Unsupported [UnOp] node: {kind}"),
+        })
+    }
+}
+
+impl Constructable for SizeofKind {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
+        let node = cursor.node();
+        trace!("Construct [SizeofKind] from node: {}", node.kind());
+
+        cursor.goto_first_child();
+        cursor.goto_next_sibling();
+
+        let sizeof_kind = match cursor.node().kind() {
+            constant::PARENTHESIZED_EXPRESSION => {
+                Self::Expr(Box::new(Expr::construct(source_code, cursor)?))
+            }
+            _ => {
+                cursor.goto_next_sibling();
+
+                Self::Ty(Ty::construct(source_code, cursor)?)
+            }
+        };
+
+        cursor.goto_parent();
+
+        Ok(sizeof_kind)
+    }
+}
+
+impl Constructable for Sizeof {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
+        let node = cursor.node();
+        trace!("Construct [SizeOf] from node: {}", node.kind());
+
+        Ok(Self {
+            kind: SizeofKind::construct(source_code, cursor)?,
+            span: Span {
+                lo: node.start_byte(),
+                hi: node.end_byte(),
+            },
         })
     }
 }
@@ -882,6 +923,7 @@ impl Constructable for ExprKind {
 
                 Self::Comma(exprs)
             }
+            constant::SIZEOF_EXPRESSION => Self::Sizeof(Sizeof::construct(source_code, cursor)?),
             kind => bail!("Unsupported [ExprKind] node: {kind}"),
         })
     }
@@ -1032,12 +1074,7 @@ impl HirRepr {
                     }
                 }
                 Err(error) => {
-                    log::warn!(
-                        "Failed to construct item at {}:{} - {:?}",
-                        file!(),
-                        line!(),
-                        error
-                    );
+                    log::warn!("Failed to construct item - {:?}", error);
                 }
             }
 

@@ -128,6 +128,18 @@ pub enum LoopSource {
 }
 
 #[derive(Debug, Clone)]
+pub enum SizeofKind {
+    Ty(Ty),
+    Expr(Box<Expr>),
+}
+
+#[derive(Debug, Clone)]
+pub struct Sizeof {
+    pub kind: SizeofKind,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
 pub enum ExprKind {
     Block(Block),
     Lit(Lit),
@@ -148,6 +160,7 @@ pub enum ExprKind {
     Array(Vec<Expr>),
     AddrOf(Box<Expr>),
     Comma(Vec<Expr>),
+    Sizeof(Sizeof),
 }
 
 #[derive(Debug, Clone)]

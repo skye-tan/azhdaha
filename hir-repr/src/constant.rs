@@ -155,6 +155,8 @@ pub(crate) const CAST_EXPRESSION: &str = "cast_expression";
 pub(crate) const INITIALIZER_LIST: &str = "initializer_list";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Comma`].  
 pub(crate) const COMMA_EXPRESSION: &str = "comma_expression";
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::SizeOf`].  
+pub(crate) const SIZEOF_EXPRESSION: &str = "sizeof_expression";
 
 /// Constant word used for [`ItemKind`]'s construction representing a [`ItemKind::Func`].  
 pub(crate) const FUNCTION_DEFINITION: &str = "function_definition";

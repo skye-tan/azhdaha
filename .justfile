@@ -22,6 +22,10 @@ custom-test:
 clippy:
     cargo clippy -- --deny warnings
 
+# check code format.
+check-format:
+    cargo fmt --check
+
 # print help.
 help:
     @ just --list --unsorted

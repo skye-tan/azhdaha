@@ -907,11 +907,21 @@ impl Constructable for Expr {
 impl Constructable for Param {
     type ConsType = Self;
 
-    fn construct(_source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
         trace!("Construct [Param] from node: {}", node.kind());
 
-        todo!()
+        cursor.goto_first_child();
+
+        let ty = Ty::construct(source_code, cursor)?;
+
+        cursor.goto_next_sibling();
+
+        let ident = Ident::construct(source_code, cursor)?;
+
+        cursor.goto_parent();
+
+        Ok(Self { ty, ident })
     }
 }
 
@@ -937,13 +947,11 @@ impl Constructable for Func {
 
         let mut params = vec![];
 
-        loop {
+        while cursor.node().kind() != ")" {
             params.push(Param::construct(source_code, cursor)?);
 
             cursor.goto_next_sibling();
-            if !cursor.goto_next_sibling() {
-                break;
-            }
+            cursor.goto_next_sibling();
         }
 
         cursor.goto_parent();

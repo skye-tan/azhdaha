@@ -87,7 +87,7 @@ pub(crate) const DOUBLE: &str = "double";
 /// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Char`].
 pub(crate) const CHAR: &str = "char";
 /// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Void`].
-pub(crate) const VOID: &str = "Void";
+pub(crate) const VOID: &str = "void";
 
 /// Constant word used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
 pub(crate) const PRIMITIVE_TYPE: &str = "primitive_type";

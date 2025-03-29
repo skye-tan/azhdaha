@@ -11,28 +11,4 @@ mod construct;
 /// Contains datatypes used to represent the HIR.
 mod datatype;
 
-use construct::Constructable;
-
-pub fn construct_hir(ast: &ast_utils::AST) -> anyhow::Result<datatype::Expr> {
-    let mut cursor = ast.tree.walk();
-
-    let mut is_traversed = false;
-    loop {
-        if is_traversed {
-            if cursor.goto_next_sibling() {
-                is_traversed = false;
-            } else if !cursor.goto_parent() {
-                break;
-            }
-        } else {
-            let node = cursor.node();
-            if node.kind() == "compound_statement" {
-                return datatype::Expr::construct(&ast.source_code, &mut cursor);
-            }
-            if !cursor.goto_first_child() {
-                is_traversed = true;
-            }
-        }
-    }
-    todo!()
-}
+pub use datatype::*;

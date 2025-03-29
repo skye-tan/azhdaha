@@ -86,6 +86,8 @@ pub(crate) const FLOAT: &str = "float";
 pub(crate) const DOUBLE: &str = "double";
 /// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Char`].
 pub(crate) const CHAR: &str = "char";
+/// Constant word used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Void`].
+pub(crate) const VOID: &str = "Void";
 
 /// Constant word used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
 pub(crate) const PRIMITIVE_TYPE: &str = "primitive_type";
@@ -153,3 +155,6 @@ pub(crate) const CAST_EXPRESSION: &str = "cast_expression";
 pub(crate) const INITIALIZER_LIST: &str = "initializer_list";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Comma`].  
 pub(crate) const COMMA_EXPRESSION: &str = "comma_expression";
+
+/// Constant word used for [`ItemKind`]'s construction representing a [`ItemKind::Func`].  
+pub(crate) const FUNCTION_DEFINITION: &str = "function_definition";

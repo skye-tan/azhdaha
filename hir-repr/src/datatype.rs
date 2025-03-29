@@ -12,6 +12,7 @@ pub enum PrimTyKind {
     Float,
     Double,
     Char,
+    Void,
 }
 
 #[derive(Debug, Clone)]
@@ -162,14 +163,15 @@ pub struct Param {
 }
 
 #[derive(Debug, Clone)]
-pub struct Body {
-    params: Param,
-    value: Expr,
+pub struct Func {
+    pub ty: Ty,
+    pub params: Vec<Param>,
+    pub body: Expr,
 }
 
 #[derive(Debug, Clone)]
 pub enum ItemKind {
-    Fn(Body),
+    Func(Func),
     Union,
     Struct,
     GlobalVar,
@@ -182,6 +184,6 @@ pub struct Item {
 }
 
 #[derive(Debug, Clone)]
-pub struct Hir {
+pub struct HirRepr {
     pub items: Vec<Item>,
 }

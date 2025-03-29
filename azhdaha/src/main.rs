@@ -7,19 +7,19 @@ fn main() -> anyhow::Result<()> {
 
     let args = cli_utils::parse_args();
 
-    let asts = ast_utils::AST::construct(&args.compile_commands)?;
+    let ast_reprs = ast_utils::AstRepr::construct(&args.compile_commands)?;
 
     if args.dot_graph {
-        for (index, ast) in asts.iter().enumerate() {
-            let path = format!("{index}.dot");
+        for (index, ast_repr) in ast_reprs.iter().enumerate() {
+            let path = format!("{}.dot", index + 1);
 
-            if let Err(error) = ast.create_dot_graph(&path) {
-                log::error!("Failed to create dot graph file '{path}' with error: {error:?}");
+            if let Err(error) = ast_repr.create_dot_graph(&path) {
+                log::error!("Failed to create dot-graph file '{path}' - {error:?}");
             }
         }
     }
 
-    println!("{:#?}", hir_repr::construct_hir(&asts[0])?);
+    println!("{:#?}", hir_repr::HirRepr::lower_ast(&ast_reprs[0])?);
 
     Ok(())
 }

@@ -2,9 +2,9 @@
 //! corresponding source codes after preprocessing.
 //!
 
-/// Contains [`AST`]s properties.
+/// Contains [`AstRepr`]s properties.
 mod ast;
 /// Contains functions used for preprocessing source code.
 mod preprocess;
 
-pub use ast::AST;
+pub use ast::AstRepr;

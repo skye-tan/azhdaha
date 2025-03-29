@@ -1,19 +1,11 @@
-use std::vec;
-
-use anyhow::Context;
+use anyhow::{Context, bail};
 use log::trace;
 use tree_sitter::TreeCursor;
 
-use crate::{
-    constant,
-    datatype::{
-        BinOp, BinOpKind, Block, DeclStmt, Expr, ExprKind, Ident, Lit, LitKind, LoopSource, Path,
-        PrimTyKind, Span, Stmt, StmtKind, Ty, TyKind, UnOp,
-    },
-};
+use crate::{constant, datatype::*};
 
 /// Must be implemented by datatypes which are construable from an ast node.
-pub(crate) trait Constructable {
+trait Constructable {
     /// The returned type by the [`Constructable::construct`] method.
     type ConsType;
 
@@ -30,11 +22,12 @@ impl Constructable for PrimTyKind {
 
         Ok(
             match std::str::from_utf8(&source_code[node.start_byte()..node.end_byte()])? {
-                constant::INT => PrimTyKind::Int,
-                constant::FLOAT => PrimTyKind::Float,
-                constant::DOUBLE => PrimTyKind::Double,
-                constant::CHAR => PrimTyKind::Char,
-                _ => unreachable!(),
+                constant::INT => Self::Int,
+                constant::FLOAT => Self::Float,
+                constant::DOUBLE => Self::Double,
+                constant::CHAR => Self::Char,
+                constant::VOID => Self::Void,
+                kind => bail!("Unsupported [PrimTyKind] node: {kind}"),
             },
         )
     }
@@ -58,7 +51,7 @@ impl Constructable for TyKind {
 
                 ty_kind
             }
-            _ => unreachable!(),
+            kind => bail!("Unsupported [TyKind] node: {kind}"),
         })
     }
 }
@@ -223,26 +216,24 @@ impl Constructable for StmtKind {
         let node = cursor.node();
         trace!("Construct [StmtKind] from node: {}", node.kind());
 
-        Ok({
-            match node.kind() {
-                constant::DECLARATION => DeclStmt::construct(source_code, cursor)?
-                    .into_iter()
-                    .map(Self::Decl)
-                    .collect(),
-                constant::RETURN_STATEMENT
-                | constant::EXPRESSION_STATEMENT
-                | constant::BREAK_STATEMENT
-                | constant::CONTINUE_STATEMENT => {
-                    vec![Self::Semi(Expr::construct(source_code, cursor)?)]
-                }
-                constant::IF_STATEMENT
-                | constant::WHILE_STATEMENT
-                | constant::DO_STATEMENT
-                | constant::FOR_STATEMENT => {
-                    vec![Self::Expr(Expr::construct(source_code, cursor)?)]
-                }
-                _ => unreachable!(),
+        Ok(match node.kind() {
+            constant::DECLARATION => DeclStmt::construct(source_code, cursor)?
+                .into_iter()
+                .map(Self::Decl)
+                .collect(),
+            constant::RETURN_STATEMENT
+            | constant::EXPRESSION_STATEMENT
+            | constant::BREAK_STATEMENT
+            | constant::CONTINUE_STATEMENT => {
+                vec![Self::Semi(Expr::construct(source_code, cursor)?)]
             }
+            constant::IF_STATEMENT
+            | constant::WHILE_STATEMENT
+            | constant::DO_STATEMENT
+            | constant::FOR_STATEMENT => {
+                vec![Self::Expr(Expr::construct(source_code, cursor)?)]
+            }
+            kind => bail!("Unsupported [StmtKind] node: {kind}"),
         })
     }
 }
@@ -323,7 +314,7 @@ impl Constructable for LitKind {
                     Self::Float(literal.parse()?)
                 }
             }
-            _ => unreachable!(),
+            kind => bail!("Unsupported [LitKind] node: {kind}"),
         })
     }
 }
@@ -369,29 +360,27 @@ impl Constructable for BinOpKind {
         let node = cursor.node();
         trace!("Construct [BinOpKind] from node: {}", node.kind());
 
-        Ok({
-            match node.kind() {
-                constant::ADD | constant::ASSIGN_ADD | constant::INC => Self::Add,
-                constant::SUB | constant::ASSIGN_SUB | constant::DEC => Self::Sub,
-                constant::MUL | constant::ASSIGN_MUL => Self::Mul,
-                constant::DIV | constant::ASSIGN_DIV => Self::Div,
-                constant::REM | constant::ASSIGN_REM => Self::Rem,
-                constant::AND => Self::And,
-                constant::OR => Self::Or,
-                constant::BIT_XOR | constant::ASSIGN_BIT_XOR => Self::BitXor,
-                constant::BIT_AND | constant::ASSIGN_BIT_AND => Self::BitAnd,
-                constant::BIT_OR | constant::ASSIGN_BIT_OR => Self::BitOr,
-                constant::SHL | constant::ASSIGN_SHL => Self::Shl,
-                constant::SHR | constant::ASSIGN_SHR => Self::Shr,
-                constant::EQ => Self::Eq,
-                constant::LT => Self::Lt,
-                constant::LE => Self::Le,
-                constant::NE => Self::Ne,
-                constant::GE => Self::Ge,
-                constant::GT => Self::Gt,
-                constant::ASSIGN => Self::Assign,
-                _ => unreachable!(),
-            }
+        Ok(match node.kind() {
+            constant::ADD | constant::ASSIGN_ADD | constant::INC => Self::Add,
+            constant::SUB | constant::ASSIGN_SUB | constant::DEC => Self::Sub,
+            constant::MUL | constant::ASSIGN_MUL => Self::Mul,
+            constant::DIV | constant::ASSIGN_DIV => Self::Div,
+            constant::REM | constant::ASSIGN_REM => Self::Rem,
+            constant::AND => Self::And,
+            constant::OR => Self::Or,
+            constant::BIT_XOR | constant::ASSIGN_BIT_XOR => Self::BitXor,
+            constant::BIT_AND | constant::ASSIGN_BIT_AND => Self::BitAnd,
+            constant::BIT_OR | constant::ASSIGN_BIT_OR => Self::BitOr,
+            constant::SHL | constant::ASSIGN_SHL => Self::Shl,
+            constant::SHR | constant::ASSIGN_SHR => Self::Shr,
+            constant::EQ => Self::Eq,
+            constant::LT => Self::Lt,
+            constant::LE => Self::Le,
+            constant::NE => Self::Ne,
+            constant::GE => Self::Ge,
+            constant::GT => Self::Gt,
+            constant::ASSIGN => Self::Assign,
+            kind => bail!("Unsupported [BinOpKind] node: {kind}"),
         })
     }
 }
@@ -420,16 +409,14 @@ impl Constructable for UnOp {
         let node = cursor.node();
         trace!("Construct [UnOp] from node: {}", node.kind());
 
-        Ok({
-            match node.kind() {
-                constant::NOT => Self::Not,
-                constant::NEG => Self::Neg,
-                constant::COM => Self::Com,
-                constant::POS => Self::Pos,
-                constant::ADDR_OF => Self::AddrOf,
-                constant::DEREF => Self::Deref,
-                _ => unreachable!(),
-            }
+        Ok(match node.kind() {
+            constant::NOT => Self::Not,
+            constant::NEG => Self::Neg,
+            constant::COM => Self::Com,
+            constant::POS => Self::Pos,
+            constant::ADDR_OF => Self::AddrOf,
+            constant::DEREF => Self::Deref,
+            kind => bail!("Unsupported [UnOp] node: {kind}"),
         })
     }
 }
@@ -895,7 +882,7 @@ impl Constructable for ExprKind {
 
                 Self::Comma(exprs)
             }
-            _ => unreachable!(),
+            kind => bail!("Unsupported [ExprKind] node: {kind}"),
         })
     }
 }
@@ -914,5 +901,138 @@ impl Constructable for Expr {
                 hi: node.end_byte(),
             },
         })
+    }
+}
+
+impl Constructable for Param {
+    type ConsType = Self;
+
+    fn construct(_source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
+        let node = cursor.node();
+        trace!("Construct [Param] from node: {}", node.kind());
+
+        todo!()
+    }
+}
+
+impl Constructable for Func {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
+        let node = cursor.node();
+        trace!("Construct [Func] from node: {}", node.kind());
+
+        cursor.goto_first_child();
+
+        let ty = Ty::construct(source_code, cursor)?;
+
+        cursor.goto_next_sibling();
+        cursor.goto_first_child();
+
+        let _ident = Ident::construct(source_code, cursor)?;
+
+        cursor.goto_next_sibling();
+        cursor.goto_first_child();
+        cursor.goto_next_sibling();
+
+        let mut params = vec![];
+
+        loop {
+            params.push(Param::construct(source_code, cursor)?);
+
+            cursor.goto_next_sibling();
+            if !cursor.goto_next_sibling() {
+                break;
+            }
+        }
+
+        cursor.goto_parent();
+        cursor.goto_parent();
+        cursor.goto_next_sibling();
+
+        let body = Expr::construct(source_code, cursor)?;
+
+        Ok(Self { ty, params, body })
+    }
+}
+
+impl Constructable for ItemKind {
+    type ConsType = Option<Self>;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
+        let node = cursor.node();
+        trace!("Construct [ItemKind] from node: {}", node.kind());
+
+        Ok(match node.kind() {
+            constant::FUNCTION_DEFINITION => {
+                Some(Self::Func(Func::construct(source_code, cursor)?))
+            }
+            kind => {
+                trace!("Unsupported [ItemKind] node: {kind}");
+                None
+            }
+        })
+    }
+}
+
+impl Constructable for Item {
+    type ConsType = Option<Self>;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
+        let node = cursor.node();
+        trace!("Construct [Item] from node: {}", node.kind());
+
+        Ok(
+            ItemKind::construct(source_code, cursor)?.map(|item_kind| Self {
+                kind: item_kind,
+                span: Span {
+                    lo: node.start_byte(),
+                    hi: node.end_byte(),
+                },
+            }),
+        )
+    }
+}
+
+impl HirRepr {
+    pub fn lower_ast(ast_repr: &ast_utils::AstRepr) -> anyhow::Result<Self> {
+        let mut cursor = ast_repr.tree.walk();
+
+        let mut items = vec![];
+        let mut is_traversed = false;
+
+        loop {
+            if is_traversed {
+                if cursor.goto_next_sibling() {
+                    is_traversed = false;
+                } else if !cursor.goto_parent() {
+                    break;
+                }
+            } else {
+                match Item::construct(&ast_repr.source_code, &mut cursor) {
+                    Ok(item) => {
+                        if let Some(item) = item {
+                            items.push(item);
+                            is_traversed = true;
+                            continue;
+                        }
+                    }
+                    Err(error) => {
+                        log::warn!(
+                            "Failed to construct item at {}:{} - {:?}",
+                            file!(),
+                            line!(),
+                            error
+                        );
+                    }
+                }
+
+                if !cursor.goto_first_child() {
+                    is_traversed = true;
+                }
+            }
+        }
+
+        Ok(Self { items })
     }
 }

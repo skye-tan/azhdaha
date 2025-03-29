@@ -1005,39 +1005,29 @@ impl Constructable for Item {
 impl HirRepr {
     pub fn lower_ast(ast_repr: &ast_utils::AstRepr) -> anyhow::Result<Self> {
         let mut cursor = ast_repr.tree.walk();
+        cursor.goto_first_child();
 
         let mut items = vec![];
-        let mut is_traversed = false;
 
         loop {
-            if is_traversed {
-                if cursor.goto_next_sibling() {
-                    is_traversed = false;
-                } else if !cursor.goto_parent() {
-                    break;
-                }
-            } else {
-                match Item::construct(&ast_repr.source_code, &mut cursor) {
-                    Ok(item) => {
-                        if let Some(item) = item {
-                            items.push(item);
-                            is_traversed = true;
-                            continue;
-                        }
-                    }
-                    Err(error) => {
-                        log::warn!(
-                            "Failed to construct item at {}:{} - {:?}",
-                            file!(),
-                            line!(),
-                            error
-                        );
+            match Item::construct(&ast_repr.source_code, &mut cursor) {
+                Ok(item) => {
+                    if let Some(item) = item {
+                        items.push(item);
                     }
                 }
+                Err(error) => {
+                    log::warn!(
+                        "Failed to construct item at {}:{} - {:?}",
+                        file!(),
+                        line!(),
+                        error
+                    );
+                }
+            }
 
-                if !cursor.goto_first_child() {
-                    is_traversed = true;
-                }
+            if !cursor.goto_next_sibling() {
+                break;
             }
         }
 

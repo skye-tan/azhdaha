@@ -915,22 +915,22 @@ impl Constructable for Param {
 
         let ty = Ty::construct(source_code, cursor)?;
 
-        cursor.goto_next_sibling();
-
-        let ident = Ident::construct(source_code, cursor)?;
+        if cursor.goto_next_sibling() {
+            let _ident = Ident::construct(source_code, cursor)?;
+        }
 
         cursor.goto_parent();
 
-        Ok(Self { ty, ident })
+        Ok(Self { ty })
     }
 }
 
-impl Constructable for Func {
+impl Constructable for FnSig {
     type ConsType = Self;
 
     fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
         let node = cursor.node();
-        trace!("Construct [Func] from node: {}", node.kind());
+        trace!("Construct [FnSig] from node: {}", node.kind());
 
         cursor.goto_first_child();
 
@@ -956,13 +956,28 @@ impl Constructable for Func {
 
         cursor.goto_parent();
         cursor.goto_parent();
-        cursor.goto_next_sibling();
+        cursor.goto_parent();
+
+        Ok(Self { ty, params })
+    }
+}
+
+impl Constructable for Fn {
+    type ConsType = Self;
+
+    fn construct(source_code: &[u8], cursor: &mut TreeCursor) -> anyhow::Result<Self::ConsType> {
+        let node = cursor.node();
+        trace!("Construct [Fn] from node: {}", node.kind());
+
+        let sig = FnSig::construct(source_code, cursor)?;
+
+        cursor.goto_last_child();
 
         let body = Expr::construct(source_code, cursor)?;
 
         cursor.goto_parent();
 
-        Ok(Self { ty, params, body })
+        Ok(Self { sig, body })
     }
 }
 
@@ -974,9 +989,7 @@ impl Constructable for ItemKind {
         trace!("Construct [ItemKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constant::FUNCTION_DEFINITION => {
-                Some(Self::Func(Func::construct(source_code, cursor)?))
-            }
+            constant::FUNCTION_DEFINITION => Some(Self::Fn(Fn::construct(source_code, cursor)?)),
             kind => {
                 trace!("Unsupported [ItemKind] node: {kind}");
                 None

@@ -159,19 +159,23 @@ pub struct Expr {
 #[derive(Debug, Clone)]
 pub struct Param {
     pub ty: Ty,
-    pub ident: Ident,
 }
 
 #[derive(Debug, Clone)]
-pub struct Func {
+pub struct FnSig {
     pub ty: Ty,
     pub params: Vec<Param>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Fn {
+    pub sig: FnSig,
     pub body: Expr,
 }
 
 #[derive(Debug, Clone)]
 pub enum ItemKind {
-    Func(Func),
+    Fn(Fn),
     Union,
     Struct,
     GlobalVar,

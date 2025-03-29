@@ -960,6 +960,8 @@ impl Constructable for Func {
 
         let body = Expr::construct(source_code, cursor)?;
 
+        cursor.goto_parent();
+
         Ok(Self { ty, params, body })
     }
 }

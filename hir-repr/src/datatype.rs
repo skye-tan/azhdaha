@@ -1,5 +1,40 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
+use std::collections::HashMap;
+
+use la_arena::{Arena, Idx};
+use tree_sitter::TreeCursor;
+
+#[derive(Debug, Clone)]
+pub struct ResCtx<T> {
+    map: HashMap<String, Idx<T>>,
+    arena: Arena<T>,
+}
+
+impl<T> ResCtx<T> {
+    pub fn new() -> Self {
+        Self {
+            map: HashMap::new(),
+            arena: Arena::new(),
+        }
+    }
+
+    pub fn insert(&mut self, name: String, elem: T) {
+        let idx = self.arena.alloc(elem);
+        self.map.insert(name, idx);
+    }
+
+    pub fn retrieve(&self, name: &str) -> Option<&T> {
+        self.map.get(name).map(|idx| &self.arena[*idx])
+    }
+}
+
+impl<T> Default for ResCtx<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Span {
     pub lo: usize,
@@ -58,6 +93,7 @@ pub struct Stmt {
 #[derive(Debug, Clone)]
 pub struct Block {
     pub stmts: Vec<Stmt>,
+    pub res_ctx: ResCtx<DeclStmt>,
     pub span: Span,
 }
 
@@ -200,7 +236,9 @@ pub struct Item {
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
-pub struct HirRepr {
+pub struct LoweringCtx<'a> {
     pub items: Vec<Item>,
+    pub res_ctx: ResCtx<FnSig>,
+    pub cursor: TreeCursor<'a>,
+    pub source_code: &'a [u8],
 }

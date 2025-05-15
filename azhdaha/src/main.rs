@@ -1,13 +1,16 @@
 //! A compiler frontend tool for C programming language which analyzes the sources code
 //! in order to detect memory leakage by applying linear type system principles.
 
+use ast_utils::AstRepr;
+use hir_repr::LoweringCtx;
+
 #[allow(clippy::print_stdout)]
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let args = cli_utils::parse_args();
 
-    let ast_reprs = ast_utils::AstRepr::construct(&args.compile_commands)?;
+    let ast_reprs = AstRepr::construct(&args.compile_commands)?;
 
     if args.dot_graph {
         for (index, ast_repr) in ast_reprs.iter().enumerate() {
@@ -19,7 +22,8 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    println!("{:#?}", hir_repr::HirRepr::lower_ast(&ast_reprs[0])?);
+    let lowering_ctx = LoweringCtx::lower_ast(&ast_reprs[0]);
+    println!("{:#?}", lowering_ctx.items);
 
     Ok(())
 }

@@ -8,8 +8,8 @@ workspace = true
 
 [dependencies]
 log.workspace = true
+anyhow.workspace = true
 cli-utils = { version = "0.1.0", path = "../cli-utils" }
 ast-utils = { version = "0.1.0", path = "../ast-utils" }
 hir-repr = { version = "0.1.0", path = "../hir-repr" }
-anyhow.workspace = true
 env_logger = "0.11.7"

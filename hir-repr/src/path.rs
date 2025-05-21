@@ -1,6 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use anyhow::{Context, bail};
+use anyhow::bail;
 use log::trace;
 
 use crate::{constant, datatype::*};
@@ -115,11 +115,16 @@ impl LoweringCtx<'_> {
 
         let ident = self.lower_ident()?;
 
+        let res = if let Some(idx) = self.var_map.get(&ident.name) {
+            Res::Var(*idx)
+        } else if let Some(idx) = self.fn_map.get(&ident.name) {
+            Res::Fn(*idx)
+        } else {
+            bail!("Unknown identifier: {}", &ident.name);
+        };
+
         Ok(Path {
-            idx: *self
-                .var_map
-                .get(&ident.name)
-                .context("Unknown identifier.")?,
+            res,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),

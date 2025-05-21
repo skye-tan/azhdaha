@@ -31,6 +31,8 @@ impl<'hir> LoweringCtx<'hir> {
             items: vec![],
             var_arena: Arena::new(),
             var_map: HashMap::new(),
+            fn_arena: Arena::new(),
+            fn_map: HashMap::new(),
             cursor: ast_repr.tree.walk(),
             source_code: &ast_repr.source_code,
         };

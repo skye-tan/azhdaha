@@ -14,7 +14,20 @@ impl LoweringCtx<'_> {
         let ty = self.lower_ty()?;
 
         if self.cursor.goto_next_sibling() {
-            let _ident = self.lower_ident()?;
+            let ident = self.lower_ident()?;
+
+            let node = self.cursor.node();
+
+            let idx = self.var_arena.alloc(DeclStmt {
+                ty: ty.clone(),
+                ident: ident.clone(),
+                init: None,
+                span: Span {
+                    lo: node.start_byte(),
+                    hi: node.end_byte(),
+                },
+            });
+            self.var_map.insert(ident.name, idx);
         }
 
         self.cursor.goto_parent();
@@ -33,7 +46,7 @@ impl LoweringCtx<'_> {
         self.cursor.goto_next_sibling();
         self.cursor.goto_first_child();
 
-        let _ident = self.lower_ident()?;
+        let ident = self.lower_ident()?;
 
         self.cursor.goto_next_sibling();
         self.cursor.goto_first_child();
@@ -52,18 +65,27 @@ impl LoweringCtx<'_> {
         self.cursor.goto_parent();
         self.cursor.goto_parent();
 
-        Ok(FnSig { ty, params })
+        let fn_sig = FnSig { ty, params };
+
+        let idx = self.fn_arena.alloc(fn_sig.clone());
+        self.fn_map.insert(ident.name, idx);
+
+        Ok(fn_sig)
     }
 
     pub(crate) fn lower_fn(&mut self) -> anyhow::Result<Fn> {
         let node = self.cursor.node();
         trace!("Construct [Fn] from node: {}", node.kind());
 
+        let previous_var_map = self.var_map.clone();
+
         let sig = self.lower_fn_sig()?;
 
         self.cursor.goto_last_child();
 
         let body = self.lower_expr()?;
+
+        self.var_map = previous_var_map;
 
         self.cursor.goto_parent();
 

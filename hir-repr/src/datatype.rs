@@ -81,8 +81,14 @@ pub struct Lit {
 }
 
 #[derive(Debug, Clone)]
+pub enum Res {
+    Var(Idx<DeclStmt>),
+    Fn(Idx<FnSig>),
+}
+
+#[derive(Debug, Clone)]
 pub struct Path {
-    pub idx: Idx<DeclStmt>,
+    pub res: Res,
     pub span: Span,
 }
 
@@ -210,6 +216,9 @@ pub struct LoweringCtx<'hir> {
 
     pub var_arena: Arena<DeclStmt>,
     pub var_map: HashMap<String, Idx<DeclStmt>>,
+
+    pub fn_arena: Arena<FnSig>,
+    pub fn_map: HashMap<String, Idx<FnSig>>,
 
     pub cursor: TreeCursor<'hir>,
     pub source_code: &'hir [u8],

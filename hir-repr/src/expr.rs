@@ -125,13 +125,11 @@ impl LoweringCtx<'_> {
 
                 let mut arguments = vec![];
 
-                loop {
+                while self.cursor.node().kind() != ")" {
                     arguments.push(self.lower_expr()?);
 
                     self.cursor.goto_next_sibling();
-                    if !self.cursor.goto_next_sibling() {
-                        break;
-                    }
+                    self.cursor.goto_next_sibling();
                 }
 
                 self.cursor.goto_parent();

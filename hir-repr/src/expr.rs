@@ -5,7 +5,7 @@ use log::trace;
 
 use crate::{constant, datatype::*};
 
-impl<'hir> LoweringCtx<'hir> {
+impl LoweringCtx<'_> {
     fn lower_bin_op_kind(&mut self) -> anyhow::Result<BinOpKind> {
         let node = self.cursor.node();
         trace!("Construct [BinOpKind] from node: {}", node.kind());

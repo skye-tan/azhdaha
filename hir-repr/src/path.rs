@@ -116,11 +116,10 @@ impl LoweringCtx<'_> {
         let ident = self.lower_ident()?;
 
         Ok(Path {
-            idx: self
+            idx: *self
                 .var_map
                 .get(&ident.name)
-                .context("Unknown identifier.")?
-                .clone(),
+                .context("Unknown identifier.")?,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),

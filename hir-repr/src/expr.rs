@@ -5,7 +5,7 @@ use log::trace;
 
 use crate::{constant, datatype::*};
 
-impl LoweringCtx<'_> {
+impl<'hir> LoweringCtx<'hir> {
     fn lower_bin_op_kind(&mut self) -> anyhow::Result<BinOpKind> {
         let node = self.cursor.node();
         trace!("Construct [BinOpKind] from node: {}", node.kind());
@@ -342,7 +342,6 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Block(Block {
                     stmts,
-                    res_ctx: ResCtx::new(),
                     span: Span {
                         lo: node.start_byte(),
                         hi: node.end_byte(),
@@ -390,7 +389,6 @@ impl LoweringCtx<'_> {
                                 kind: StmtKind::Semi(body),
                                 span: span.clone(),
                             }],
-                            res_ctx: ResCtx::new(),
                             span: span.clone(),
                         };
 
@@ -441,7 +439,6 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Block(Block {
                     stmts,
-                    res_ctx: ResCtx::new(),
                     span: Span {
                         lo: node.start_byte(),
                         hi: node.end_byte(),

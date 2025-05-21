@@ -6,36 +6,6 @@ use la_arena::{Arena, Idx};
 use tree_sitter::TreeCursor;
 
 #[derive(Debug, Clone)]
-pub struct ResCtx<T> {
-    map: HashMap<String, Idx<T>>,
-    arena: Arena<T>,
-}
-
-impl<T> ResCtx<T> {
-    pub fn new() -> Self {
-        Self {
-            map: HashMap::new(),
-            arena: Arena::new(),
-        }
-    }
-
-    pub fn insert(&mut self, name: String, elem: T) {
-        let idx = self.arena.alloc(elem);
-        self.map.insert(name, idx);
-    }
-
-    pub fn retrieve(&self, name: &str) -> Option<&T> {
-        self.map.get(name).map(|idx| &self.arena[*idx])
-    }
-}
-
-impl<T> Default for ResCtx<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct Span {
     pub lo: usize,
     pub hi: usize,
@@ -93,7 +63,6 @@ pub struct Stmt {
 #[derive(Debug, Clone)]
 pub struct Block {
     pub stmts: Vec<Stmt>,
-    pub res_ctx: ResCtx<DeclStmt>,
     pub span: Span,
 }
 
@@ -113,7 +82,7 @@ pub struct Lit {
 
 #[derive(Debug, Clone)]
 pub struct Path {
-    pub res: Ident, // TODO: use Res instead of Ident
+    pub idx: Idx<DeclStmt>,
     pub span: Span,
 }
 
@@ -236,9 +205,12 @@ pub struct Item {
     pub span: Span,
 }
 
-pub struct LoweringCtx<'a> {
+pub struct LoweringCtx<'hir> {
     pub items: Vec<Item>,
-    pub res_ctx: ResCtx<FnSig>,
-    pub cursor: TreeCursor<'a>,
-    pub source_code: &'a [u8],
+
+    pub var_arena: Arena<DeclStmt>,
+    pub var_map: HashMap<String, Idx<DeclStmt>>,
+
+    pub cursor: TreeCursor<'hir>,
+    pub source_code: &'hir [u8],
 }

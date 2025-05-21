@@ -93,7 +93,7 @@ impl LoweringCtx<'_> {
                 }
             };
 
-            decl_stmts.push(DeclStmt {
+            let decl_stmt = DeclStmt {
                 ty,
                 ident,
                 init,
@@ -101,7 +101,12 @@ impl LoweringCtx<'_> {
                     lo: node.start_byte(),
                     hi: node.end_byte(),
                 },
-            });
+            };
+
+            let idx = self.var_arena.alloc(decl_stmt.clone());
+            self.var_map.insert(decl_stmt.ident.name.clone(), idx);
+
+            decl_stmts.push(decl_stmt);
 
             self.cursor.goto_next_sibling();
             if !self.cursor.goto_next_sibling() {
@@ -133,7 +138,8 @@ impl LoweringCtx<'_> {
             constant::IF_STATEMENT
             | constant::WHILE_STATEMENT
             | constant::DO_STATEMENT
-            | constant::FOR_STATEMENT => {
+            | constant::FOR_STATEMENT
+            | constant::COMPOUND_STATEMENT => {
                 vec![StmtKind::Expr(self.lower_expr()?)]
             }
             kind => bail!("Unsupported [StmtKind] node: {kind}"),
@@ -161,10 +167,10 @@ impl LoweringCtx<'_> {
         let node = self.cursor.node();
         trace!("Construct [Block] from node: {}", node.kind());
 
-        let res_ctx = ResCtx::new();
-
         self.cursor.goto_first_child();
         self.cursor.goto_next_sibling();
+
+        let previous_var_map = self.var_map.clone();
 
         let mut stmts = vec![];
 
@@ -176,9 +182,10 @@ impl LoweringCtx<'_> {
 
         self.cursor.goto_parent();
 
+        self.var_map = previous_var_map;
+
         Ok(Block {
             stmts,
-            res_ctx,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),

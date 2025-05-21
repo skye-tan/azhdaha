@@ -1,6 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use anyhow::bail;
+use anyhow::{Context, bail};
 use log::trace;
 
 use crate::{constant, datatype::*};
@@ -113,8 +113,14 @@ impl LoweringCtx<'_> {
         let node = self.cursor.node();
         trace!("Construct [Path] from node: {}", node.kind());
 
+        let ident = self.lower_ident()?;
+
         Ok(Path {
-            res: self.lower_ident()?,
+            idx: self
+                .var_map
+                .get(&ident.name)
+                .context("Unknown identifier.")?
+                .clone(),
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),

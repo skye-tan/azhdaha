@@ -3,7 +3,7 @@
 use anyhow::bail;
 use log::trace;
 
-use crate::{constant, datatype::*};
+use crate::{constants, datatypes::*};
 
 impl LoweringCtx<'_> {
     fn process_decl(&mut self, mut ty: Ty) -> anyhow::Result<(Ty, Ident)> {
@@ -11,7 +11,7 @@ impl LoweringCtx<'_> {
         trace!("Process [DeclStmt] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constant::ARRAY_DECLARATOR => {
+            constants::ARRAY_DECLARATOR => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
                 self.cursor.goto_next_sibling();
@@ -34,7 +34,7 @@ impl LoweringCtx<'_> {
 
                 result
             }
-            constant::POINTER_DECLARATOR => {
+            constants::POINTER_DECLARATOR => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
@@ -72,7 +72,7 @@ impl LoweringCtx<'_> {
             let ty = ty.clone();
 
             let (ty, ident, init) = match self.cursor.node().kind() {
-                constant::INIT_DECLARATOR => {
+                constants::INIT_DECLARATOR => {
                     self.cursor.goto_first_child();
 
                     let (ty, ident) = self.process_decl(ty)?;
@@ -124,22 +124,22 @@ impl LoweringCtx<'_> {
         trace!("Construct [StmtKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constant::DECLARATION => self
+            constants::DECLARATION => self
                 .lower_decl_stmt()?
                 .into_iter()
                 .map(StmtKind::Decl)
                 .collect(),
-            constant::RETURN_STATEMENT
-            | constant::EXPRESSION_STATEMENT
-            | constant::BREAK_STATEMENT
-            | constant::CONTINUE_STATEMENT => {
+            constants::RETURN_STATEMENT
+            | constants::EXPRESSION_STATEMENT
+            | constants::BREAK_STATEMENT
+            | constants::CONTINUE_STATEMENT => {
                 vec![StmtKind::Semi(self.lower_expr()?)]
             }
-            constant::IF_STATEMENT
-            | constant::WHILE_STATEMENT
-            | constant::DO_STATEMENT
-            | constant::FOR_STATEMENT
-            | constant::COMPOUND_STATEMENT => {
+            constants::IF_STATEMENT
+            | constants::WHILE_STATEMENT
+            | constants::DO_STATEMENT
+            | constants::FOR_STATEMENT
+            | constants::COMPOUND_STATEMENT => {
                 vec![StmtKind::Expr(self.lower_expr()?)]
             }
             kind => bail!("Unsupported [StmtKind] node: {kind}"),

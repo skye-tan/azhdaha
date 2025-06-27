@@ -19,11 +19,11 @@ mod item;
 mod path;
 
 /// Contains constant values used to generate the HIR.
-mod constant;
+mod constants;
 /// Contains datatypes used to represent the HIR.
-mod datatype;
+mod datatypes;
 
-pub use datatype::*;
+pub use datatypes::*;
 
 impl<'hir> LoweringCtx<'hir> {
     pub fn lower_ast(ast_repr: &'hir AstRepr) -> Self {

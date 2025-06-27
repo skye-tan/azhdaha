@@ -3,7 +3,7 @@
 use anyhow::bail;
 use log::trace;
 
-use crate::{constant, datatype::*};
+use crate::{constants, datatypes::*};
 
 impl LoweringCtx<'_> {
     fn lower_prim_ty_kind(&mut self) -> anyhow::Result<PrimTyKind> {
@@ -12,11 +12,11 @@ impl LoweringCtx<'_> {
 
         Ok(
             match std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])? {
-                constant::INT => PrimTyKind::Int,
-                constant::FLOAT => PrimTyKind::Float,
-                constant::DOUBLE => PrimTyKind::Double,
-                constant::CHAR => PrimTyKind::Char,
-                constant::VOID => PrimTyKind::Void,
+                constants::INT => PrimTyKind::Int,
+                constants::FLOAT => PrimTyKind::Float,
+                constants::DOUBLE => PrimTyKind::Double,
+                constants::CHAR => PrimTyKind::Char,
+                constants::VOID => PrimTyKind::Void,
                 kind => bail!("Unsupported [PrimTyKind] node: {kind}"),
             },
         )
@@ -27,8 +27,8 @@ impl LoweringCtx<'_> {
         trace!("Construct [TyKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constant::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_prim_ty_kind()?),
-            constant::TYPE_DESCRIPTOR => {
+            constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_prim_ty_kind()?),
+            constants::TYPE_DESCRIPTOR => {
                 self.cursor.goto_first_child();
 
                 let ty_kind = self.lower_ty_kind()?;
@@ -75,14 +75,14 @@ impl LoweringCtx<'_> {
         trace!("Construct [LitKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constant::STRING_LITERAL => LitKind::Str(
+            constants::STRING_LITERAL => LitKind::Str(
                 std::str::from_utf8(&self.source_code[node.start_byte() + 1..node.end_byte() - 1])?
                     .to_owned(),
             ),
-            constant::CHAR_LITERAL => {
+            constants::CHAR_LITERAL => {
                 LitKind::Char(self.source_code[node.start_byte() + 1] as char)
             }
-            constant::NUMBER_LITERAL => {
+            constants::NUMBER_LITERAL => {
                 let literal =
                     std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])?;
 

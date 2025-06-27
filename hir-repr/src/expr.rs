@@ -3,7 +3,7 @@
 use anyhow::bail;
 use log::trace;
 
-use crate::{constant, datatype::*};
+use crate::{constants, datatypes::*};
 
 impl LoweringCtx<'_> {
     fn lower_bin_op_kind(&mut self) -> anyhow::Result<BinOpKind> {
@@ -11,25 +11,25 @@ impl LoweringCtx<'_> {
         trace!("Construct [BinOpKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constant::ADD | constant::ASSIGN_ADD | constant::INC => BinOpKind::Add,
-            constant::SUB | constant::ASSIGN_SUB | constant::DEC => BinOpKind::Sub,
-            constant::MUL | constant::ASSIGN_MUL => BinOpKind::Mul,
-            constant::DIV | constant::ASSIGN_DIV => BinOpKind::Div,
-            constant::REM | constant::ASSIGN_REM => BinOpKind::Rem,
-            constant::AND => BinOpKind::And,
-            constant::OR => BinOpKind::Or,
-            constant::BIT_XOR | constant::ASSIGN_BIT_XOR => BinOpKind::BitXor,
-            constant::BIT_AND | constant::ASSIGN_BIT_AND => BinOpKind::BitAnd,
-            constant::BIT_OR | constant::ASSIGN_BIT_OR => BinOpKind::BitOr,
-            constant::SHL | constant::ASSIGN_SHL => BinOpKind::Shl,
-            constant::SHR | constant::ASSIGN_SHR => BinOpKind::Shr,
-            constant::EQ => BinOpKind::Eq,
-            constant::LT => BinOpKind::Lt,
-            constant::LE => BinOpKind::Le,
-            constant::NE => BinOpKind::Ne,
-            constant::GE => BinOpKind::Ge,
-            constant::GT => BinOpKind::Gt,
-            constant::ASSIGN => BinOpKind::Assign,
+            constants::ADD | constants::ASSIGN_ADD | constants::INC => BinOpKind::Add,
+            constants::SUB | constants::ASSIGN_SUB | constants::DEC => BinOpKind::Sub,
+            constants::MUL | constants::ASSIGN_MUL => BinOpKind::Mul,
+            constants::DIV | constants::ASSIGN_DIV => BinOpKind::Div,
+            constants::REM | constants::ASSIGN_REM => BinOpKind::Rem,
+            constants::AND => BinOpKind::And,
+            constants::OR => BinOpKind::Or,
+            constants::BIT_XOR | constants::ASSIGN_BIT_XOR => BinOpKind::BitXor,
+            constants::BIT_AND | constants::ASSIGN_BIT_AND => BinOpKind::BitAnd,
+            constants::BIT_OR | constants::ASSIGN_BIT_OR => BinOpKind::BitOr,
+            constants::SHL | constants::ASSIGN_SHL => BinOpKind::Shl,
+            constants::SHR | constants::ASSIGN_SHR => BinOpKind::Shr,
+            constants::EQ => BinOpKind::Eq,
+            constants::LT => BinOpKind::Lt,
+            constants::LE => BinOpKind::Le,
+            constants::NE => BinOpKind::Ne,
+            constants::GE => BinOpKind::Ge,
+            constants::GT => BinOpKind::Gt,
+            constants::ASSIGN => BinOpKind::Assign,
             kind => bail!("Unsupported [BinOpKind] node: {kind}"),
         })
     }
@@ -52,12 +52,12 @@ impl LoweringCtx<'_> {
         trace!("Construct [UnOp] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constant::NOT => UnOp::Not,
-            constant::NEG => UnOp::Neg,
-            constant::COM => UnOp::Com,
-            constant::POS => UnOp::Pos,
-            constant::ADDR_OF => UnOp::AddrOf,
-            constant::DEREF => UnOp::Deref,
+            constants::NOT => UnOp::Not,
+            constants::NEG => UnOp::Neg,
+            constants::COM => UnOp::Com,
+            constants::POS => UnOp::Pos,
+            constants::ADDR_OF => UnOp::AddrOf,
+            constants::DEREF => UnOp::Deref,
             kind => bail!("Unsupported [UnOp] node: {kind}"),
         })
     }
@@ -70,7 +70,7 @@ impl LoweringCtx<'_> {
         self.cursor.goto_next_sibling();
 
         let sizeof_kind = match self.cursor.node().kind() {
-            constant::PARENTHESIZED_EXPRESSION => SizeofKind::Expr(Box::new(self.lower_expr()?)),
+            constants::PARENTHESIZED_EXPRESSION => SizeofKind::Expr(Box::new(self.lower_expr()?)),
             _ => {
                 self.cursor.goto_next_sibling();
 
@@ -102,8 +102,8 @@ impl LoweringCtx<'_> {
 
         Ok(match node.kind() {
             kind if kind.contains("literal") => ExprKind::Lit(self.lower_lit()?),
-            constant::COMPOUND_STATEMENT => ExprKind::Block(self.lower_block()?),
-            constant::RETURN_STATEMENT => {
+            constants::COMPOUND_STATEMENT => ExprKind::Block(self.lower_block()?),
+            constants::RETURN_STATEMENT => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
@@ -113,8 +113,8 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Ret(Box::new(expr))
             }
-            constant::IDENTIFIER => ExprKind::Path(self.lower_path()?),
-            constant::CALL_EXPRESSION => {
+            constants::IDENTIFIER => ExprKind::Path(self.lower_path()?),
+            constants::CALL_EXPRESSION => {
                 self.cursor.goto_first_child();
 
                 let path = self.lower_expr()?;
@@ -137,7 +137,7 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Call(Box::new(path), arguments)
             }
-            constant::EXPRESSION_STATEMENT => {
+            constants::EXPRESSION_STATEMENT => {
                 self.cursor.goto_first_child();
 
                 let expr_kind = self.lower_expr_kind()?;
@@ -146,7 +146,7 @@ impl LoweringCtx<'_> {
 
                 expr_kind
             }
-            constant::BINARY_EXPRESSION => {
+            constants::BINARY_EXPRESSION => {
                 self.cursor.goto_first_child();
 
                 let lhs = self.lower_expr()?;
@@ -163,7 +163,7 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs))
             }
-            constant::UPDATE_EXPRESSION => {
+            constants::UPDATE_EXPRESSION => {
                 self.cursor.goto_first_child();
 
                 let lhs = self.lower_expr()?;
@@ -191,7 +191,7 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs))
             }
-            constant::UNARY_EXPRESSION | constant::POINTER_EXPRESSION => {
+            constants::UNARY_EXPRESSION | constants::POINTER_EXPRESSION => {
                 self.cursor.goto_first_child();
 
                 let un_op = self.lower_un_op()?;
@@ -208,7 +208,7 @@ impl LoweringCtx<'_> {
                     _ => ExprKind::Unary(un_op, Box::new(expr)),
                 }
             }
-            constant::PARENTHESIZED_EXPRESSION => {
+            constants::PARENTHESIZED_EXPRESSION => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
@@ -218,7 +218,7 @@ impl LoweringCtx<'_> {
 
                 expr_kind
             }
-            constant::IF_STATEMENT => {
+            constants::IF_STATEMENT => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
@@ -245,7 +245,7 @@ impl LoweringCtx<'_> {
 
                 ExprKind::If(Box::new(condition), Box::new(body), else_clause)
             }
-            constant::WHILE_STATEMENT => {
+            constants::WHILE_STATEMENT => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
@@ -278,7 +278,7 @@ impl LoweringCtx<'_> {
                     }),
                 )
             }
-            constant::DO_STATEMENT => {
+            constants::DO_STATEMENT => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
@@ -346,7 +346,7 @@ impl LoweringCtx<'_> {
                     },
                 })
             }
-            constant::FOR_STATEMENT => {
+            constants::FOR_STATEMENT => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
                 self.cursor.goto_next_sibling();
@@ -443,7 +443,7 @@ impl LoweringCtx<'_> {
                     },
                 })
             }
-            constant::ASSIGNMENT_EXPRESSION => {
+            constants::ASSIGNMENT_EXPRESSION => {
                 self.cursor.goto_first_child();
 
                 let lhs = self.lower_expr()?;
@@ -463,7 +463,7 @@ impl LoweringCtx<'_> {
                     _ => ExprKind::AssignOp(bin_op, Box::new(lhs), Box::new(rhs)),
                 }
             }
-            constant::FIELD_EXPRESSION => {
+            constants::FIELD_EXPRESSION => {
                 self.cursor.goto_first_child();
 
                 let target = self.lower_expr()?;
@@ -477,7 +477,7 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Field(Box::new(target), field)
             }
-            constant::SUBSCRIPT_EXPRESSION => {
+            constants::SUBSCRIPT_EXPRESSION => {
                 self.cursor.goto_first_child();
 
                 let target = self.lower_expr()?;
@@ -498,9 +498,9 @@ impl LoweringCtx<'_> {
                     },
                 )
             }
-            constant::BREAK_STATEMENT => ExprKind::Break,
-            constant::CONTINUE_STATEMENT => ExprKind::Continue,
-            constant::CAST_EXPRESSION => {
+            constants::BREAK_STATEMENT => ExprKind::Break,
+            constants::CONTINUE_STATEMENT => ExprKind::Continue,
+            constants::CAST_EXPRESSION => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
@@ -515,7 +515,7 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Cast(Box::new(target), ty)
             }
-            constant::INITIALIZER_LIST => {
+            constants::INITIALIZER_LIST => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
@@ -534,7 +534,7 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Array(elements)
             }
-            constant::COMMA_EXPRESSION => {
+            constants::COMMA_EXPRESSION => {
                 self.cursor.goto_first_child();
 
                 let mut exprs = vec![];
@@ -552,7 +552,7 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Comma(exprs)
             }
-            constant::SIZEOF_EXPRESSION => ExprKind::Sizeof(self.lower_sizeof()?),
+            constants::SIZEOF_EXPRESSION => ExprKind::Sizeof(self.lower_sizeof()?),
             kind => bail!("Unsupported [ExprKind] node: {kind}"),
         })
     }

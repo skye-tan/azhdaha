@@ -2,7 +2,7 @@
 
 use log::trace;
 
-use crate::{constant, datatype::*};
+use crate::{constants, datatypes::*};
 
 impl LoweringCtx<'_> {
     pub(crate) fn lower_param(&mut self) -> anyhow::Result<Param> {
@@ -97,7 +97,7 @@ impl LoweringCtx<'_> {
         trace!("Construct [ItemKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constant::FUNCTION_DEFINITION => Some(ItemKind::Fn(self.lower_fn()?)),
+            constants::FUNCTION_DEFINITION => Some(ItemKind::Fn(self.lower_fn()?)),
             kind => {
                 trace!("Unsupported [ItemKind] node: {kind}");
                 None

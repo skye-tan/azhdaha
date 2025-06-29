@@ -17,7 +17,7 @@ fn main() -> anyhow::Result<()> {
             let path = format!("{}.dot", index + 1);
 
             if let Err(error) = ast_repr.create_dot_graph(&path) {
-                log::error!("Failed to create dot-graph file '{path}' - {error:?}");
+                log::error!("Failed to create dot-graph for '{path}' - {error:?}");
             }
         }
     }

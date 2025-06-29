@@ -3,3 +3,12 @@
 //!
 //! This implementation has been modeled after rustc's MIR representation.
 //!
+
+#![allow(clippy::missing_docs_in_private_items)]
+#![allow(dead_code)]
+
+mod basic_block;
+mod operand;
+mod statement;
+mod terminator;
+mod types;

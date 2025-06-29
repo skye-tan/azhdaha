@@ -7,3 +7,5 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
+hir-repr = { version = "0.1.0", path = "../hir-repr" }
+smallvec = "1.15.1"

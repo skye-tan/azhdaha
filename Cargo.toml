@@ -19,7 +19,6 @@ tree-sitter = "0.25.2"
 la-arena = "0.3.1"
 
 [workspace.lints.clippy]
-
 print_stdout = "deny"
 print_stderr = "deny"
 

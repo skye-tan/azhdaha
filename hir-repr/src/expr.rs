@@ -361,8 +361,6 @@ impl LoweringCtx<'_> {
 
                 let initialization = self.lower_stmt()?;
 
-                let resolver = mem::replace(&mut self.resolver, pre_resolver);
-
                 self.cursor.goto_next_sibling();
 
                 let condition = self.lower_expr()?;
@@ -384,6 +382,8 @@ impl LoweringCtx<'_> {
                 let mut body = self.lower_expr()?;
 
                 self.cursor.goto_parent();
+
+                let resolver = mem::replace(&mut self.resolver, pre_resolver);
 
                 match &mut body.kind {
                     ExprKind::Block(block) => {

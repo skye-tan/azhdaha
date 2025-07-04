@@ -5,7 +5,7 @@ use log::trace;
 use crate::{constants, datatypes::*};
 
 impl LoweringCtx<'_> {
-    pub(crate) fn lower_param(&mut self) -> anyhow::Result<Param> {
+    pub(crate) fn lower_param(&mut self) -> anyhow::Result<(Option<Ident>, Param)> {
         let node = self.cursor.node();
         trace!("Construct [Param] from node: {}", node.kind());
 
@@ -13,29 +13,18 @@ impl LoweringCtx<'_> {
 
         let ty = self.lower_ty()?;
 
-        if self.cursor.goto_next_sibling() {
-            let ident = self.lower_ident()?;
-
-            let node = self.cursor.node();
-
-            let idx = self.var_arena.alloc(DeclStmt {
-                ty: ty.clone(),
-                ident: ident.clone(),
-                init: None,
-                span: Span {
-                    lo: node.start_byte(),
-                    hi: node.end_byte(),
-                },
-            });
-            self.var_map.insert(ident.name, idx);
-        }
+        let ident = if self.cursor.goto_next_sibling() {
+            Some(self.lower_ident()?)
+        } else {
+            None
+        };
 
         self.cursor.goto_parent();
 
-        Ok(Param { ty })
+        Ok((ident, Param { ty }))
     }
 
-    pub(crate) fn lower_fn_sig(&mut self) -> anyhow::Result<FnSig> {
+    pub(crate) fn lower_fn_sig(&mut self) -> anyhow::Result<(Resolver, FnSig)> {
         let node = self.cursor.node();
         trace!("Construct [FnSig] from node: {}", node.kind());
 
@@ -52,10 +41,10 @@ impl LoweringCtx<'_> {
         self.cursor.goto_first_child();
         self.cursor.goto_next_sibling();
 
-        let mut params = vec![];
+        let mut arguments = vec![];
 
         while self.cursor.node().kind() != ")" {
-            params.push(self.lower_param()?);
+            arguments.push(self.lower_param()?);
 
             self.cursor.goto_next_sibling();
             self.cursor.goto_next_sibling();
@@ -65,29 +54,46 @@ impl LoweringCtx<'_> {
         self.cursor.goto_parent();
         self.cursor.goto_parent();
 
-        let fn_sig = FnSig { ty, params };
+        let fn_sig = FnSig {
+            ty,
+            params: arguments.iter().map(|(_, param)| param.clone()).collect(),
+        };
 
-        let idx = self.fn_arena.alloc(fn_sig.clone());
-        self.fn_map.insert(ident.name, idx);
+        self.resolver.insert(
+            ident.name,
+            Ty {
+                kind: TyKind::Fn(Box::new(fn_sig.clone())),
+                span: Span {
+                    lo: node.start_byte(),
+                    hi: node.end_byte(),
+                },
+            },
+        );
 
-        Ok(fn_sig)
+        let pre_resolver = self.resolver.clone();
+
+        for (ident, param) in arguments {
+            if let Some(ident) = ident {
+                self.resolver.insert(ident.name, param.ty);
+            }
+        }
+
+        Ok((pre_resolver, fn_sig))
     }
 
     pub(crate) fn lower_fn(&mut self) -> anyhow::Result<Fn> {
         let node = self.cursor.node();
         trace!("Construct [Fn] from node: {}", node.kind());
 
-        let previous_var_map = self.var_map.clone();
-
-        let sig = self.lower_fn_sig()?;
+        let (pre_resolver, sig) = self.lower_fn_sig()?;
 
         self.cursor.goto_last_child();
 
         let body = self.lower_expr()?;
 
-        self.var_map = previous_var_map;
-
         self.cursor.goto_parent();
+
+        self.resolver = pre_resolver;
 
         Ok(Fn { sig, body })
     }

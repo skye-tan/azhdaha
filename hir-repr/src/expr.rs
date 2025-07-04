@@ -1,5 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
+use std::mem;
+
 use anyhow::bail;
 use log::trace;
 
@@ -312,15 +314,18 @@ impl LoweringCtx<'_> {
                     }),
                 );
 
-                let mut stmts = match body.kind {
-                    ExprKind::Block(block) => block.stmts.clone(),
+                let (mut stmts, resolver) = match body.kind {
+                    ExprKind::Block(block) => (block.stmts, block.resolver),
                     _ => {
                         let span = body.span.clone();
 
-                        vec![Stmt {
-                            kind: StmtKind::Semi(body),
-                            span: span.clone(),
-                        }]
+                        (
+                            vec![Stmt {
+                                kind: StmtKind::Semi(body),
+                                span: span.clone(),
+                            }],
+                            self.resolver.clone(),
+                        )
                     }
                 };
 
@@ -340,6 +345,7 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Block(Block {
                     stmts,
+                    resolver,
                     span: Span {
                         lo: node.start_byte(),
                         hi: node.end_byte(),
@@ -351,7 +357,11 @@ impl LoweringCtx<'_> {
                 self.cursor.goto_next_sibling();
                 self.cursor.goto_next_sibling();
 
+                let pre_resolver = self.resolver.clone();
+
                 let initialization = self.lower_stmt()?;
+
+                let resolver = mem::replace(&mut self.resolver, pre_resolver);
 
                 self.cursor.goto_next_sibling();
 
@@ -387,6 +397,7 @@ impl LoweringCtx<'_> {
                                 kind: StmtKind::Semi(body),
                                 span: span.clone(),
                             }],
+                            resolver: resolver.clone(),
                             span: span.clone(),
                         };
 
@@ -437,6 +448,7 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Block(Block {
                     stmts,
+                    resolver,
                     span: Span {
                         lo: node.start_byte(),
                         hi: node.end_byte(),

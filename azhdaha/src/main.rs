@@ -23,7 +23,7 @@ fn main() -> anyhow::Result<()> {
     }
 
     let lowering_ctx = LoweringCtx::lower_ast(&ast_reprs[0]);
-    println!("{:#?}", lowering_ctx.items);
+    println!("{:#?}\n{:#?}", lowering_ctx.items, lowering_ctx.resolver);
 
     Ok(())
 }

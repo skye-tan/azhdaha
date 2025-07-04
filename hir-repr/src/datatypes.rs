@@ -24,6 +24,7 @@ pub enum PrimTyKind {
 pub enum TyKind {
     PrimTy(PrimTyKind),
     Array(Box<Ty>, Box<Expr>),
+    Fn(Box<FnSig>),
     Ptr(Box<Ty>),
 }
 
@@ -63,6 +64,7 @@ pub struct Stmt {
 #[derive(Debug, Clone)]
 pub struct Block {
     pub stmts: Vec<Stmt>,
+    pub resolver: Resolver,
     pub span: Span,
 }
 
@@ -81,14 +83,8 @@ pub struct Lit {
 }
 
 #[derive(Debug, Clone)]
-pub enum Res {
-    Var(Idx<DeclStmt>),
-    Fn(Idx<FnSig>),
-}
-
-#[derive(Debug, Clone)]
 pub struct Path {
-    pub res: Res,
+    pub res: Idx<Ty>,
     pub span: Span,
 }
 
@@ -211,14 +207,16 @@ pub struct Item {
     pub span: Span,
 }
 
+#[derive(Debug, Clone)]
+pub struct Resolver {
+    pub arena: Arena<Ty>,
+    pub map: HashMap<String, Idx<Ty>>,
+}
+
 pub struct LoweringCtx<'hir> {
     pub items: Vec<Item>,
 
-    pub var_arena: Arena<DeclStmt>,
-    pub var_map: HashMap<String, Idx<DeclStmt>>,
-
-    pub fn_arena: Arena<FnSig>,
-    pub fn_map: HashMap<String, Idx<FnSig>>,
+    pub resolver: Resolver,
 
     pub cursor: TreeCursor<'hir>,
     pub source_code: &'hir [u8],

@@ -6,8 +6,9 @@
 
 use std::collections::HashMap;
 
+use la_arena::{Arena, Idx};
+
 use ast_utils::AstRepr;
-use la_arena::Arena;
 
 /// Contains the methods needed to lower [`Block`], [`Stmt`], [`StmtKind`], and [`DeclStmt`].
 mod block;
@@ -25,14 +26,34 @@ mod datatypes;
 
 pub use datatypes::*;
 
+impl Resolver {
+    pub fn new() -> Self {
+        Self {
+            arena: Arena::new(),
+            map: HashMap::new(),
+        }
+    }
+
+    pub fn insert(&mut self, key: String, item: Ty) {
+        let idx = self.arena.alloc(item);
+
+        self.map.insert(key, idx);
+    }
+
+    pub fn lookup_idx(&mut self, key: &str) -> Option<Idx<Ty>> {
+        self.map.get(key).cloned()
+    }
+
+    pub fn get_item(&mut self, idx: Idx<Ty>) -> Ty {
+        self.arena[idx].clone()
+    }
+}
+
 impl<'hir> LoweringCtx<'hir> {
     pub fn lower_ast(ast_repr: &'hir AstRepr) -> Self {
         let mut lowering_ctx = Self {
             items: vec![],
-            var_arena: Arena::new(),
-            var_map: HashMap::new(),
-            fn_arena: Arena::new(),
-            fn_map: HashMap::new(),
+            resolver: Resolver::new(),
             cursor: ast_repr.tree.walk(),
             source_code: &ast_repr.source_code,
         };

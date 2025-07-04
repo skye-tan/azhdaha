@@ -1,5 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
+use std::mem;
+
 use anyhow::bail;
 use log::trace;
 
@@ -93,6 +95,8 @@ impl LoweringCtx<'_> {
                 }
             };
 
+            self.resolver.insert(ident.name.clone(), ty.clone());
+
             let decl_stmt = DeclStmt {
                 ty,
                 ident,
@@ -102,9 +106,6 @@ impl LoweringCtx<'_> {
                     hi: node.end_byte(),
                 },
             };
-
-            let idx = self.var_arena.alloc(decl_stmt.clone());
-            self.var_map.insert(decl_stmt.ident.name.clone(), idx);
 
             decl_stmts.push(decl_stmt);
 
@@ -170,7 +171,7 @@ impl LoweringCtx<'_> {
         self.cursor.goto_first_child();
         self.cursor.goto_next_sibling();
 
-        let previous_var_map = self.var_map.clone();
+        let pre_resolver = self.resolver.clone();
 
         let mut stmts = vec![];
 
@@ -182,10 +183,11 @@ impl LoweringCtx<'_> {
 
         self.cursor.goto_parent();
 
-        self.var_map = previous_var_map;
+        let resolver = mem::replace(&mut self.resolver, pre_resolver);
 
         Ok(Block {
             stmts,
+            resolver,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),

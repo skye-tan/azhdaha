@@ -115,11 +115,7 @@ impl LoweringCtx<'_> {
 
         let ident = self.lower_ident()?;
 
-        let res = if let Some(idx) = self.var_map.get(&ident.name) {
-            Res::Var(*idx)
-        } else if let Some(idx) = self.fn_map.get(&ident.name) {
-            Res::Fn(*idx)
-        } else {
+        let Some(res) = self.resolver.lookup_idx(&ident.name) else {
             bail!("Unknown identifier: {}", &ident.name);
         };
 

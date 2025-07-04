@@ -4,11 +4,16 @@
 //! This implementation has been modeled after rustc's MIR representation.
 //!
 
-#![allow(clippy::missing_docs_in_private_items)]
-#![allow(dead_code)]
+mod datatypes;
 
-mod basic_block;
-mod operand;
-mod statement;
-mod terminator;
-mod types;
+pub use datatypes::*;
+
+// impl MirCtx {
+//     pub fn new() -> Self {
+//         Self { bodies: vec![] }
+//     }
+
+//     pub fn build_mir(&mut self) -> Body {
+//         todo!()
+//     }
+// }

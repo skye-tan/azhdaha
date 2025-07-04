@@ -49,6 +49,12 @@ impl Resolver {
     }
 }
 
+impl Default for Resolver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'hir> LoweringCtx<'hir> {
     pub fn lower_ast(ast_repr: &'hir AstRepr) -> Self {
         let mut lowering_ctx = Self {

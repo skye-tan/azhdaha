@@ -3,6 +3,7 @@
 
 use ast_utils::AstRepr;
 use hir_repr::LoweringCtx;
+use mir_repr::MirCtx;
 
 #[allow(clippy::print_stdout)]
 fn main() -> anyhow::Result<()> {
@@ -24,6 +25,19 @@ fn main() -> anyhow::Result<()> {
 
     let lowering_ctx = LoweringCtx::lower_ast(&ast_reprs[0]);
     println!("{:#?}\n{:#?}", lowering_ctx.items, lowering_ctx.resolver);
+
+    for item in lowering_ctx.items {
+        match item.kind {
+            hir_repr::ItemKind::Fn(f) => {
+                let ctx = MirCtx::new(f);
+                let mir = ctx.lower();
+                mir.print();
+            },
+            hir_repr::ItemKind::Union => todo!(),
+            hir_repr::ItemKind::Struct => todo!(),
+            hir_repr::ItemKind::GlobalVar => todo!(),
+        }
+    }
 
     Ok(())
 }

@@ -1,6 +1,8 @@
 #![allow(clippy::missing_docs_in_private_items)]
 #![allow(dead_code)]
 
+use std::cell::RefCell;
+
 use smallvec::SmallVec;
 
 use hir_repr::Span;
@@ -8,28 +10,6 @@ use hir_repr::Span;
 #[derive(Debug, Clone)]
 pub enum Const {
     Val,
-}
-
-#[derive(Debug, Clone)]
-pub enum PrimTyKind {
-    Int,
-    Float,
-    Double,
-    Char,
-    Void,
-}
-
-#[derive(Debug, Clone)]
-pub enum TyKind {
-    PrimTy(PrimTyKind),
-    Array(Box<Ty>, Const),
-    Ptr(Box<Ty>),
-}
-
-#[derive(Debug, Clone)]
-pub struct Ty {
-    pub kind: TyKind,
-    pub span: Span,
 }
 
 #[derive(Debug, Clone)]
@@ -145,18 +125,40 @@ pub struct BasicBlockData {
 
 #[derive(Debug, Clone)]
 pub struct LocalDecl {
-    pub ty: Ty,
+    pub ty: hir_repr::Ty,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
 pub struct Body {
     pub basic_blocks: Vec<BasicBlockData>,
-    pub local_decls: Vec<LocalDecl>,
+    pub local_decls: <LocalDecl>,
     pub span: Span,
+}
+
+impl Body {
+    pub fn print(&self) {
+        for (i, lc) in self.local_decls.iter().enumerate() {
+            println!("let {}: {:?};", i, lc.ty);
+        }
+        
+        for (i, bb) in self.basic_blocks.iter().enumerate() {
+            println!("'bb{i}: {{");
+            for stmt in &bb.statements {
+                match &stmt.kind {
+                    StatementKind::Assign(place, rvalue) => {
+                        println!("{:?} = {:?}", place, rvalue);
+                    },
+                }
+            }
+            println!("}}");
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct MirCtx {
-    pub bodies: Vec<Body>,
+    pub input: hir_repr::Fn,
+    pub result: RefCell<Body>,
 }
+

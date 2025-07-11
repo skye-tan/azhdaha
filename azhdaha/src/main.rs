@@ -24,15 +24,21 @@ fn main() -> anyhow::Result<()> {
     }
 
     let lowering_ctx = LoweringCtx::lower_ast(&ast_reprs[0]);
-    println!("{:#?}\n{:#?}", lowering_ctx.items, lowering_ctx.resolver);
+    println!(
+        "\n{:#?}\n{:#?}\n",
+        lowering_ctx.items, lowering_ctx.resolver
+    );
 
     for item in lowering_ctx.items {
         match item.kind {
             hir_repr::ItemKind::Fn(f) => {
-                let ctx = MirCtx::new(f);
-                let mir = ctx.lower();
-                mir.print();
-            },
+                let ctx = MirCtx::new(&lowering_ctx.resolver, f.body.span);
+                let mir_body = ctx.lower(&f);
+
+                if let Some(mir_body) = mir_body {
+                    println!("\n{mir_body}");
+                }
+            }
             hir_repr::ItemKind::Union => todo!(),
             hir_repr::ItemKind::Struct => todo!(),
             hir_repr::ItemKind::GlobalVar => todo!(),

@@ -1,49 +1,15 @@
 #![allow(clippy::missing_docs_in_private_items)]
-#![allow(dead_code)]
 
-use std::cell::RefCell;
+use std::{cell::RefCell, collections::HashMap};
 
+use la_arena::{Arena, Idx};
 use smallvec::SmallVec;
 
-use hir_repr::Span;
+use hir_repr::{BinOp, Resolver, ResolverIdx, Span, Ty, UnOp};
 
 #[derive(Debug, Clone)]
 pub enum Const {
     Val,
-}
-
-#[derive(Debug, Clone)]
-pub enum BinOp {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Rem,
-    BitXor,
-    BitAnd,
-    BitOr,
-    Shl,
-    Shr,
-    Eq,
-    Lt,
-    Le,
-    Ne,
-    Ge,
-    Gt,
-}
-
-#[derive(Debug, Clone)]
-pub enum UnOp {
-    Not,
-    Neg,
-    Com,
-    AddrOf,
-    Deref,
-}
-
-#[derive(Debug, Clone)]
-pub struct Local {
-    index: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -73,7 +39,7 @@ pub enum Operand {
 #[derive(Debug, Clone)]
 pub enum Rvalue {
     Use(Operand),
-    BinaryOp(BinOp, Box<(Operand, Operand)>),
+    BinaryOp(BinOp, Box<Operand>, Box<Operand>),
     UnaryOp(UnOp, Operand),
 }
 
@@ -112,53 +78,32 @@ pub struct Terminator {
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
-pub struct BasicBlock {
-    index: u32,
-}
+pub type BasicBlock = Idx<BasicBlockData>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct BasicBlockData {
     pub statements: Vec<Statement>,
     pub terminator: Option<Terminator>,
 }
 
+pub type Local = Idx<LocalDecl>;
+
 #[derive(Debug, Clone)]
 pub struct LocalDecl {
-    pub ty: hir_repr::Ty,
+    pub ty: Ty,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
 pub struct Body {
-    pub basic_blocks: Vec<BasicBlockData>,
-    pub local_decls: <LocalDecl>,
+    pub basic_blocks: Arena<BasicBlockData>,
+    pub local_decls: Arena<LocalDecl>,
     pub span: Span,
 }
 
-impl Body {
-    pub fn print(&self) {
-        for (i, lc) in self.local_decls.iter().enumerate() {
-            println!("let {}: {:?};", i, lc.ty);
-        }
-        
-        for (i, bb) in self.basic_blocks.iter().enumerate() {
-            println!("'bb{i}: {{");
-            for stmt in &bb.statements {
-                match &stmt.kind {
-                    StatementKind::Assign(place, rvalue) => {
-                        println!("{:?} = {:?}", place, rvalue);
-                    },
-                }
-            }
-            println!("}}");
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
-pub struct MirCtx {
-    pub input: hir_repr::Fn,
-    pub result: RefCell<Body>,
+pub struct MirCtx<'mir> {
+    pub body: RefCell<Body>,
+    pub resolver: &'mir Resolver,
+    pub map: HashMap<ResolverIdx, Local>,
 }
-

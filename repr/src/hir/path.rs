@@ -6,7 +6,7 @@ use log::trace;
 use crate::hir::{constants, datatypes::*};
 
 impl LoweringCtx<'_> {
-    fn lower_prim_ty_kind(&mut self) -> anyhow::Result<PrimTyKind> {
+    fn lower_to_prim_ty_kind(&mut self) -> anyhow::Result<PrimTyKind> {
         let node = self.cursor.node();
         trace!("Construct [PrimTyKind] from node: {}", node.kind());
 
@@ -22,16 +22,16 @@ impl LoweringCtx<'_> {
         )
     }
 
-    fn lower_ty_kind(&mut self) -> anyhow::Result<TyKind> {
+    fn lower_to_ty_kind(&mut self) -> anyhow::Result<TyKind> {
         let node = self.cursor.node();
         trace!("Construct [TyKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_prim_ty_kind()?),
+            constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_to_prim_ty_kind()?),
             constants::TYPE_DESCRIPTOR => {
                 self.cursor.goto_first_child();
 
-                let ty_kind = self.lower_ty_kind()?;
+                let ty_kind = self.lower_to_ty_kind()?;
 
                 self.cursor.goto_parent();
 
@@ -41,12 +41,12 @@ impl LoweringCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_ty(&mut self) -> anyhow::Result<Ty> {
+    pub(crate) fn lower_to_ty(&mut self) -> anyhow::Result<Ty> {
         let node = self.cursor.node();
         trace!("Construct [Ty] from node: {}", node.kind());
 
         Ok(Ty {
-            kind: self.lower_ty_kind()?,
+            kind: self.lower_to_ty_kind()?,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),
@@ -54,7 +54,7 @@ impl LoweringCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_ident(&mut self) -> anyhow::Result<Ident> {
+    pub(crate) fn lower_to_ident(&mut self) -> anyhow::Result<Ident> {
         let node = self.cursor.node();
         trace!("Construct [Ident] from node: {}", node.kind());
 
@@ -70,7 +70,7 @@ impl LoweringCtx<'_> {
         })
     }
 
-    fn lower_lit_kind(&mut self) -> anyhow::Result<LitKind> {
+    fn lower_to_lit_kind(&mut self) -> anyhow::Result<LitKind> {
         let node = self.cursor.node();
         trace!("Construct [LitKind] from node: {}", node.kind());
 
@@ -96,12 +96,12 @@ impl LoweringCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_lit(&mut self) -> anyhow::Result<Lit> {
+    pub(crate) fn lower_to_lit(&mut self) -> anyhow::Result<Lit> {
         let node = self.cursor.node();
         trace!("Construct [Lit] from node: {}", node.kind());
 
         Ok(Lit {
-            kind: self.lower_lit_kind()?,
+            kind: self.lower_to_lit_kind()?,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),
@@ -109,11 +109,11 @@ impl LoweringCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_path(&mut self) -> anyhow::Result<Path> {
+    pub(crate) fn lower_to_path(&mut self) -> anyhow::Result<Path> {
         let node = self.cursor.node();
         trace!("Construct [Path] from node: {}", node.kind());
 
-        let ident = self.lower_ident()?;
+        let ident = self.lower_to_ident()?;
 
         let Some(res) = self.resolver.lookup_idx(&ident.name) else {
             bail!("Unknown identifier: {}", &ident.name);

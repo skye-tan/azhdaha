@@ -11,16 +11,16 @@ use crate::hir::{
 };
 
 impl LoweringCtx<'_> {
-    pub(crate) fn lower_param(&mut self) -> anyhow::Result<Param> {
+    pub(crate) fn lower_to_param(&mut self) -> anyhow::Result<Param> {
         let node = self.cursor.node();
         trace!("Construct [Param] from node: {}", node.kind());
 
         self.cursor.goto_first_child();
 
-        let ty = self.lower_ty()?;
+        let ty = self.lower_to_ty()?;
 
         let ident = if self.cursor.goto_next_sibling() {
-            let ident = self.lower_ident()?;
+            let ident = self.lower_to_ident()?;
 
             self.resolver
                 .insert(ident.name.clone(), ResolverData::Local(ty.clone()))?;
@@ -35,18 +35,18 @@ impl LoweringCtx<'_> {
         Ok(Param { ty, ident })
     }
 
-    pub(crate) fn lower_fn_sig(&mut self) -> anyhow::Result<(Resolver, FnSig)> {
+    pub(crate) fn lower_to_fn_sig(&mut self) -> anyhow::Result<(Resolver, FnSig)> {
         let node = self.cursor.node();
         trace!("Construct [FnSig] from node: {}", node.kind());
 
         self.cursor.goto_first_child();
 
-        let ty = self.lower_ty()?;
+        let ty = self.lower_to_ty()?;
 
         self.cursor.goto_next_sibling();
         self.cursor.goto_first_child();
 
-        let ident = self.lower_ident()?;
+        let ident = self.lower_to_ident()?;
 
         self.cursor.goto_next_sibling();
         self.cursor.goto_first_child();
@@ -57,7 +57,7 @@ impl LoweringCtx<'_> {
         let mut params = vec![];
 
         while self.cursor.node().kind() != ")" {
-            params.push(self.lower_param()?);
+            params.push(self.lower_to_param()?);
 
             self.cursor.goto_next_sibling();
             self.cursor.goto_next_sibling();
@@ -74,15 +74,15 @@ impl LoweringCtx<'_> {
         Ok((pre_resolver, fn_sig))
     }
 
-    pub(crate) fn lower_fn(&mut self) -> anyhow::Result<Fn> {
+    pub(crate) fn lower_to_fn(&mut self) -> anyhow::Result<Fn> {
         let node = self.cursor.node();
         trace!("Construct [Fn] from node: {}", node.kind());
 
-        let (pre_resolver, sig) = self.lower_fn_sig()?;
+        let (pre_resolver, sig) = self.lower_to_fn_sig()?;
 
         self.cursor.goto_last_child();
 
-        let body = self.lower_expr()?;
+        let body = self.lower_to_expr()?;
 
         self.cursor.goto_parent();
 
@@ -95,12 +95,12 @@ impl LoweringCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_item_kind(&mut self) -> anyhow::Result<Option<ItemKind>> {
+    pub(crate) fn lower_to_item_kind(&mut self) -> anyhow::Result<Option<ItemKind>> {
         let node = self.cursor.node();
         trace!("Construct [ItemKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constants::FUNCTION_DEFINITION => Some(ItemKind::Fn(self.lower_fn()?)),
+            constants::FUNCTION_DEFINITION => Some(ItemKind::Fn(self.lower_to_fn()?)),
             kind => {
                 trace!("Unsupported [ItemKind] node: {kind}");
                 None
@@ -108,11 +108,11 @@ impl LoweringCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_item(&mut self) -> anyhow::Result<Option<Item>> {
+    pub(crate) fn lower_to_item(&mut self) -> anyhow::Result<Option<Item>> {
         let node = self.cursor.node();
         trace!("Construct [Item] from node: {}", node.kind());
 
-        Ok(self.lower_item_kind()?.map(|item_kind| Item {
+        Ok(self.lower_to_item_kind()?.map(|item_kind| Item {
             kind: item_kind,
             span: Span {
                 lo: node.start_byte(),

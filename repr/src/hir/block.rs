@@ -18,7 +18,7 @@ impl LoweringCtx<'_> {
                 self.cursor.goto_next_sibling();
                 self.cursor.goto_next_sibling();
 
-                let array_len = self.lower_expr()?;
+                let array_len = self.lower_to_expr()?;
 
                 let span = ty.span.clone();
 
@@ -40,7 +40,7 @@ impl LoweringCtx<'_> {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
-                let ident = self.lower_ident()?;
+                let ident = self.lower_to_ident()?;
 
                 self.cursor.goto_parent();
 
@@ -54,17 +54,17 @@ impl LoweringCtx<'_> {
                     ident,
                 )
             }
-            _ => (ty, self.lower_ident()?),
+            _ => (ty, self.lower_to_ident()?),
         })
     }
 
-    fn lower_decl_stmt(&mut self) -> anyhow::Result<Vec<DeclStmt>> {
+    fn lower_to_decl_stmt(&mut self) -> anyhow::Result<Vec<DeclStmt>> {
         let node = self.cursor.node();
         trace!("Construct [DeclStmt] from node: {}", node.kind());
 
         self.cursor.goto_first_child();
 
-        let ty = self.lower_ty()?;
+        let ty = self.lower_to_ty()?;
 
         self.cursor.goto_next_sibling();
 
@@ -82,7 +82,7 @@ impl LoweringCtx<'_> {
                     self.cursor.goto_next_sibling();
                     self.cursor.goto_next_sibling();
 
-                    let init = self.lower_expr()?;
+                    let init = self.lower_to_expr()?;
 
                     self.cursor.goto_parent();
 
@@ -121,13 +121,13 @@ impl LoweringCtx<'_> {
         Ok(decl_stmts)
     }
 
-    fn lower_stmt_kind(&mut self) -> anyhow::Result<Vec<StmtKind>> {
+    fn lower_to_stmt_kind(&mut self) -> anyhow::Result<Vec<StmtKind>> {
         let node = self.cursor.node();
         trace!("Construct [StmtKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
             constants::DECLARATION => self
-                .lower_decl_stmt()?
+                .lower_to_decl_stmt()?
                 .into_iter()
                 .map(StmtKind::Decl)
                 .collect(),
@@ -135,25 +135,25 @@ impl LoweringCtx<'_> {
             | constants::EXPRESSION_STATEMENT
             | constants::BREAK_STATEMENT
             | constants::CONTINUE_STATEMENT => {
-                vec![StmtKind::Semi(self.lower_expr()?)]
+                vec![StmtKind::Semi(self.lower_to_expr()?)]
             }
             constants::IF_STATEMENT
             | constants::WHILE_STATEMENT
             | constants::DO_STATEMENT
             | constants::FOR_STATEMENT
             | constants::COMPOUND_STATEMENT => {
-                vec![StmtKind::Expr(self.lower_expr()?)]
+                vec![StmtKind::Expr(self.lower_to_expr()?)]
             }
             kind => bail!("Unsupported [StmtKind] node: {kind}"),
         })
     }
 
-    pub(crate) fn lower_stmt(&mut self) -> anyhow::Result<Vec<Stmt>> {
+    pub(crate) fn lower_to_stmt(&mut self) -> anyhow::Result<Vec<Stmt>> {
         let node = self.cursor.node();
         trace!("Construct [Stmt] from node: {}", node.kind());
 
         Ok(self
-            .lower_stmt_kind()?
+            .lower_to_stmt_kind()?
             .into_iter()
             .map(|stmt_kind| Stmt {
                 kind: stmt_kind,
@@ -165,7 +165,7 @@ impl LoweringCtx<'_> {
             .collect())
     }
 
-    pub(crate) fn lower_block(&mut self) -> anyhow::Result<Block> {
+    pub(crate) fn lower_to_block(&mut self) -> anyhow::Result<Block> {
         let node = self.cursor.node();
         trace!("Construct [Block] from node: {}", node.kind());
 
@@ -177,7 +177,7 @@ impl LoweringCtx<'_> {
         let mut stmts = vec![];
 
         while self.cursor.node().kind() != "}" {
-            stmts.append(&mut self.lower_stmt()?);
+            stmts.append(&mut self.lower_to_stmt()?);
 
             self.cursor.goto_next_sibling();
         }

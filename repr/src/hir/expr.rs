@@ -8,7 +8,7 @@ use log::trace;
 use crate::hir::{constants, datatypes::*};
 
 impl LoweringCtx<'_> {
-    fn lower_bin_op(&mut self) -> anyhow::Result<BinOp> {
+    fn lower_to_bin_op(&mut self) -> anyhow::Result<BinOp> {
         let node = self.cursor.node();
         trace!("Construct [BinOp] from node: {}", node.kind());
 
@@ -36,7 +36,7 @@ impl LoweringCtx<'_> {
         })
     }
 
-    fn lower_un_op(&mut self) -> anyhow::Result<UnOp> {
+    fn lower_to_un_op(&mut self) -> anyhow::Result<UnOp> {
         let node = self.cursor.node();
         trace!("Construct [UnOp] from node: {}", node.kind());
 
@@ -51,7 +51,7 @@ impl LoweringCtx<'_> {
         })
     }
 
-    fn lower_sizeof_kind(&mut self) -> anyhow::Result<SizeofKind> {
+    fn lower_to_sizeof_kind(&mut self) -> anyhow::Result<SizeofKind> {
         let node = self.cursor.node();
         trace!("Construct [SizeofKind] from node: {}", node.kind());
 
@@ -59,11 +59,13 @@ impl LoweringCtx<'_> {
         self.cursor.goto_next_sibling();
 
         let sizeof_kind = match self.cursor.node().kind() {
-            constants::PARENTHESIZED_EXPRESSION => SizeofKind::Expr(Box::new(self.lower_expr()?)),
+            constants::PARENTHESIZED_EXPRESSION => {
+                SizeofKind::Expr(Box::new(self.lower_to_expr()?))
+            }
             _ => {
                 self.cursor.goto_next_sibling();
 
-                SizeofKind::Ty(self.lower_ty()?)
+                SizeofKind::Ty(self.lower_to_ty()?)
             }
         };
 
@@ -72,12 +74,12 @@ impl LoweringCtx<'_> {
         Ok(sizeof_kind)
     }
 
-    fn lower_sizeof(&mut self) -> anyhow::Result<Sizeof> {
+    fn lower_to_sizeof(&mut self) -> anyhow::Result<Sizeof> {
         let node = self.cursor.node();
         trace!("Construct [SizeOf] from node: {}", node.kind());
 
         Ok(Sizeof {
-            kind: self.lower_sizeof_kind()?,
+            kind: self.lower_to_sizeof_kind()?,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),
@@ -85,28 +87,28 @@ impl LoweringCtx<'_> {
         })
     }
 
-    fn lower_expr_kind(&mut self) -> anyhow::Result<ExprKind> {
+    fn lower_to_expr_kind(&mut self) -> anyhow::Result<ExprKind> {
         let node = self.cursor.node();
         trace!("Construct [ExprKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            kind if kind.contains("literal") => ExprKind::Lit(self.lower_lit()?),
-            constants::COMPOUND_STATEMENT => ExprKind::Block(self.lower_block()?),
+            kind if kind.contains("literal") => ExprKind::Lit(self.lower_to_lit()?),
+            constants::COMPOUND_STATEMENT => ExprKind::Block(self.lower_to_block()?),
             constants::RETURN_STATEMENT => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
-                let expr = self.lower_expr()?;
+                let expr = self.lower_to_expr()?;
 
                 self.cursor.goto_parent();
 
                 ExprKind::Ret(Box::new(expr))
             }
-            constants::IDENTIFIER => ExprKind::Path(self.lower_path()?),
+            constants::IDENTIFIER => ExprKind::Path(self.lower_to_path()?),
             constants::CALL_EXPRESSION => {
                 self.cursor.goto_first_child();
 
-                let path = self.lower_expr()?;
+                let path = self.lower_to_expr()?;
 
                 self.cursor.goto_next_sibling();
                 self.cursor.goto_first_child();
@@ -115,7 +117,7 @@ impl LoweringCtx<'_> {
                 let mut arguments = vec![];
 
                 while self.cursor.node().kind() != ")" {
-                    arguments.push(self.lower_expr()?);
+                    arguments.push(self.lower_to_expr()?);
 
                     self.cursor.goto_next_sibling();
                     self.cursor.goto_next_sibling();
@@ -129,7 +131,7 @@ impl LoweringCtx<'_> {
             constants::EXPRESSION_STATEMENT => {
                 self.cursor.goto_first_child();
 
-                let expr_kind = self.lower_expr_kind()?;
+                let expr_kind = self.lower_to_expr_kind()?;
 
                 self.cursor.goto_parent();
 
@@ -138,15 +140,15 @@ impl LoweringCtx<'_> {
             constants::BINARY_EXPRESSION => {
                 self.cursor.goto_first_child();
 
-                let lhs = self.lower_expr()?;
+                let lhs = self.lower_to_expr()?;
 
                 self.cursor.goto_next_sibling();
 
-                let bin_op = self.lower_bin_op()?;
+                let bin_op = self.lower_to_bin_op()?;
 
                 self.cursor.goto_next_sibling();
 
-                let rhs = self.lower_expr()?;
+                let rhs = self.lower_to_expr()?;
 
                 self.cursor.goto_parent();
 
@@ -155,11 +157,11 @@ impl LoweringCtx<'_> {
             constants::UPDATE_EXPRESSION => {
                 self.cursor.goto_first_child();
 
-                let lhs = self.lower_expr()?;
+                let lhs = self.lower_to_expr()?;
 
                 self.cursor.goto_next_sibling();
 
-                let bin_op = self.lower_bin_op()?;
+                let bin_op = self.lower_to_bin_op()?;
                 let op_node = self.cursor.node();
 
                 self.cursor.goto_parent();
@@ -183,11 +185,11 @@ impl LoweringCtx<'_> {
             constants::UNARY_EXPRESSION | constants::POINTER_EXPRESSION => {
                 self.cursor.goto_first_child();
 
-                let un_op = self.lower_un_op()?;
+                let un_op = self.lower_to_un_op()?;
 
                 self.cursor.goto_next_sibling();
 
-                let expr = self.lower_expr()?;
+                let expr = self.lower_to_expr()?;
 
                 self.cursor.goto_parent();
 
@@ -201,7 +203,7 @@ impl LoweringCtx<'_> {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
-                let expr_kind = self.lower_expr_kind()?;
+                let expr_kind = self.lower_to_expr_kind()?;
 
                 self.cursor.goto_parent();
 
@@ -211,17 +213,17 @@ impl LoweringCtx<'_> {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
-                let condition = self.lower_expr()?;
+                let condition = self.lower_to_expr()?;
 
                 self.cursor.goto_next_sibling();
 
-                let body = self.lower_expr()?;
+                let body = self.lower_to_expr()?;
 
                 let else_clause = if self.cursor.goto_next_sibling() {
                     self.cursor.goto_first_child();
                     self.cursor.goto_next_sibling();
 
-                    let x = self.lower_expr()?;
+                    let x = self.lower_to_expr()?;
 
                     self.cursor.goto_parent();
 
@@ -238,11 +240,11 @@ impl LoweringCtx<'_> {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
-                let condition = self.lower_expr()?;
+                let condition = self.lower_to_expr()?;
 
                 self.cursor.goto_next_sibling();
 
-                let body = self.lower_expr()?;
+                let body = self.lower_to_expr()?;
 
                 self.cursor.goto_parent();
 
@@ -271,12 +273,12 @@ impl LoweringCtx<'_> {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
-                let body = self.lower_expr()?;
+                let body = self.lower_to_expr()?;
 
                 self.cursor.goto_next_sibling();
                 self.cursor.goto_next_sibling();
 
-                let condition = self.lower_expr()?;
+                let condition = self.lower_to_expr()?;
 
                 self.cursor.goto_parent();
 
@@ -346,17 +348,17 @@ impl LoweringCtx<'_> {
 
                 let pre_resolver = self.resolver.clone();
 
-                let initialization = self.lower_stmt()?;
+                let initialization = self.lower_to_stmt()?;
 
                 self.cursor.goto_next_sibling();
 
-                let condition = self.lower_expr()?;
+                let condition = self.lower_to_expr()?;
 
                 self.cursor.goto_next_sibling();
                 self.cursor.goto_next_sibling();
 
                 let update_stmt = Stmt {
-                    kind: StmtKind::Semi(self.lower_expr()?),
+                    kind: StmtKind::Semi(self.lower_to_expr()?),
                     span: Span {
                         lo: self.cursor.node().start_byte(),
                         hi: self.cursor.node().end_byte(),
@@ -366,7 +368,7 @@ impl LoweringCtx<'_> {
                 self.cursor.goto_next_sibling();
                 self.cursor.goto_next_sibling();
 
-                let mut body = self.lower_expr()?;
+                let mut body = self.lower_to_expr()?;
 
                 self.cursor.goto_parent();
 
@@ -445,15 +447,15 @@ impl LoweringCtx<'_> {
             constants::ASSIGNMENT_EXPRESSION => {
                 self.cursor.goto_first_child();
 
-                let lhs = self.lower_expr()?;
+                let lhs = self.lower_to_expr()?;
 
                 self.cursor.goto_next_sibling();
 
-                let bin_op = self.lower_bin_op()?;
+                let bin_op = self.lower_to_bin_op()?;
 
                 self.cursor.goto_next_sibling();
 
-                let rhs = self.lower_expr()?;
+                let rhs = self.lower_to_expr()?;
 
                 self.cursor.goto_parent();
 
@@ -465,12 +467,12 @@ impl LoweringCtx<'_> {
             constants::FIELD_EXPRESSION => {
                 self.cursor.goto_first_child();
 
-                let target = self.lower_expr()?;
+                let target = self.lower_to_expr()?;
 
                 self.cursor.goto_next_sibling();
                 self.cursor.goto_next_sibling();
 
-                let field = self.lower_ident()?;
+                let field = self.lower_to_ident()?;
 
                 self.cursor.goto_parent();
 
@@ -479,12 +481,12 @@ impl LoweringCtx<'_> {
             constants::SUBSCRIPT_EXPRESSION => {
                 self.cursor.goto_first_child();
 
-                let target = self.lower_expr()?;
+                let target = self.lower_to_expr()?;
 
                 self.cursor.goto_next_sibling();
                 self.cursor.goto_next_sibling();
 
-                let index = self.lower_expr()?;
+                let index = self.lower_to_expr()?;
 
                 self.cursor.goto_parent();
 
@@ -503,12 +505,12 @@ impl LoweringCtx<'_> {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
 
-                let ty = self.lower_ty()?;
+                let ty = self.lower_to_ty()?;
 
                 self.cursor.goto_next_sibling();
                 self.cursor.goto_next_sibling();
 
-                let target = self.lower_expr()?;
+                let target = self.lower_to_expr()?;
 
                 self.cursor.goto_parent();
 
@@ -521,7 +523,7 @@ impl LoweringCtx<'_> {
                 let mut elements = vec![];
 
                 loop {
-                    elements.push(self.lower_expr()?);
+                    elements.push(self.lower_to_expr()?);
 
                     self.cursor.goto_next_sibling();
                     if !self.cursor.goto_next_sibling() {
@@ -539,7 +541,7 @@ impl LoweringCtx<'_> {
                 let mut exprs = vec![];
 
                 loop {
-                    exprs.push(self.lower_expr()?);
+                    exprs.push(self.lower_to_expr()?);
 
                     self.cursor.goto_next_sibling();
                     if !self.cursor.goto_next_sibling() {
@@ -551,17 +553,17 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Comma(exprs)
             }
-            constants::SIZEOF_EXPRESSION => ExprKind::Sizeof(self.lower_sizeof()?),
+            constants::SIZEOF_EXPRESSION => ExprKind::Sizeof(self.lower_to_sizeof()?),
             kind => bail!("Unsupported [ExprKind] node: {kind}"),
         })
     }
 
-    pub(crate) fn lower_expr(&mut self) -> anyhow::Result<Expr> {
+    pub(crate) fn lower_to_expr(&mut self) -> anyhow::Result<Expr> {
         let node = self.cursor.node();
         trace!("Construct [Expr] from node: {}", node.kind());
 
         Ok(Expr {
-            kind: self.lower_expr_kind()?,
+            kind: self.lower_to_expr_kind()?,
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),

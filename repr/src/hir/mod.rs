@@ -36,7 +36,7 @@ impl<'hir> LoweringCtx<'hir> {
         lowering_ctx.cursor.goto_first_child();
 
         loop {
-            match lowering_ctx.lower_item() {
+            match lowering_ctx.lower_to_item() {
                 Ok(item) => {
                     if let Some(item) = item {
                         lowering_ctx.items.push(item);

@@ -3,7 +3,7 @@
 use anyhow::bail;
 use log::trace;
 
-use crate::{constants, datatypes::*};
+use crate::hir::{constants, datatypes::*};
 
 impl LoweringCtx<'_> {
     fn lower_prim_ty_kind(&mut self) -> anyhow::Result<PrimTyKind> {

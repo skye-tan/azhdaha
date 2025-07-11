@@ -5,7 +5,7 @@ use std::mem;
 use anyhow::bail;
 use log::trace;
 
-use crate::{constants, datatypes::*};
+use crate::hir::{constants, datatypes::*, resolver::ResolverData};
 
 impl LoweringCtx<'_> {
     fn process_decl(&mut self, mut ty: Ty) -> anyhow::Result<(Ty, Ident)> {

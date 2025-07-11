@@ -1,9 +1,9 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use std::collections::HashMap;
-
-use la_arena::{Arena, Idx};
+use la_arena::Idx;
 use tree_sitter::TreeCursor;
+
+use crate::hir::resolver::{Resolver, ResolverData};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Span {
@@ -200,22 +200,6 @@ pub enum ItemKind {
 pub struct Item {
     pub kind: ItemKind,
     pub span: Span,
-}
-
-pub type ResolverIdx = Idx<ResolverData>;
-
-#[derive(Debug, Clone)]
-pub enum ResolverData {
-    Fn(FnSig),
-    Union,
-    Struct,
-    Local(Ty),
-}
-
-#[derive(Debug, Clone)]
-pub struct Resolver {
-    pub arena: Arena<ResolverData>,
-    pub map: HashMap<String, Idx<ResolverData>>,
 }
 
 pub struct LoweringCtx<'hir> {

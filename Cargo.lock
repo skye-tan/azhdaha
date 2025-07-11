@@ -86,9 +86,8 @@ dependencies = [
  "ast-utils",
  "cli-utils",
  "env_logger",
- "hir-repr",
  "log",
- "mir-repr",
+ "repr",
 ]
 
 [[package]]
@@ -210,17 +209,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
-name = "hir-repr"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ast-utils",
- "la-arena",
- "log",
- "tree-sitter",
-]
-
-[[package]]
 name = "indexmap"
 version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -283,15 +271,6 @@ name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
-
-[[package]]
-name = "mir-repr"
-version = "0.1.0"
-dependencies = [
- "hir-repr",
- "la-arena",
- "smallvec",
-]
 
 [[package]]
 name = "once_cell"
@@ -360,6 +339,18 @@ name = "regex-syntax"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
+
+[[package]]
+name = "repr"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ast-utils",
+ "la-arena",
+ "log",
+ "smallvec",
+ "tree-sitter",
+]
 
 [[package]]
 name = "ryu"

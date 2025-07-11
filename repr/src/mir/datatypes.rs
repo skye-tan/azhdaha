@@ -5,7 +5,10 @@ use std::{cell::RefCell, collections::HashMap};
 use la_arena::{Arena, Idx};
 use smallvec::SmallVec;
 
-use hir_repr::{BinOp, Resolver, ResolverIdx, Span, Ty, UnOp};
+use crate::hir::{
+    BinOp, Span, Ty, UnOp,
+    resolver::{Resolver, ResolverIdx},
+};
 
 #[derive(Debug, Clone)]
 pub enum Const {

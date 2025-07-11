@@ -3,8 +3,7 @@ members = [
     "azhdaha",
     "cli-utils",
     "ast-utils",
-    "hir-repr",
-    "mir-repr"
+    "repr"
 ]
 resolver = "2"
 
@@ -17,6 +16,7 @@ anyhow = "1.0.96"
 compile_commands = "0.3.0"
 tree-sitter = "0.25.2"
 la-arena = "0.3.1"
+smallvec = "1.15.1"
 
 [workspace.lints.clippy]
 print_stdout = "deny"

@@ -13,7 +13,7 @@ use std::{cell::RefCell, collections::HashMap};
 
 use la_arena::{Arena, RawIdx};
 
-use hir_repr::{Resolver, Span, Ty};
+use crate::hir::{self, Span, Ty, resolver::Resolver};
 
 impl<'mir> MirCtx<'mir> {
     pub fn new(resolver: &'mir Resolver, span: Span) -> Self {
@@ -39,7 +39,7 @@ impl<'mir> MirCtx<'mir> {
         })
     }
 
-    pub fn lower(mut self, item: &'mir hir_repr::Fn) -> Option<Body> {
+    pub fn lower(mut self, item: &'mir hir::Fn) -> Option<Body> {
         self.add_local(&item.sig.ty, item.body.span);
 
         for param in &item.sig.params {
@@ -60,15 +60,11 @@ impl<'mir> MirCtx<'mir> {
         Some(self.body.into_inner())
     }
 
-    fn lower_expr(
-        &mut self,
-        expr: &'mir hir_repr::Expr,
-        bb_data: &mut BasicBlockData,
-    ) -> Option<Local> {
+    fn lower_expr(&mut self, expr: &'mir hir::Expr, bb_data: &mut BasicBlockData) -> Option<Local> {
         let span = expr.span;
 
         match &expr.kind {
-            hir_repr::ExprKind::Block(block) => {
+            hir::ExprKind::Block(block) => {
                 let pre_resolver = self.resolver;
                 self.resolver = &block.resolver;
 
@@ -80,8 +76,8 @@ impl<'mir> MirCtx<'mir> {
 
                 return None;
             }
-            hir_repr::ExprKind::Lit(lit) => todo!(),
-            hir_repr::ExprKind::Ret(expr) => {
+            hir::ExprKind::Lit(lit) => todo!(),
+            hir::ExprKind::Ret(expr) => {
                 let local = self.lower_expr(expr, bb_data);
 
                 if let Some(local) = local {
@@ -109,13 +105,13 @@ impl<'mir> MirCtx<'mir> {
 
                 return None;
             }
-            hir_repr::ExprKind::Path(path) => {
+            hir::ExprKind::Path(path) => {
                 let local = self.map.get(&path.res);
 
                 return local.cloned();
             }
-            hir_repr::ExprKind::Call(expr, exprs) => todo!(),
-            hir_repr::ExprKind::Binary(bin_op, left_expr, right_expr) => {
+            hir::ExprKind::Call(expr, exprs) => todo!(),
+            hir::ExprKind::Binary(bin_op, left_expr, right_expr) => {
                 let left_local = self.lower_expr(left_expr, bb_data).unwrap();
                 let right_local = self.lower_expr(right_expr, bb_data).unwrap();
 
@@ -146,12 +142,12 @@ impl<'mir> MirCtx<'mir> {
 
                 return Some(local);
             }
-            hir_repr::ExprKind::Unary(un_op, expr) => todo!(),
-            hir_repr::ExprKind::If(expr, expr1, expr2) => todo!(),
-            hir_repr::ExprKind::Loop(loop_source, expr) => todo!(),
-            hir_repr::ExprKind::Break => todo!(),
-            hir_repr::ExprKind::Continue => todo!(),
-            hir_repr::ExprKind::Assign(lhs_expr, rhs_expr) => {
+            hir::ExprKind::Unary(un_op, expr) => todo!(),
+            hir::ExprKind::If(expr, expr1, expr2) => todo!(),
+            hir::ExprKind::Loop(loop_source, expr) => todo!(),
+            hir::ExprKind::Break => todo!(),
+            hir::ExprKind::Continue => todo!(),
+            hir::ExprKind::Assign(lhs_expr, rhs_expr) => {
                 let lhs_local = self.lower_expr(lhs_expr, bb_data).unwrap();
                 let rhs_local = self.lower_expr(rhs_expr, bb_data).unwrap();
 
@@ -171,22 +167,22 @@ impl<'mir> MirCtx<'mir> {
 
                 return None;
             }
-            hir_repr::ExprKind::AssignOp(bin_op, expr, expr1) => todo!(),
-            hir_repr::ExprKind::Field(expr, ident) => todo!(),
-            hir_repr::ExprKind::Index(expr, expr1, span) => todo!(),
-            hir_repr::ExprKind::Cast(expr, ty) => todo!(),
-            hir_repr::ExprKind::Array(exprs) => todo!(),
-            hir_repr::ExprKind::AddrOf(expr) => todo!(),
-            hir_repr::ExprKind::Comma(exprs) => todo!(),
-            hir_repr::ExprKind::Sizeof(sizeof) => todo!(),
+            hir::ExprKind::AssignOp(bin_op, expr, expr1) => todo!(),
+            hir::ExprKind::Field(expr, ident) => todo!(),
+            hir::ExprKind::Index(expr, expr1, span) => todo!(),
+            hir::ExprKind::Cast(expr, ty) => todo!(),
+            hir::ExprKind::Array(exprs) => todo!(),
+            hir::ExprKind::AddrOf(expr) => todo!(),
+            hir::ExprKind::Comma(exprs) => todo!(),
+            hir::ExprKind::Sizeof(sizeof) => todo!(),
         }
     }
 
-    fn lower_stmt(&mut self, stmt: &'mir hir_repr::Stmt, bb_data: &mut BasicBlockData) {
+    fn lower_stmt(&mut self, stmt: &'mir hir::Stmt, bb_data: &mut BasicBlockData) {
         let span = stmt.span;
 
         match &stmt.kind {
-            hir_repr::StmtKind::Decl(decl_stmt) => {
+            hir::StmtKind::Decl(decl_stmt) => {
                 let resolver_idx = self.resolver.lookup_idx(&decl_stmt.ident.name).unwrap();
                 let local = self.add_local(&decl_stmt.ty, decl_stmt.span);
                 self.map.insert(resolver_idx, local);
@@ -211,8 +207,8 @@ impl<'mir> MirCtx<'mir> {
                     }
                 }
             }
-            hir_repr::StmtKind::Expr(expr) => todo!(),
-            hir_repr::StmtKind::Semi(expr) => {
+            hir::StmtKind::Expr(expr) => todo!(),
+            hir::StmtKind::Semi(expr) => {
                 self.lower_expr(expr, bb_data);
             }
         }

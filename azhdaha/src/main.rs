@@ -2,8 +2,11 @@
 //! in order to detect memory leakage by applying linear type system principles.
 
 use ast_utils::AstRepr;
-use hir_repr::LoweringCtx;
-use mir_repr::MirCtx;
+
+use repr::{
+    hir::{self, LoweringCtx},
+    mir::MirCtx,
+};
 
 #[allow(clippy::print_stdout)]
 fn main() -> anyhow::Result<()> {
@@ -31,7 +34,7 @@ fn main() -> anyhow::Result<()> {
 
     for item in lowering_ctx.items {
         match item.kind {
-            hir_repr::ItemKind::Fn(f) => {
+            hir::ItemKind::Fn(f) => {
                 let ctx = MirCtx::new(&lowering_ctx.resolver, f.body.span);
                 let mir_body = ctx.lower(&f);
 
@@ -39,9 +42,9 @@ fn main() -> anyhow::Result<()> {
                     println!("\n{mir_body}");
                 }
             }
-            hir_repr::ItemKind::Union => todo!(),
-            hir_repr::ItemKind::Struct => todo!(),
-            hir_repr::ItemKind::GlobalVar => todo!(),
+            hir::ItemKind::Union => todo!(),
+            hir::ItemKind::Struct => todo!(),
+            hir::ItemKind::GlobalVar => todo!(),
         }
     }
 

@@ -1,5 +1,5 @@
 [package]
-name = "hir-repr"
+name = "repr"
 version = "0.1.0"
 edition.workspace = true
 
@@ -12,3 +12,4 @@ log.workspace = true
 anyhow.workspace = true
 tree-sitter.workspace = true
 la-arena.workspace = true
+smallvec.workspace = true

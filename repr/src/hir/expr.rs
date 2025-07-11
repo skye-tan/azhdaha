@@ -5,7 +5,7 @@ use std::mem;
 use anyhow::bail;
 use log::trace;
 
-use crate::{constants, datatypes::*};
+use crate::hir::{constants, datatypes::*};
 
 impl LoweringCtx<'_> {
     fn lower_bin_op(&mut self) -> anyhow::Result<BinOp> {

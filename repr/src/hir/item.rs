@@ -4,7 +4,11 @@ use std::mem;
 
 use log::trace;
 
-use crate::{constants, datatypes::*};
+use crate::hir::{
+    constants,
+    datatypes::*,
+    resolver::{Resolver, ResolverData},
+};
 
 impl LoweringCtx<'_> {
     pub(crate) fn lower_param(&mut self) -> anyhow::Result<Param> {

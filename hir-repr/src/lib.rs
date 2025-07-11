@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 
+use anyhow::bail;
 use la_arena::{Arena, Idx};
 
 use ast_utils::AstRepr;
@@ -23,6 +24,8 @@ mod path;
 mod constants;
 /// Contains datatypes used to represent the HIR.
 mod datatypes;
+/// Contains implementation of [`Display`] for datatypes.
+mod display;
 
 pub use datatypes::*;
 
@@ -34,18 +37,22 @@ impl Resolver {
         }
     }
 
-    pub fn insert(&mut self, key: String, item: Ty) {
+    pub fn insert(&mut self, key: String, item: ResolverData) -> anyhow::Result<()> {
         let idx = self.arena.alloc(item);
 
-        self.map.insert(key, idx);
+        if self.map.insert(key, idx).is_some() {
+            bail!("Variable shadowing is not sepported.");
+        }
+
+        Ok(())
     }
 
-    pub fn lookup_idx(&mut self, key: &str) -> Option<Idx<Ty>> {
+    pub fn lookup_idx(&self, key: &str) -> Option<Idx<ResolverData>> {
         self.map.get(key).cloned()
     }
 
-    pub fn get_item(&mut self, idx: Idx<Ty>) -> Ty {
-        self.arena[idx].clone()
+    pub fn get_item(&self, idx: Idx<ResolverData>) -> &ResolverData {
+        &self.arena[idx]
     }
 }
 

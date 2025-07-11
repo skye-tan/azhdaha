@@ -1,11 +1,13 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
+use std::mem;
+
 use log::trace;
 
 use crate::{constants, datatypes::*};
 
 impl LoweringCtx<'_> {
-    pub(crate) fn lower_param(&mut self) -> anyhow::Result<(Option<Ident>, Param)> {
+    pub(crate) fn lower_param(&mut self) -> anyhow::Result<Param> {
         let node = self.cursor.node();
         trace!("Construct [Param] from node: {}", node.kind());
 
@@ -14,14 +16,19 @@ impl LoweringCtx<'_> {
         let ty = self.lower_ty()?;
 
         let ident = if self.cursor.goto_next_sibling() {
-            Some(self.lower_ident()?)
+            let ident = self.lower_ident()?;
+
+            self.resolver
+                .insert(ident.name.clone(), ResolverData::Local(ty.clone()))?;
+
+            Some(ident)
         } else {
             None
         };
 
         self.cursor.goto_parent();
 
-        Ok((ident, Param { ty }))
+        Ok(Param { ty, ident })
     }
 
     pub(crate) fn lower_fn_sig(&mut self) -> anyhow::Result<(Resolver, FnSig)> {
@@ -41,10 +48,12 @@ impl LoweringCtx<'_> {
         self.cursor.goto_first_child();
         self.cursor.goto_next_sibling();
 
-        let mut arguments = vec![];
+        let mut pre_resolver = self.resolver.clone();
+
+        let mut params = vec![];
 
         while self.cursor.node().kind() != ")" {
-            arguments.push(self.lower_param()?);
+            params.push(self.lower_param()?);
 
             self.cursor.goto_next_sibling();
             self.cursor.goto_next_sibling();
@@ -54,29 +63,9 @@ impl LoweringCtx<'_> {
         self.cursor.goto_parent();
         self.cursor.goto_parent();
 
-        let fn_sig = FnSig {
-            ty,
-            params: arguments.iter().map(|(_, param)| param.clone()).collect(),
-        };
+        let fn_sig = FnSig { ty, params };
 
-        self.resolver.insert(
-            ident.name,
-            Ty {
-                kind: TyKind::Fn(Box::new(fn_sig.clone())),
-                span: Span {
-                    lo: node.start_byte(),
-                    hi: node.end_byte(),
-                },
-            },
-        );
-
-        let pre_resolver = self.resolver.clone();
-
-        for (ident, param) in arguments {
-            if let Some(ident) = ident {
-                self.resolver.insert(ident.name, param.ty);
-            }
-        }
+        pre_resolver.insert(ident.name, ResolverData::Fn(fn_sig.clone()))?;
 
         Ok((pre_resolver, fn_sig))
     }
@@ -93,9 +82,13 @@ impl LoweringCtx<'_> {
 
         self.cursor.goto_parent();
 
-        self.resolver = pre_resolver;
+        let resolver = mem::replace(&mut self.resolver, pre_resolver);
 
-        Ok(Fn { sig, body })
+        Ok(Fn {
+            sig,
+            body,
+            resolver,
+        })
     }
 
     pub(crate) fn lower_item_kind(&mut self) -> anyhow::Result<Option<ItemKind>> {

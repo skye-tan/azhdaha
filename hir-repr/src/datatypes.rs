@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use la_arena::{Arena, Idx};
 use tree_sitter::TreeCursor;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Span {
     pub lo: usize,
     pub hi: usize,
@@ -24,7 +24,6 @@ pub enum PrimTyKind {
 pub enum TyKind {
     PrimTy(PrimTyKind),
     Array(Box<Ty>, Box<Expr>),
-    Fn(Box<FnSig>),
     Ptr(Box<Ty>),
 }
 
@@ -84,12 +83,12 @@ pub struct Lit {
 
 #[derive(Debug, Clone)]
 pub struct Path {
-    pub res: Idx<Ty>,
+    pub res: Idx<ResolverData>,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
-pub enum BinOpKind {
+#[derive(Debug, Clone, Copy)]
+pub enum BinOp {
     Add,
     Sub,
     Mul,
@@ -111,13 +110,7 @@ pub enum BinOpKind {
     Assign,
 }
 
-#[derive(Debug, Clone)]
-pub struct BinOp {
-    pub node: BinOpKind,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum UnOp {
     Not,
     Neg,
@@ -179,6 +172,7 @@ pub struct Expr {
 #[derive(Debug, Clone)]
 pub struct Param {
     pub ty: Ty,
+    pub ident: Option<Ident>,
 }
 
 #[derive(Debug, Clone)]
@@ -191,6 +185,7 @@ pub struct FnSig {
 pub struct Fn {
     pub sig: FnSig,
     pub body: Expr,
+    pub resolver: Resolver,
 }
 
 #[derive(Debug, Clone)]
@@ -207,10 +202,20 @@ pub struct Item {
     pub span: Span,
 }
 
+pub type ResolverIdx = Idx<ResolverData>;
+
+#[derive(Debug, Clone)]
+pub enum ResolverData {
+    Fn(FnSig),
+    Union,
+    Struct,
+    Local(Ty),
+}
+
 #[derive(Debug, Clone)]
 pub struct Resolver {
-    pub arena: Arena<Ty>,
-    pub map: HashMap<String, Idx<Ty>>,
+    pub arena: Arena<ResolverData>,
+    pub map: HashMap<String, Idx<ResolverData>>,
 }
 
 pub struct LoweringCtx<'hir> {

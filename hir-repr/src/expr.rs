@@ -8,44 +8,31 @@ use log::trace;
 use crate::{constants, datatypes::*};
 
 impl LoweringCtx<'_> {
-    fn lower_bin_op_kind(&mut self) -> anyhow::Result<BinOpKind> {
-        let node = self.cursor.node();
-        trace!("Construct [BinOpKind] from node: {}", node.kind());
-
-        Ok(match node.kind() {
-            constants::ADD | constants::ASSIGN_ADD | constants::INC => BinOpKind::Add,
-            constants::SUB | constants::ASSIGN_SUB | constants::DEC => BinOpKind::Sub,
-            constants::MUL | constants::ASSIGN_MUL => BinOpKind::Mul,
-            constants::DIV | constants::ASSIGN_DIV => BinOpKind::Div,
-            constants::REM | constants::ASSIGN_REM => BinOpKind::Rem,
-            constants::AND => BinOpKind::And,
-            constants::OR => BinOpKind::Or,
-            constants::BIT_XOR | constants::ASSIGN_BIT_XOR => BinOpKind::BitXor,
-            constants::BIT_AND | constants::ASSIGN_BIT_AND => BinOpKind::BitAnd,
-            constants::BIT_OR | constants::ASSIGN_BIT_OR => BinOpKind::BitOr,
-            constants::SHL | constants::ASSIGN_SHL => BinOpKind::Shl,
-            constants::SHR | constants::ASSIGN_SHR => BinOpKind::Shr,
-            constants::EQ => BinOpKind::Eq,
-            constants::LT => BinOpKind::Lt,
-            constants::LE => BinOpKind::Le,
-            constants::NE => BinOpKind::Ne,
-            constants::GE => BinOpKind::Ge,
-            constants::GT => BinOpKind::Gt,
-            constants::ASSIGN => BinOpKind::Assign,
-            kind => bail!("Unsupported [BinOpKind] node: {kind}"),
-        })
-    }
-
     fn lower_bin_op(&mut self) -> anyhow::Result<BinOp> {
         let node = self.cursor.node();
         trace!("Construct [BinOp] from node: {}", node.kind());
 
-        Ok(BinOp {
-            node: self.lower_bin_op_kind()?,
-            span: Span {
-                lo: node.start_byte(),
-                hi: node.end_byte(),
-            },
+        Ok(match node.kind() {
+            constants::ADD | constants::ASSIGN_ADD | constants::INC => BinOp::Add,
+            constants::SUB | constants::ASSIGN_SUB | constants::DEC => BinOp::Sub,
+            constants::MUL | constants::ASSIGN_MUL => BinOp::Mul,
+            constants::DIV | constants::ASSIGN_DIV => BinOp::Div,
+            constants::REM | constants::ASSIGN_REM => BinOp::Rem,
+            constants::AND => BinOp::And,
+            constants::OR => BinOp::Or,
+            constants::BIT_XOR | constants::ASSIGN_BIT_XOR => BinOp::BitXor,
+            constants::BIT_AND | constants::ASSIGN_BIT_AND => BinOp::BitAnd,
+            constants::BIT_OR | constants::ASSIGN_BIT_OR => BinOp::BitOr,
+            constants::SHL | constants::ASSIGN_SHL => BinOp::Shl,
+            constants::SHR | constants::ASSIGN_SHR => BinOp::Shr,
+            constants::EQ => BinOp::Eq,
+            constants::LT => BinOp::Lt,
+            constants::LE => BinOp::Le,
+            constants::NE => BinOp::Ne,
+            constants::GE => BinOp::Ge,
+            constants::GT => BinOp::Gt,
+            constants::ASSIGN => BinOp::Assign,
+            kind => bail!("Unsupported [BinOp] node: {kind}"),
         })
     }
 
@@ -470,8 +457,8 @@ impl LoweringCtx<'_> {
 
                 self.cursor.goto_parent();
 
-                match bin_op.node {
-                    BinOpKind::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
+                match bin_op {
+                    BinOp::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
                     _ => ExprKind::AssignOp(bin_op, Box::new(lhs), Box::new(rhs)),
                 }
             }

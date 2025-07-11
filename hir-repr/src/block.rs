@@ -95,7 +95,8 @@ impl LoweringCtx<'_> {
                 }
             };
 
-            self.resolver.insert(ident.name.clone(), ty.clone());
+            self.resolver
+                .insert(ident.name.clone(), ResolverData::Local(ty.clone()))?;
 
             let decl_stmt = DeclStmt {
                 ty,

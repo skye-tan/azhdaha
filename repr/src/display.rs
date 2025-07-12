@@ -1,64 +1,69 @@
 use std::fmt::Display;
 
-use crate::hir::{BinOp, PrimTyKind, Ty, TyKind, UnOp};
+use crate::hir::{BinOp, Lit, LitKind, PrimTyKind, Ty, TyKind, UnOp};
 use crate::mir::{
     Body, Operand, Place, Rvalue, Statement, StatementKind, Terminator, TerminatorKind,
 };
 
+impl Display for Lit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.kind {
+            LitKind::Str(val) => write!(f, "const {val} char*"),
+            LitKind::Char(val) => write!(f, "const {val} char"),
+            LitKind::Int(val) => write!(f, "const {val} int"),
+            LitKind::Float(val) => write!(f, "const {val} float"),
+        }
+    }
+}
+
 impl Display for BinOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = match self {
-            BinOp::Add => "+",
-            BinOp::Sub => "-",
-            BinOp::Mul => "*",
-            BinOp::Div => "/",
-            BinOp::Rem => "%",
-            BinOp::And => "&&",
-            BinOp::Or => "||",
-            BinOp::BitXor => "^",
-            BinOp::BitAnd => "&",
-            BinOp::BitOr => "|",
-            BinOp::Shl => "<<",
-            BinOp::Shr => ">>",
-            BinOp::Eq => "==",
-            BinOp::Lt => "<",
-            BinOp::Le => "<=",
-            BinOp::Ne => "!=",
-            BinOp::Ge => ">=",
-            BinOp::Gt => ">",
+        match self {
+            BinOp::Add => write!(f, "+"),
+            BinOp::Sub => write!(f, "-"),
+            BinOp::Mul => write!(f, "*"),
+            BinOp::Div => write!(f, "/"),
+            BinOp::Rem => write!(f, "%"),
+            BinOp::And => write!(f, "&&"),
+            BinOp::Or => write!(f, "||"),
+            BinOp::BitXor => write!(f, "^"),
+            BinOp::BitAnd => write!(f, "&"),
+            BinOp::BitOr => write!(f, "|"),
+            BinOp::Shl => write!(f, "<<"),
+            BinOp::Shr => write!(f, ">>"),
+            BinOp::Eq => write!(f, "=="),
+            BinOp::Lt => write!(f, "<"),
+            BinOp::Le => write!(f, "<="),
+            BinOp::Ne => write!(f, "!="),
+            BinOp::Ge => write!(f, ">="),
+            BinOp::Gt => write!(f, ">"),
             BinOp::Assign => unreachable!(),
-        };
-
-        write!(f, "{str}")
+        }
     }
 }
 
 impl Display for UnOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = match self {
-            UnOp::Not => "!",
-            UnOp::Neg => "-",
-            UnOp::Com => "~",
-            UnOp::Pos => "+",
-            UnOp::AddrOf => "&",
-            UnOp::Deref => "*",
-        };
-
-        write!(f, "{str}")
+        match self {
+            UnOp::Not => write!(f, "!"),
+            UnOp::Neg => write!(f, "-"),
+            UnOp::Com => write!(f, "~"),
+            UnOp::Pos => write!(f, "+"),
+            UnOp::AddrOf => write!(f, "&"),
+            UnOp::Deref => write!(f, "*"),
+        }
     }
 }
 
 impl Display for PrimTyKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = match self {
-            PrimTyKind::Int => "int",
-            PrimTyKind::Float => "float",
-            PrimTyKind::Double => "double",
-            PrimTyKind::Char => "char",
-            PrimTyKind::Void => "void",
-        };
-
-        write!(f, "{str}")
+        match self {
+            PrimTyKind::Int => write!(f, "int"),
+            PrimTyKind::Float => write!(f, "float"),
+            PrimTyKind::Double => write!(f, "double"),
+            PrimTyKind::Char => write!(f, "char"),
+            PrimTyKind::Void => write!(f, "void"),
+        }
     }
 }
 
@@ -76,7 +81,7 @@ impl Display for Operand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Operand::Place(place) => write!(f, "{place}"),
-            Operand::Constant(const_operand) => todo!(),
+            Operand::Const(lit) => write!(f, "{lit}"),
         }
     }
 }
@@ -95,7 +100,7 @@ impl Display for Rvalue {
 
 impl Display for Place {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "'{}", self.local.into_raw())?;
+        write!(f, "_{}", self.local.into_raw())?;
 
         for projection in &self.projections {
             todo!()
@@ -128,7 +133,7 @@ impl Display for Terminator {
 impl Display for Body {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (local, local_decl) in self.local_decls.iter() {
-            writeln!(f, "let '{}: {};", local.into_raw(), local_decl.ty)?;
+            writeln!(f, "let _{}: {};", local.into_raw(), local_decl.ty)?;
         }
 
         for (bb, bb_data) in self.basic_blocks.iter() {

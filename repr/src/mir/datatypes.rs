@@ -6,14 +6,9 @@ use la_arena::{Arena, Idx};
 use smallvec::SmallVec;
 
 use crate::hir::{
-    BinOp, Span, Ty, UnOp,
+    BinOp, Lit, Span, Ty, UnOp,
     resolver::{Resolver, ResolverIdx},
 };
-
-#[derive(Debug, Clone)]
-pub enum Const {
-    Val,
-}
 
 #[derive(Debug, Clone)]
 pub enum PlaceElem {
@@ -28,15 +23,9 @@ pub struct Place {
 }
 
 #[derive(Debug, Clone)]
-pub struct ConstOperand {
-    pub cons_: Const,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone)]
 pub enum Operand {
     Place(Place),
-    Constant(ConstOperand),
+    Const(Lit),
 }
 
 #[derive(Debug, Clone)]

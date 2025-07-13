@@ -2,7 +2,7 @@
 
 use std::mem;
 
-use anyhow::bail;
+use anyhow::{Context, bail};
 use log::trace;
 
 use crate::hir::{constants, datatypes::*};
@@ -104,7 +104,16 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Ret(Box::new(expr))
             }
-            constants::IDENTIFIER => ExprKind::Path(self.lower_to_path()?),
+            constants::IDENTIFIER => {
+                let ident = self.lower_to_ident()?;
+
+                let idx = self
+                    .resolver
+                    .lookup_idx(&ident.name)
+                    .context("Use of unidentified variable.")?;
+
+                ExprKind::Local(idx)
+            }
             constants::CALL_EXPRESSION => {
                 self.cursor.goto_first_child();
 

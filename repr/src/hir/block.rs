@@ -5,7 +5,7 @@ use std::mem;
 use anyhow::bail;
 use log::trace;
 
-use crate::hir::{constants, datatypes::*, resolver::ResolverData};
+use crate::hir::{constants, datatypes::*, resolver::ResKind};
 
 impl LoweringCtx<'_> {
     fn process_decl(&mut self, mut ty: Ty) -> anyhow::Result<(Ty, Ident)> {
@@ -95,12 +95,11 @@ impl LoweringCtx<'_> {
                 }
             };
 
-            self.resolver
-                .insert(ident.name.clone(), ResolverData::Local(ty.clone()))?;
+            let idx = self.resolver.insert(ident, ResKind::Local(ty.clone()))?;
 
             let decl_stmt = DeclStmt {
+                res: idx,
                 ty,
-                ident,
                 init,
                 span: Span {
                     lo: node.start_byte(),

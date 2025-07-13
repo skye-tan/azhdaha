@@ -54,22 +54,6 @@ impl LoweringCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_to_ident(&mut self) -> anyhow::Result<Ident> {
-        let node = self.cursor.node();
-        trace!("Construct [Ident] from node: {}", node.kind());
-
-        Ok(Ident {
-            name: std::str::from_utf8(
-                &self.source_code[self.cursor.node().start_byte()..self.cursor.node().end_byte()],
-            )?
-            .to_string(),
-            span: Span {
-                lo: node.start_byte(),
-                hi: node.end_byte(),
-            },
-        })
-    }
-
     fn lower_to_lit_kind(&mut self) -> anyhow::Result<LitKind> {
         let node = self.cursor.node();
         trace!("Construct [LitKind] from node: {}", node.kind());
@@ -109,18 +93,15 @@ impl LoweringCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_to_path(&mut self) -> anyhow::Result<Path> {
+    pub(crate) fn lower_to_ident(&mut self) -> anyhow::Result<Ident> {
         let node = self.cursor.node();
-        trace!("Construct [Path] from node: {}", node.kind());
+        trace!("Construct [Ident] from node: {}", node.kind());
 
-        let ident = self.lower_to_ident()?;
-
-        let Some(res) = self.resolver.lookup_idx(&ident.name) else {
-            bail!("Unknown identifier: {}", &ident.name);
-        };
-
-        Ok(Path {
-            res,
+        Ok(Ident {
+            name: std::str::from_utf8(
+                &self.source_code[self.cursor.node().start_byte()..self.cursor.node().end_byte()],
+            )?
+            .to_string(),
             span: Span {
                 lo: node.start_byte(),
                 hi: node.end_byte(),

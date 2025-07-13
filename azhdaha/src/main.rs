@@ -38,7 +38,7 @@ fn main() -> anyhow::Result<()> {
                 let ctx = MirCtx::new(&lowering_ctx.resolver, f.body.span);
                 let mir_body = ctx.lower(&f);
 
-                if let Some(mir_body) = mir_body {
+                if let Ok(mir_body) = mir_body {
                     println!("\n{mir_body}");
                 }
             }

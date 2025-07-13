@@ -7,7 +7,7 @@ use smallvec::SmallVec;
 
 use crate::hir::{
     BinOp, Lit, Span, Ty, UnOp,
-    resolver::{Resolver, ResolverIdx},
+    resolver::{ResIdx, Resolver},
 };
 
 #[derive(Debug, Clone)]
@@ -25,7 +25,7 @@ pub struct Place {
 #[derive(Debug, Clone)]
 pub enum Const {
     Lit(Lit),
-    Function(ResolverIdx),
+    Fn(ResIdx),
 }
 
 #[derive(Debug, Clone)]
@@ -56,13 +56,13 @@ pub struct Statement {
 #[derive(Debug, Clone)]
 pub struct SwitchTargets {
     value: SmallVec<[u128; 1]>,
-    targets: SmallVec<[BasicBlock; 2]>,
+    bbs: SmallVec<[BasicBlock; 2]>,
 }
 
 #[derive(Debug, Clone)]
 pub enum TerminatorKind {
     Goto {
-        target: BasicBlock,
+        bb: BasicBlock,
     },
     SwitchInt {
         discr: Operand,
@@ -89,21 +89,23 @@ pub type Local = Idx<LocalDecl>;
 
 #[derive(Debug, Clone)]
 pub struct LocalDecl {
+    pub debug_ident: Option<String>,
     pub ty: Ty,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub struct Body {
+pub struct Body<'mir> {
     pub basic_blocks: Arena<BasicBlockData>,
     pub local_decls: Arena<LocalDecl>,
+    pub resolver: &'mir Resolver,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
 pub struct MirCtx<'mir> {
-    pub body: RefCell<Body>,
-    pub resolver: &'mir Resolver,
-    pub local_map: HashMap<ResolverIdx, Local>,
+    pub body: Body<'mir>,
+    pub bb_data: BasicBlockData,
+    pub local_map: HashMap<ResIdx, Local>,
     // pub global_map: HashMap<ResolverIdx, Local>,
 }

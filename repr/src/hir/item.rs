@@ -7,7 +7,7 @@ use log::trace;
 use crate::hir::{
     constants,
     datatypes::*,
-    resolver::{Resolver, ResolverData},
+    resolver::{ResKind, Resolver},
 };
 
 impl LoweringCtx<'_> {
@@ -19,20 +19,26 @@ impl LoweringCtx<'_> {
 
         let ty = self.lower_to_ty()?;
 
-        let ident = if self.cursor.goto_next_sibling() {
+        let res = if self.cursor.goto_next_sibling() {
             let ident = self.lower_to_ident()?;
 
-            self.resolver
-                .insert(ident.name.clone(), ResolverData::Local(ty.clone()))?;
+            let res = self.resolver.insert(ident, ResKind::Local(ty.clone()))?;
 
-            Some(ident)
+            Some(res)
         } else {
             None
         };
 
         self.cursor.goto_parent();
 
-        Ok(Param { ty, ident })
+        Ok(Param {
+            res,
+            ty,
+            span: Span {
+                lo: node.start_byte(),
+                hi: node.end_byte(),
+            },
+        })
     }
 
     pub(crate) fn lower_to_fn_sig(&mut self) -> anyhow::Result<(Resolver, FnSig)> {
@@ -67,9 +73,9 @@ impl LoweringCtx<'_> {
         self.cursor.goto_parent();
         self.cursor.goto_parent();
 
-        let fn_sig = FnSig { ty, params };
+        let res = pre_resolver.insert(ident, ResKind::Fn(ty.clone(), params.clone()))?;
 
-        pre_resolver.insert(ident.name, ResolverData::Fn(fn_sig.clone()))?;
+        let fn_sig = FnSig { res, ty, params };
 
         Ok((pre_resolver, fn_sig))
     }

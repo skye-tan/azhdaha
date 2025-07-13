@@ -1,9 +1,8 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use la_arena::Idx;
 use tree_sitter::TreeCursor;
 
-use crate::hir::resolver::{Resolver, ResolverData};
+use crate::hir::resolver::{ResIdx, Resolver};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Span {
@@ -41,8 +40,8 @@ pub struct Ident {
 
 #[derive(Debug, Clone)]
 pub struct DeclStmt {
+    pub res: ResIdx,
     pub ty: Ty,
-    pub ident: Ident,
     pub init: Option<Expr>,
     pub span: Span,
 }
@@ -73,18 +72,11 @@ pub enum LitKind {
     Char(char),
     Int(i64),
     Float(f64),
-    Symbol(Idx<ResolverData>),
 }
 
 #[derive(Debug, Clone)]
 pub struct Lit {
     pub kind: LitKind,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub struct Path {
-    pub res: Idx<ResolverData>,
     pub span: Span,
 }
 
@@ -145,7 +137,7 @@ pub enum ExprKind {
     Block(Block),
     Lit(Lit),
     Ret(Box<Expr>),
-    Path(Path),
+    Local(ResIdx),
     Call(Box<Expr>, Vec<Expr>),
     Binary(BinOp, Box<Expr>, Box<Expr>),
     Unary(UnOp, Box<Expr>),
@@ -172,12 +164,14 @@ pub struct Expr {
 
 #[derive(Debug, Clone)]
 pub struct Param {
+    pub res: Option<ResIdx>,
     pub ty: Ty,
-    pub ident: Option<Ident>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]
 pub struct FnSig {
+    pub res: ResIdx,
     pub ty: Ty,
     pub params: Vec<Param>,
 }

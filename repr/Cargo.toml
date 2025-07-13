@@ -13,3 +13,4 @@ anyhow.workspace = true
 tree-sitter.workspace = true
 la-arena.workspace = true
 smallvec.workspace = true
+itertools = "0.14.0"

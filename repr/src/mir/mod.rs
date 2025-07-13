@@ -4,8 +4,8 @@
 //! This implementation has been modeled after rustc's MIR representation.
 //!
 
+/// Contains datatypes used to represent the MIR.
 mod datatypes;
-mod display;
 
 pub use datatypes::*;
 
@@ -13,7 +13,7 @@ use std::{cell::RefCell, collections::HashMap};
 
 use la_arena::{Arena, RawIdx};
 
-use crate::hir::{self, Span, Ty, resolver::Resolver};
+use crate::hir::{self, PrimTyKind, Span, Ty, TyKind, resolver::Resolver};
 
 impl<'mir> MirCtx<'mir> {
     pub fn new(resolver: &'mir Resolver, span: Span) -> Self {
@@ -24,15 +24,15 @@ impl<'mir> MirCtx<'mir> {
                 span,
             }),
             resolver,
-            map: HashMap::new(),
+            local_map: HashMap::new(),
         }
     }
 
-    fn add_basic_block(&self, bb_data: &BasicBlockData) -> BasicBlock {
+    pub(crate) fn add_basic_block(&self, bb_data: &BasicBlockData) -> BasicBlock {
         self.body.borrow_mut().basic_blocks.alloc(bb_data.clone())
     }
 
-    fn add_local(&self, ty: &Ty, span: Span) -> Local {
+    pub(crate) fn add_local(&self, ty: &Ty, span: Span) -> Local {
         self.body.borrow_mut().local_decls.alloc(LocalDecl {
             ty: ty.clone(),
             span,
@@ -47,7 +47,7 @@ impl<'mir> MirCtx<'mir> {
                 Some(ident) => {
                     let resolver_idx = item.resolver.lookup_idx(&ident.name).unwrap();
                     let local = self.add_local(&param.ty, param.ty.span);
-                    self.map.insert(resolver_idx, local);
+                    self.local_map.insert(resolver_idx, local);
                 }
                 None => return None,
             }
@@ -60,7 +60,11 @@ impl<'mir> MirCtx<'mir> {
         Some(self.body.into_inner())
     }
 
-    fn lower_expr(&mut self, expr: &'mir hir::Expr, bb_data: &mut BasicBlockData) -> Option<Local> {
+    pub(crate) fn lower_expr(
+        &mut self,
+        expr: &'mir hir::Expr,
+        bb_data: &mut BasicBlockData,
+    ) -> Option<Place> {
         let span = expr.span;
 
         match &expr.kind {
@@ -74,27 +78,22 @@ impl<'mir> MirCtx<'mir> {
 
                 self.resolver = pre_resolver;
 
-                return None;
+                None
             }
             hir::ExprKind::Lit(lit) => todo!(),
             hir::ExprKind::Ret(expr) => {
-                let local = self.lower_expr(expr, bb_data);
+                let rvalue = self.lower_to_rvalue(expr, bb_data);
 
-                if let Some(local) = local {
-                    bb_data.statements.push(Statement {
-                        kind: StatementKind::Assign(
-                            Place {
-                                local: Local::from_raw(RawIdx::from_u32(0)),
-                                projections: vec![],
-                            },
-                            Rvalue::Use(Operand::Place(Place {
-                                local,
-                                projections: vec![],
-                            })),
-                        ),
-                        span,
-                    });
-                }
+                bb_data.statements.push(Statement {
+                    kind: StatementKind::Assign(
+                        Place {
+                            local: Local::from_raw(RawIdx::from_u32(0)),
+                            projections: vec![],
+                        },
+                        rvalue,
+                    ),
+                    span,
+                });
 
                 bb_data.terminator = Some(Terminator {
                     kind: TerminatorKind::Return,
@@ -103,69 +102,27 @@ impl<'mir> MirCtx<'mir> {
 
                 _ = self.add_basic_block(bb_data);
 
-                return None;
+                None
             }
-            hir::ExprKind::Path(path) => {
-                let local = self.map.get(&path.res);
-
-                return local.cloned();
-            }
+            hir::ExprKind::Path(path) => todo!(),
             hir::ExprKind::Call(expr, exprs) => todo!(),
-            hir::ExprKind::Binary(bin_op, left_expr, right_expr) => {
-                let left_local = self.lower_expr(left_expr, bb_data).unwrap();
-                let right_local = self.lower_expr(right_expr, bb_data).unwrap();
-
-                let ty = self.body.borrow().local_decls[left_local].ty.clone();
-
-                let local = self.add_local(&ty, span);
-
-                bb_data.statements.push(Statement {
-                    kind: StatementKind::Assign(
-                        Place {
-                            local: local,
-                            projections: vec![],
-                        },
-                        Rvalue::BinaryOp(
-                            *bin_op,
-                            Box::new(Operand::Place(Place {
-                                local: left_local,
-                                projections: vec![],
-                            })),
-                            Box::new(Operand::Place(Place {
-                                local: right_local,
-                                projections: vec![],
-                            })),
-                        ),
-                    ),
-                    span,
-                });
-
-                return Some(local);
-            }
-            hir::ExprKind::Unary(un_op, expr) => todo!(),
+            hir::ExprKind::Binary(bin_op, left_expr, right_expr) => None,
+            hir::ExprKind::Unary(un_op, expr) => None,
             hir::ExprKind::If(expr, expr1, expr2) => todo!(),
             hir::ExprKind::Loop(loop_source, expr) => todo!(),
             hir::ExprKind::Break => todo!(),
             hir::ExprKind::Continue => todo!(),
             hir::ExprKind::Assign(lhs_expr, rhs_expr) => {
-                let lhs_local = self.lower_expr(lhs_expr, bb_data).unwrap();
-                let rhs_local = self.lower_expr(rhs_expr, bb_data).unwrap();
+                let place = self.lower_to_place(lhs_expr);
+
+                let rvalue = self.lower_to_rvalue(rhs_expr, bb_data);
 
                 bb_data.statements.push(Statement {
-                    kind: StatementKind::Assign(
-                        Place {
-                            local: lhs_local,
-                            projections: vec![],
-                        },
-                        Rvalue::Use(Operand::Place(Place {
-                            local: rhs_local,
-                            projections: vec![],
-                        })),
-                    ),
+                    kind: StatementKind::Assign(place.clone(), rvalue),
                     span,
                 });
 
-                return None;
+                Some(place)
             }
             hir::ExprKind::AssignOp(bin_op, expr, expr1) => todo!(),
             hir::ExprKind::Field(expr, ident) => todo!(),
@@ -178,39 +135,174 @@ impl<'mir> MirCtx<'mir> {
         }
     }
 
-    fn lower_stmt(&mut self, stmt: &'mir hir::Stmt, bb_data: &mut BasicBlockData) {
+    pub(crate) fn lower_stmt(&mut self, stmt: &'mir hir::Stmt, bb_data: &mut BasicBlockData) {
         let span = stmt.span;
 
         match &stmt.kind {
             hir::StmtKind::Decl(decl_stmt) => {
+                let init_rvalue = decl_stmt
+                    .init
+                    .as_ref()
+                    .map(|init_expr| self.lower_to_rvalue(init_expr, bb_data));
+
                 let resolver_idx = self.resolver.lookup_idx(&decl_stmt.ident.name).unwrap();
                 let local = self.add_local(&decl_stmt.ty, decl_stmt.span);
-                self.map.insert(resolver_idx, local);
+                self.local_map.insert(resolver_idx, local);
 
-                if let Some(init) = &decl_stmt.init {
-                    let init_local = self.lower_expr(init, bb_data);
-
-                    if let Some(init_local) = init_local {
-                        bb_data.statements.push(Statement {
-                            kind: StatementKind::Assign(
-                                Place {
-                                    local,
-                                    projections: vec![],
-                                },
-                                Rvalue::Use(Operand::Place(Place {
-                                    local: init_local,
-                                    projections: vec![],
-                                })),
-                            ),
-                            span,
-                        });
-                    }
+                if let Some(init_rvalue) = init_rvalue {
+                    bb_data.statements.push(Statement {
+                        kind: StatementKind::Assign(
+                            Place {
+                                local,
+                                projections: vec![],
+                            },
+                            init_rvalue,
+                        ),
+                        span,
+                    });
                 }
             }
-            hir::StmtKind::Expr(expr) => todo!(),
-            hir::StmtKind::Semi(expr) => {
-                self.lower_expr(expr, bb_data);
+            hir::StmtKind::Expr(expr) => {
+                _ = self.lower_expr(expr, bb_data);
             }
+            hir::StmtKind::Semi(expr) => {
+                _ = self.lower_expr(expr, bb_data);
+            }
+        }
+    }
+
+    pub(crate) fn lower_to_rvalue(
+        &mut self,
+        expr: &'mir hir::Expr,
+        bb_data: &mut BasicBlockData,
+    ) -> Rvalue {
+        let span = expr.span;
+
+        match &expr.kind {
+            hir::ExprKind::Path(_) | hir::ExprKind::Lit(_) => {
+                Rvalue::Use(self.lower_to_operand(expr, bb_data))
+            }
+            hir::ExprKind::Binary(bin_op, left_expr, right_expr) => {
+                let left_operand = self.lower_to_operand(left_expr, bb_data);
+                let right_operand = self.lower_to_operand(right_expr, bb_data);
+
+                Rvalue::BinaryOp(*bin_op, left_operand, right_operand)
+            }
+            hir::ExprKind::Unary(un_op, expr) => {
+                let operand = self.lower_to_operand(expr, bb_data);
+
+                Rvalue::UnaryOp(*un_op, operand)
+            }
+            hir::ExprKind::Assign(lhs_expr, rhs_expr) => {
+                let place = self.lower_to_place(lhs_expr);
+
+                let rvalue = self.lower_to_rvalue(rhs_expr, bb_data);
+
+                bb_data.statements.push(Statement {
+                    kind: StatementKind::Assign(place.clone(), rvalue),
+                    span,
+                });
+
+                Rvalue::Use(Operand::Place(place))
+            }
+            hir::ExprKind::Call(expr, exprs) => {
+                let operand = self.lower_to_operand(expr, bb_data);
+
+                let arguments = exprs
+                    .iter()
+                    .map(|expr| self.lower_to_operand(expr, bb_data))
+                    .collect();
+
+                Rvalue::Call(operand, arguments)
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    pub(crate) fn lower_to_operand(
+        &mut self,
+        expr: &'mir hir::Expr,
+        bb_data: &mut BasicBlockData,
+    ) -> Operand {
+        let span = expr.span;
+
+        match &expr.kind {
+            hir::ExprKind::Lit(lit) => Operand::Const(Const::Lit(lit.clone())),
+            hir::ExprKind::Path(path) => {
+                let Some(local) = self.local_map.get(&path.res) else {
+                    return Operand::Const(Const::Function(path.res));
+                };
+
+                Operand::Place(Place {
+                    local: *local,
+                    projections: vec![],
+                })
+            }
+            hir::ExprKind::Binary(bin_op, left_expr, right_expr) => {
+                let left_operand = self.lower_to_operand(left_expr, bb_data);
+                let right_operand = self.lower_to_operand(right_expr, bb_data);
+
+                let local = self.add_local(
+                    &Ty {
+                        kind: TyKind::PrimTy(PrimTyKind::Int),
+                        span,
+                    },
+                    span,
+                );
+
+                let place = Place {
+                    local,
+                    projections: vec![],
+                };
+
+                bb_data.statements.push(Statement {
+                    kind: StatementKind::Assign(
+                        place.clone(),
+                        Rvalue::BinaryOp(*bin_op, left_operand, right_operand),
+                    ),
+                    span,
+                });
+
+                Operand::Place(place)
+            }
+            hir::ExprKind::Unary(un_op, expr) => {
+                let operand = self.lower_to_operand(expr, bb_data);
+
+                let local = self.add_local(
+                    &Ty {
+                        kind: TyKind::PrimTy(PrimTyKind::Int),
+                        span,
+                    },
+                    span,
+                );
+
+                let place = Place {
+                    local,
+                    projections: vec![],
+                };
+
+                bb_data.statements.push(Statement {
+                    kind: StatementKind::Assign(place.clone(), Rvalue::UnaryOp(*un_op, operand)),
+                    span,
+                });
+
+                Operand::Place(place)
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    pub(crate) fn lower_to_place(&mut self, expr: &'mir hir::Expr) -> Place {
+        match &expr.kind {
+            hir::ExprKind::Path(path) => {
+                let local = self.local_map.get(&path.res).unwrap();
+
+                Place {
+                    local: *local,
+                    projections: vec![],
+                }
+            }
+            _ => unreachable!(),
         }
     }
 }

@@ -20,7 +20,7 @@ impl LoweringCtx<'_> {
 
                 let array_len = self.lower_to_expr()?;
 
-                let span = ty.span.clone();
+                let span = ty.span;
 
                 ty = Ty {
                     kind: TyKind::Array(Box::new(ty), Box::new(array_len)),
@@ -44,7 +44,7 @@ impl LoweringCtx<'_> {
 
                 self.cursor.goto_parent();
 
-                let span = ty.span.clone();
+                let span = ty.span;
 
                 (
                     Ty {

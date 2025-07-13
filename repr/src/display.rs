@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use itertools::Itertools;
+
 use crate::hir::{BinOp, Lit, LitKind, PrimTyKind, Ty, TyKind, UnOp};
 use crate::mir::{
     Body, Operand, Place, Rvalue, Statement, StatementKind, Terminator, TerminatorKind,
@@ -12,6 +14,7 @@ impl Display for Lit {
             LitKind::Char(val) => write!(f, "const {val} char"),
             LitKind::Int(val) => write!(f, "const {val} int"),
             LitKind::Float(val) => write!(f, "const {val} float"),
+            LitKind::Symbol(_) => todo!(),
         }
     }
 }
@@ -81,7 +84,10 @@ impl Display for Operand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Operand::Place(place) => write!(f, "{place}"),
-            Operand::Const(lit) => write!(f, "{lit}"),
+            Operand::Const(lit) => match lit {
+                crate::mir::Const::Lit(lit) => write!(f, "{lit}"),
+                crate::mir::Const::Function(idx) => write!(f, "{idx:?}"),
+            },
         }
     }
 }
@@ -94,6 +100,9 @@ impl Display for Rvalue {
                 write!(f, "{} {} {}", left_operand, bin_op, right_operand)
             }
             Rvalue::UnaryOp(un_op, operand) => write!(f, "{un_op} {operand}"),
+            Rvalue::Call(operand, operands) => {
+                write!(f, "{operand}({})", operands.iter().join(", "))
+            }
         }
     }
 }

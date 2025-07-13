@@ -306,12 +306,12 @@ impl LoweringCtx<'_> {
                 let (mut stmts, resolver) = match body.kind {
                     ExprKind::Block(block) => (block.stmts, block.resolver),
                     _ => {
-                        let span = body.span.clone();
+                        let span = body.span;
 
                         (
                             vec![Stmt {
                                 kind: StmtKind::Semi(body),
-                                span: span.clone(),
+                                span,
                             }],
                             self.resolver.clone(),
                         )
@@ -379,15 +379,15 @@ impl LoweringCtx<'_> {
                         block.stmts.push(update_stmt);
                     }
                     _ => {
-                        let span = body.span.clone();
+                        let span = body.span;
 
                         let mut block = Block {
                             stmts: vec![Stmt {
                                 kind: StmtKind::Semi(body),
-                                span: span.clone(),
+                                span,
                             }],
                             resolver: resolver.clone(),
-                            span: span.clone(),
+                            span,
                         };
 
                         block.stmts.push(update_stmt);

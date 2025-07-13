@@ -73,6 +73,7 @@ pub enum LitKind {
     Char(char),
     Int(i64),
     Float(f64),
+    Symbol(Idx<ResolverData>),
 }
 
 #[derive(Debug, Clone)]

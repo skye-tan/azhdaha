@@ -6,14 +6,9 @@ use la_arena::{Arena, Idx};
 use smallvec::SmallVec;
 
 use crate::hir::{
-    BinOp, Span, Ty, UnOp,
+    BinOp, Lit, Span, Ty, UnOp,
     resolver::{Resolver, ResolverIdx},
 };
-
-#[derive(Debug, Clone)]
-pub enum Const {
-    Val,
-}
 
 #[derive(Debug, Clone)]
 pub enum PlaceElem {
@@ -28,22 +23,23 @@ pub struct Place {
 }
 
 #[derive(Debug, Clone)]
-pub struct ConstOperand {
-    pub cons_: Const,
-    pub span: Span,
+pub enum Const {
+    Lit(Lit),
+    Function(ResolverIdx),
 }
 
 #[derive(Debug, Clone)]
 pub enum Operand {
     Place(Place),
-    Constant(ConstOperand),
+    Const(Const),
 }
 
 #[derive(Debug, Clone)]
 pub enum Rvalue {
     Use(Operand),
-    BinaryOp(BinOp, Box<Operand>, Box<Operand>),
+    BinaryOp(BinOp, Operand, Operand),
     UnaryOp(UnOp, Operand),
+    Call(Operand, Vec<Operand>),
 }
 
 #[derive(Debug, Clone)]
@@ -108,5 +104,6 @@ pub struct Body {
 pub struct MirCtx<'mir> {
     pub body: RefCell<Body>,
     pub resolver: &'mir Resolver,
-    pub map: HashMap<ResolverIdx, Local>,
+    pub local_map: HashMap<ResolverIdx, Local>,
+    // pub global_map: HashMap<ResolverIdx, Local>,
 }

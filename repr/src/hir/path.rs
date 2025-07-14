@@ -45,12 +45,14 @@ impl LoweringCtx<'_> {
         let node = self.cursor.node();
         trace!("Construct [Ty] from node: {}", node.kind());
 
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
         Ok(Ty {
             kind: self.lower_to_ty_kind()?,
-            span: Span {
-                lo: node.start_byte(),
-                hi: node.end_byte(),
-            },
+            span,
         })
     }
 
@@ -84,12 +86,14 @@ impl LoweringCtx<'_> {
         let node = self.cursor.node();
         trace!("Construct [Lit] from node: {}", node.kind());
 
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
         Ok(Lit {
             kind: self.lower_to_lit_kind()?,
-            span: Span {
-                lo: node.start_byte(),
-                hi: node.end_byte(),
-            },
+            span,
         })
     }
 
@@ -97,15 +101,17 @@ impl LoweringCtx<'_> {
         let node = self.cursor.node();
         trace!("Construct [Ident] from node: {}", node.kind());
 
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
         Ok(Ident {
             name: std::str::from_utf8(
                 &self.source_code[self.cursor.node().start_byte()..self.cursor.node().end_byte()],
             )?
             .to_string(),
-            span: Span {
-                lo: node.start_byte(),
-                hi: node.end_byte(),
-            },
+            span,
         })
     }
 }

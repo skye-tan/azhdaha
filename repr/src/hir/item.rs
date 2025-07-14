@@ -15,6 +15,11 @@ impl LoweringCtx<'_> {
         let node = self.cursor.node();
         trace!("Construct [Param] from node: {}", node.kind());
 
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
         self.cursor.goto_first_child();
 
         let ty = self.lower_to_ty()?;
@@ -31,14 +36,7 @@ impl LoweringCtx<'_> {
 
         self.cursor.goto_parent();
 
-        Ok(Param {
-            res,
-            ty,
-            span: Span {
-                lo: node.start_byte(),
-                hi: node.end_byte(),
-            },
-        })
+        Ok(Param { res, ty, span })
     }
 
     pub(crate) fn lower_to_fn_sig(&mut self) -> anyhow::Result<(Resolver, FnSig)> {
@@ -118,12 +116,14 @@ impl LoweringCtx<'_> {
         let node = self.cursor.node();
         trace!("Construct [Item] from node: {}", node.kind());
 
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
         Ok(self.lower_to_item_kind()?.map(|item_kind| Item {
             kind: item_kind,
-            span: Span {
-                lo: node.start_byte(),
-                hi: node.end_byte(),
-            },
+            span,
         }))
     }
 }

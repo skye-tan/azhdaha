@@ -62,6 +62,11 @@ impl LoweringCtx<'_> {
         let node = self.cursor.node();
         trace!("Construct [DeclStmt] from node: {}", node.kind());
 
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
         self.cursor.goto_first_child();
 
         let ty = self.lower_to_ty()?;
@@ -101,10 +106,7 @@ impl LoweringCtx<'_> {
                 res: idx,
                 ty,
                 init,
-                span: Span {
-                    lo: node.start_byte(),
-                    hi: node.end_byte(),
-                },
+                span,
             };
 
             decl_stmts.push(decl_stmt);
@@ -151,15 +153,17 @@ impl LoweringCtx<'_> {
         let node = self.cursor.node();
         trace!("Construct [Stmt] from node: {}", node.kind());
 
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
         Ok(self
             .lower_to_stmt_kind()?
             .into_iter()
             .map(|stmt_kind| Stmt {
                 kind: stmt_kind,
-                span: Span {
-                    lo: node.start_byte(),
-                    hi: node.end_byte(),
-                },
+                span,
             })
             .collect())
     }
@@ -167,6 +171,11 @@ impl LoweringCtx<'_> {
     pub(crate) fn lower_to_block(&mut self) -> anyhow::Result<Block> {
         let node = self.cursor.node();
         trace!("Construct [Block] from node: {}", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
 
         self.cursor.goto_first_child();
         self.cursor.goto_next_sibling();
@@ -188,10 +197,7 @@ impl LoweringCtx<'_> {
         Ok(Block {
             stmts,
             resolver,
-            span: Span {
-                lo: node.start_byte(),
-                hi: node.end_byte(),
-            },
+            span,
         })
     }
 }

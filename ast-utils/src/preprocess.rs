@@ -5,7 +5,10 @@ use compile_commands::{CompilationDatabase, CompileArgs};
 /// The flag which indicates that only preprocess phase should be done.
 const PREPROCESS_ONLY_FLAG: &str = "-E";
 
-/// The flag used for including headers.
+/// The flag which inhibits generation of linemarkers in the output from the preprocessor.
+const INHABIT_LINEMARKS_FLAG: &str = "-P";
+
+/// The flag which is used to include headers.
 #[allow(dead_code)]
 const INCLUDE_FLAG: &str = "-I";
 
@@ -51,6 +54,7 @@ pub(crate) fn preprocess(compile_commands: &CompilationDatabase) -> anyhow::Resu
             Command::new(command)
                 .args(args)
                 .arg(PREPROCESS_ONLY_FLAG)
+                .arg(INHABIT_LINEMARKS_FLAG)
                 .current_dir(directory)
                 .output()?
                 .stdout,

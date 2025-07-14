@@ -78,18 +78,25 @@ impl LoweringCtx<'_> {
         let node = self.cursor.node();
         trace!("Construct [SizeOf] from node: {}", node.kind());
 
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
         Ok(Sizeof {
             kind: self.lower_to_sizeof_kind()?,
-            span: Span {
-                lo: node.start_byte(),
-                hi: node.end_byte(),
-            },
+            span,
         })
     }
 
     fn lower_to_expr_kind(&mut self) -> anyhow::Result<ExprKind> {
         let node = self.cursor.node();
         trace!("Construct [ExprKind] from node: {}", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
 
         Ok(match node.kind() {
             kind if kind.contains("literal") => ExprKind::Lit(self.lower_to_lit()?),
@@ -175,18 +182,17 @@ impl LoweringCtx<'_> {
 
                 self.cursor.goto_parent();
 
+                let span = Span {
+                    lo: op_node.start_byte(),
+                    hi: op_node.end_byte(),
+                };
+
                 let rhs = Expr {
                     kind: ExprKind::Lit(Lit {
                         kind: LitKind::Int(1),
-                        span: Span {
-                            lo: op_node.start_byte(),
-                            hi: op_node.end_byte(),
-                        },
+                        span,
                     }),
-                    span: Span {
-                        lo: op_node.start_byte(),
-                        hi: op_node.end_byte(),
-                    },
+                    span,
                 };
 
                 ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs))
@@ -265,16 +271,10 @@ impl LoweringCtx<'_> {
                             Box::new(body),
                             Some(Box::new(Expr {
                                 kind: ExprKind::Break,
-                                span: Span {
-                                    lo: node.start_byte(),
-                                    hi: node.end_byte(),
-                                },
+                                span,
                             })),
                         ),
-                        span: Span {
-                            lo: node.start_byte(),
-                            hi: node.end_byte(),
-                        },
+                        span,
                     }),
                 )
             }
@@ -299,16 +299,10 @@ impl LoweringCtx<'_> {
                             Box::new(body.clone()),
                             Some(Box::new(Expr {
                                 kind: ExprKind::Break,
-                                span: Span {
-                                    lo: node.start_byte(),
-                                    hi: node.end_byte(),
-                                },
+                                span,
                             })),
                         ),
-                        span: Span {
-                            lo: node.start_byte(),
-                            hi: node.end_byte(),
-                        },
+                        span,
                     }),
                 );
 
@@ -330,24 +324,15 @@ impl LoweringCtx<'_> {
                 stmts.push(Stmt {
                     kind: StmtKind::Expr(Expr {
                         kind: loop_expr,
-                        span: Span {
-                            lo: node.start_byte(),
-                            hi: node.end_byte(),
-                        },
+                        span,
                     }),
-                    span: Span {
-                        lo: node.start_byte(),
-                        hi: node.end_byte(),
-                    },
+                    span,
                 });
 
                 ExprKind::Block(Block {
                     stmts,
                     resolver,
-                    span: Span {
-                        lo: node.start_byte(),
-                        hi: node.end_byte(),
-                    },
+                    span,
                 })
             }
             constants::FOR_STATEMENT => {
@@ -368,10 +353,7 @@ impl LoweringCtx<'_> {
 
                 let update_stmt = Stmt {
                     kind: StmtKind::Semi(self.lower_to_expr()?),
-                    span: Span {
-                        lo: self.cursor.node().start_byte(),
-                        hi: self.cursor.node().end_byte(),
-                    },
+                    span,
                 };
 
                 self.cursor.goto_next_sibling();
@@ -416,16 +398,10 @@ impl LoweringCtx<'_> {
                             Box::new(body),
                             Some(Box::new(Expr {
                                 kind: ExprKind::Break,
-                                span: Span {
-                                    lo: node.start_byte(),
-                                    hi: node.end_byte(),
-                                },
+                                span,
                             })),
                         ),
-                        span: Span {
-                            lo: node.start_byte(),
-                            hi: node.end_byte(),
-                        },
+                        span,
                     }),
                 );
 
@@ -433,24 +409,15 @@ impl LoweringCtx<'_> {
                 stmts.push(Stmt {
                     kind: StmtKind::Expr(Expr {
                         kind: loop_expr,
-                        span: Span {
-                            lo: node.start_byte(),
-                            hi: node.end_byte(),
-                        },
+                        span,
                     }),
-                    span: Span {
-                        lo: node.start_byte(),
-                        hi: node.end_byte(),
-                    },
+                    span,
                 });
 
                 ExprKind::Block(Block {
                     stmts,
                     resolver,
-                    span: Span {
-                        lo: node.start_byte(),
-                        hi: node.end_byte(),
-                    },
+                    span,
                 })
             }
             constants::ASSIGNMENT_EXPRESSION => {
@@ -470,7 +437,13 @@ impl LoweringCtx<'_> {
 
                 match bin_op {
                     BinOp::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
-                    _ => ExprKind::AssignOp(bin_op, Box::new(lhs), Box::new(rhs)),
+                    _ => ExprKind::Assign(
+                        Box::new(lhs.clone()),
+                        Box::new(Expr {
+                            kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
+                            span,
+                        }),
+                    ),
                 }
             }
             constants::FIELD_EXPRESSION => {
@@ -499,14 +472,7 @@ impl LoweringCtx<'_> {
 
                 self.cursor.goto_parent();
 
-                ExprKind::Index(
-                    Box::new(target),
-                    Box::new(index),
-                    Span {
-                        lo: node.start_byte(),
-                        hi: node.end_byte(),
-                    },
-                )
+                ExprKind::Index(Box::new(target), Box::new(index), span)
             }
             constants::BREAK_STATEMENT => ExprKind::Break,
             constants::CONTINUE_STATEMENT => ExprKind::Continue,
@@ -571,12 +537,14 @@ impl LoweringCtx<'_> {
         let node = self.cursor.node();
         trace!("Construct [Expr] from node: {}", node.kind());
 
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
         Ok(Expr {
             kind: self.lower_to_expr_kind()?,
-            span: Span {
-                lo: node.start_byte(),
-                hi: node.end_byte(),
-            },
+            span,
         })
     }
 }

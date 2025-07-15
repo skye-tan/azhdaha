@@ -184,7 +184,7 @@ pub struct Fn {
 
 #[derive(Debug, Clone)]
 pub enum ItemKind {
-    Fn(Fn),
+    Fn(Box<Fn>),
     Union,
     Struct,
     GlobalVar,

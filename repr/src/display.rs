@@ -1,3 +1,5 @@
+#![allow(clippy::missing_docs_in_private_items)]
+
 use std::fmt::Display;
 
 use itertools::Itertools;
@@ -14,10 +16,10 @@ trait MirDisplay {
 impl MirDisplay for Lit {
     fn mir_display(&self, _body: &Body) -> String {
         match &self.kind {
-            LitKind::Str(val) => format!("{val}"),
-            LitKind::Char(val) => format!("{val}"),
-            LitKind::Int(val) => format!("{val}"),
-            LitKind::Float(val) => format!("{val}"),
+            LitKind::Str(val) => val.to_string(),
+            LitKind::Char(val) => val.to_string(),
+            LitKind::Int(val) => val.to_string(),
+            LitKind::Float(val) => val.to_string(),
         }
     }
 }
@@ -25,24 +27,24 @@ impl MirDisplay for Lit {
 impl MirDisplay for BinOp {
     fn mir_display(&self, _body: &Body) -> String {
         match self {
-            BinOp::Add => format!("+"),
-            BinOp::Sub => format!("-"),
-            BinOp::Mul => format!("*"),
-            BinOp::Div => format!("/"),
-            BinOp::Rem => format!("%"),
-            BinOp::And => format!("&&"),
-            BinOp::Or => format!("||"),
-            BinOp::BitXor => format!("^"),
-            BinOp::BitAnd => format!("&"),
-            BinOp::BitOr => format!("|"),
-            BinOp::Shl => format!("<<"),
-            BinOp::Shr => format!(">>"),
-            BinOp::Eq => format!("=="),
-            BinOp::Lt => format!("<"),
-            BinOp::Le => format!("<="),
-            BinOp::Ne => format!("!="),
-            BinOp::Ge => format!(">="),
-            BinOp::Gt => format!(">"),
+            BinOp::Add => "+".to_owned(),
+            BinOp::Sub => "-".to_owned(),
+            BinOp::Mul => "*".to_owned(),
+            BinOp::Div => "/".to_owned(),
+            BinOp::Rem => "%".to_owned(),
+            BinOp::And => "&&".to_owned(),
+            BinOp::Or => "||".to_owned(),
+            BinOp::BitXor => "^".to_owned(),
+            BinOp::BitAnd => "&".to_owned(),
+            BinOp::BitOr => "|".to_owned(),
+            BinOp::Shl => "<<".to_owned(),
+            BinOp::Shr => ">>".to_owned(),
+            BinOp::Eq => "==".to_owned(),
+            BinOp::Lt => "<".to_owned(),
+            BinOp::Le => "<=".to_owned(),
+            BinOp::Ne => "!=".to_owned(),
+            BinOp::Ge => ">=".to_owned(),
+            BinOp::Gt => ">".to_owned(),
             BinOp::Assign => unreachable!(),
         }
     }
@@ -51,12 +53,12 @@ impl MirDisplay for BinOp {
 impl MirDisplay for UnOp {
     fn mir_display(&self, _body: &Body) -> String {
         match self {
-            UnOp::Not => format!("!"),
-            UnOp::Neg => format!("-"),
-            UnOp::Com => format!("~"),
-            UnOp::Pos => format!("+"),
-            UnOp::AddrOf => format!("&"),
-            UnOp::Deref => format!("*"),
+            UnOp::Not => "!".to_owned(),
+            UnOp::Neg => "-".to_owned(),
+            UnOp::Com => "~".to_owned(),
+            UnOp::Pos => "+".to_owned(),
+            UnOp::AddrOf => "&".to_owned(),
+            UnOp::Deref => "*".to_owned(),
         }
     }
 }
@@ -64,11 +66,11 @@ impl MirDisplay for UnOp {
 impl MirDisplay for PrimTyKind {
     fn mir_display(&self, _body: &Body) -> String {
         match self {
-            PrimTyKind::Int => format!("int"),
-            PrimTyKind::Float => format!("float"),
-            PrimTyKind::Double => format!("double"),
-            PrimTyKind::Char => format!("char"),
-            PrimTyKind::Void => format!("void"),
+            PrimTyKind::Int => "int".to_owned(),
+            PrimTyKind::Float => "float".to_owned(),
+            PrimTyKind::Double => "double".to_owned(),
+            PrimTyKind::Char => "char".to_owned(),
+            PrimTyKind::Void => "void".to_owned(),
         }
     }
 }
@@ -76,7 +78,7 @@ impl MirDisplay for PrimTyKind {
 impl MirDisplay for Ty {
     fn mir_display(&self, body: &Body) -> String {
         match &self.kind {
-            TyKind::PrimTy(prim_ty_kind) => format!("{}", prim_ty_kind.mir_display(body)),
+            TyKind::PrimTy(prim_ty_kind) => prim_ty_kind.mir_display(body),
             TyKind::Array(ty, _) => format!("[{}]", ty.mir_display(body)),
             TyKind::Ptr(ty) => format!("*{}", ty.mir_display(body)),
         }
@@ -97,7 +99,7 @@ impl MirDisplay for Place {
     fn mir_display(&self, body: &Body) -> String {
         let result = self.local.mir_display(body);
 
-        for projection in &self.projections {
+        for _projection in &self.projections {
             todo!()
         }
 
@@ -154,10 +156,29 @@ impl MirDisplay for Statement {
 }
 
 impl MirDisplay for Terminator {
-    fn mir_display(&self, _body: &Body) -> String {
+    fn mir_display(&self, body: &Body) -> String {
         match &self.kind {
-            TerminatorKind::Goto { bb } => todo!(),
-            TerminatorKind::SwitchInt { discr, targets } => todo!(),
+            TerminatorKind::Goto { bb } => {
+                format!("goto 'bb_{};", bb.into_raw())
+            }
+            TerminatorKind::SwitchInt { discr, targets } => {
+                let mut result = format!("switch {} {{\n", discr.mir_display(body));
+
+                for (idx, val) in targets.value.iter().enumerate() {
+                    result.push_str(&format!(
+                        "\t\t{} => 'bb_{};\n",
+                        val,
+                        targets.bbs.get(idx).unwrap().into_raw()
+                    ));
+                }
+
+                result.push_str(&format!(
+                    "\t\t_ => 'bb_{};\n\t}}",
+                    targets.bbs.last().unwrap().into_raw()
+                ));
+
+                result
+            }
             TerminatorKind::Return => "return;".to_owned(),
         }
     }
@@ -175,7 +196,7 @@ impl Display for Body<'_> {
         }
 
         for (bb, bb_data) in self.basic_blocks.iter() {
-            writeln!(f, "\nbb-{}: {{", bb.into_raw())?;
+            writeln!(f, "\n'bb_{}: {{", bb.into_raw())?;
 
             for stmt in &bb_data.statements {
                 writeln!(f, "\t{};", stmt.mir_display(self))?;

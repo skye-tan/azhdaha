@@ -104,7 +104,7 @@ impl LoweringCtx<'_> {
         trace!("Construct [ItemKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constants::FUNCTION_DEFINITION => Some(ItemKind::Fn(self.lower_to_fn()?)),
+            constants::FUNCTION_DEFINITION => Some(ItemKind::Fn(Box::new(self.lower_to_fn()?))),
             kind => {
                 trace!("Unsupported [ItemKind] node: {kind}");
                 None

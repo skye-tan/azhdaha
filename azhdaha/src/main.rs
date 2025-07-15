@@ -36,7 +36,7 @@ fn main() -> anyhow::Result<()> {
         match item.kind {
             hir::ItemKind::Fn(f) => {
                 let ctx = MirCtx::new(&lowering_ctx.resolver, f.body.span);
-                let mir_body = ctx.lower(&f);
+                let mir_body = ctx.lower_to_mir(&f);
 
                 if let Ok(mir_body) = mir_body {
                     println!("\n{mir_body}");

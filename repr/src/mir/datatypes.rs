@@ -1,6 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use std::{cell::RefCell, collections::HashMap};
+use std::collections::HashMap;
 
 use la_arena::{Arena, Idx};
 use smallvec::SmallVec;
@@ -55,8 +55,8 @@ pub struct Statement {
 
 #[derive(Debug, Clone)]
 pub struct SwitchTargets {
-    value: SmallVec<[u128; 1]>,
-    bbs: SmallVec<[BasicBlock; 2]>,
+    pub value: SmallVec<[u128; 1]>,
+    pub bbs: SmallVec<[BasicBlock; 2]>,
 }
 
 #[derive(Debug, Clone)]
@@ -105,7 +105,5 @@ pub struct Body<'mir> {
 #[derive(Debug, Clone)]
 pub struct MirCtx<'mir> {
     pub body: Body<'mir>,
-    pub bb_data: BasicBlockData,
     pub local_map: HashMap<ResIdx, Local>,
-    // pub global_map: HashMap<ResolverIdx, Local>,
 }

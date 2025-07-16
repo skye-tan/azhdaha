@@ -27,10 +27,10 @@ fn main() -> anyhow::Result<()> {
     }
 
     let lowering_ctx = LoweringCtx::lower_ast(&ast_reprs[0]);
-    println!(
-        "\n{:#?}\n{:#?}\n",
-        lowering_ctx.items, lowering_ctx.resolver
-    );
+    // println!(
+    //     "\n{:#?}\n{:#?}\n",
+    //     lowering_ctx.items, lowering_ctx.resolver
+    // );
 
     for item in lowering_ctx.items {
         match item.kind {

@@ -24,7 +24,7 @@ use crate::hir::{
 impl<'mir> MirCtx<'mir> {
     pub fn new(
         resolver: &'mir Resolver<ResData>,
-        label_resolver: &'mir Resolver<String>,
+        label_resolver: &'mir Resolver<()>,
         span: Span,
     ) -> Self {
         Self {
@@ -157,7 +157,7 @@ impl<'mir> MirCtx<'mir> {
                 bb
             }
             hir::StmtKind::Label(label_idx, stmt) => {
-                let next_bb = match self.bb_map.get(label_idx) {
+                let mut next_bb = match self.bb_map.get(label_idx) {
                     Some(next_bb) => *next_bb,
                     None => {
                         let next_bb = self.alloc_bb();
@@ -173,7 +173,9 @@ impl<'mir> MirCtx<'mir> {
                     span,
                 });
 
-                self.lower_to_bb(stmt, next_bb);
+                if let Some(stmt) = stmt {
+                    next_bb = self.lower_to_bb(stmt, next_bb);
+                }
 
                 next_bb
             }

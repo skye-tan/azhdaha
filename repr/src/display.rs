@@ -132,7 +132,7 @@ impl MirDisplay for Rvalue {
                 )
             }
             Rvalue::UnaryOp(un_op, operand) => {
-                format!("{} {}", un_op.mir_display(body), operand.mir_display(body))
+                format!("{}{}", un_op.mir_display(body), operand.mir_display(body))
             }
             Rvalue::Call(operand, operands) => {
                 format!(

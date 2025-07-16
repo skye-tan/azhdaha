@@ -167,6 +167,11 @@ impl LoweringCtx<'_> {
         let node = self.cursor.node();
         trace!("Construct [StmtKind] from node: {}", node.kind());
 
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
         Ok(match node.kind() {
             constants::COMPOUND_STATEMENT => StmtKind::Block(self.lower_to_block()?),
             constants::EXPRESSION_STATEMENT => StmtKind::Expr(self.lower_to_expr()?),
@@ -202,11 +207,11 @@ impl LoweringCtx<'_> {
                     .lookup_res(&ident.name)
                     .unwrap_or_else(|| {
                         self.label_resolver
-                            .insert(ident.name.clone(), ident.name)
+                            .insert(ident.name, ())
                             .expect("Failed to insert label into resolver.")
                     });
 
-                StmtKind::Label(label_res, Box::new(stmt))
+                StmtKind::Label(label_res, Some(Box::new(stmt)))
             }
             constants::GOTO_STATEMENT => {
                 self.cursor.goto_first_child();
@@ -221,7 +226,7 @@ impl LoweringCtx<'_> {
                     .lookup_res(&ident.name)
                     .unwrap_or_else(|| {
                         self.label_resolver
-                            .insert(ident.name.clone(), ident.name)
+                            .insert(ident.name, ())
                             .expect("Failed to insert label into resolver.")
                     });
 
@@ -254,11 +259,76 @@ impl LoweringCtx<'_> {
 
                 StmtKind::If(cond_expr, Box::new(body_stmt), else_stmt.map(Box::new))
             }
-            constants::WHILE_STATEMENT
-            | constants::DO_STATEMENT
-            | constants::FOR_STATEMENT
-            | constants::BREAK_STATEMENT
-            | constants::CONTINUE_STATEMENT => {
+            constants::WHILE_STATEMENT => {
+                /*
+                    loop_start:
+                        if (!$cond) goto loop_end;
+                        $body;
+                        goto loop_start:
+                    loop_end:
+                */
+
+                let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
+                let label_res_start = self.label_resolver.insert(loop_start.clone(), ())?;
+
+                let loop_end = format!("loop_end_{}_{}", span.lo, span.hi);
+                let label_res_end = self.label_resolver.insert(loop_end.clone(), ())?;
+
+                self.cursor.goto_first_child();
+                self.cursor.goto_next_sibling();
+
+                let cond_expr = self.lower_to_expr()?;
+
+                self.cursor.goto_next_sibling();
+
+                let body_stmt = self.lower_to_stmt()?;
+
+                self.cursor.goto_parent();
+
+                StmtKind::Block(Block {
+                    stmts: vec![
+                        Stmt {
+                            kind: StmtKind::Label(label_res_start, None),
+                            span,
+                        },
+                        Stmt {
+                            kind: StmtKind::If(
+                                Expr {
+                                    span: cond_expr.span,
+                                    kind: ExprKind::Unary(UnOp::Not, Box::new(cond_expr)),
+                                },
+                                Box::new(Stmt {
+                                    kind: StmtKind::Goto(label_res_end),
+                                    span,
+                                }),
+                                None,
+                            ),
+                            span,
+                        },
+                        body_stmt,
+                        Stmt {
+                            kind: StmtKind::Goto(label_res_start),
+                            span,
+                        },
+                        Stmt {
+                            kind: StmtKind::Label(label_res_end, None),
+                            span,
+                        },
+                    ],
+                    resolver: self.resolver.clone(),
+                    span,
+                })
+            }
+            constants::DO_STATEMENT => {
+                todo!()
+            }
+            constants::FOR_STATEMENT => {
+                todo!()
+            }
+            constants::CONTINUE_STATEMENT => {
+                todo!()
+            }
+            constants::BREAK_STATEMENT => {
                 todo!()
             }
             kind => bail!("Unsupported [StmtKind] node: {kind}"),

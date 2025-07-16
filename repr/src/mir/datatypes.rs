@@ -100,7 +100,7 @@ pub struct Body<'mir> {
     pub local_decls: Arena<LocalDecl>,
 
     pub resolver: &'mir Resolver<ResData>,
-    pub label_resolver: &'mir Resolver<String>,
+    pub label_resolver: &'mir Resolver<()>,
 
     pub span: Span,
 }

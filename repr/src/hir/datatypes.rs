@@ -65,7 +65,7 @@ pub enum StmtKind {
     Expr(Expr),
     Decl(DeclStmt),
     Ret(Option<Expr>),
-    Label(LabelIdx, Box<Stmt>),
+    Label(LabelIdx, Option<Box<Stmt>>),
     Goto(LabelIdx),
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
 }
@@ -178,7 +178,7 @@ pub struct Fn {
     pub body: Stmt,
 
     pub resolver: Resolver<ResData>,
-    pub label_resolver: Resolver<String>,
+    pub label_resolver: Resolver<()>,
 }
 
 #[derive(Debug, Clone)]
@@ -199,7 +199,7 @@ pub struct LoweringCtx<'hir> {
     pub items: Vec<Item>,
 
     pub resolver: Resolver<ResData>,
-    pub label_resolver: Resolver<String>,
+    pub label_resolver: Resolver<()>,
 
     pub cursor: TreeCursor<'hir>,
     pub source_code: &'hir [u8],

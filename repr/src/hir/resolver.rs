@@ -7,7 +7,7 @@ use la_arena::{Arena, Idx};
 use crate::hir::{Ident, Param, Ty};
 
 pub type ResIdx<T> = Idx<T>;
-pub type LabelIdx = Idx<String>;
+pub type LabelIdx = Idx<()>;
 
 #[derive(Debug, Clone)]
 pub enum ResKind {

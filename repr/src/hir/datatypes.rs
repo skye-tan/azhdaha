@@ -150,6 +150,7 @@ pub enum ExprKind {
     AddrOf(Box<Expr>),
     Comma(Vec<Expr>),
     Sizeof(Sizeof),
+    Empty,
 }
 
 #[derive(Debug, Clone)]

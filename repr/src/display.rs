@@ -138,7 +138,10 @@ impl MirDisplay for Rvalue {
                 format!(
                     "{}({})",
                     operand.mir_display(body),
-                    operands.iter().map(|x| x.mir_display(body)).join(", ")
+                    operands
+                        .iter()
+                        .map(|operand| operand.mir_display(body))
+                        .join(", ")
                 )
             }
         }

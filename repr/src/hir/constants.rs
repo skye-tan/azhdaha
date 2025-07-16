@@ -136,6 +136,8 @@ pub(crate) const INITIALIZER_LIST: &str = "initializer_list";
 pub(crate) const COMMA_EXPRESSION: &str = "comma_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::SizeOf`].  
 pub(crate) const SIZEOF_EXPRESSION: &str = "sizeof_expression";
+/// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Empty`].  
+pub(crate) const SEMICOLON_EXPRESSION: &str = ";";
 
 /// An identifiers used for [`StmtKind`]'s construction representing a [`StmtKind::Block`].
 pub(crate) const COMPOUND_STATEMENT: &str = "compound_statement";

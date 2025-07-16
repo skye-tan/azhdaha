@@ -269,8 +269,8 @@ impl<'mir> MirCtx<'mir> {
             hir::ExprKind::Lit(..) => todo!(),
             hir::ExprKind::Local(..) => todo!(),
             hir::ExprKind::Call(..) => todo!(),
-            hir::ExprKind::Binary(..) => (),
-            hir::ExprKind::Unary(..) => (),
+            hir::ExprKind::Binary(..) => todo!(),
+            hir::ExprKind::Unary(..) => todo!(),
             hir::ExprKind::Assign(lhs_expr, rhs_expr) => {
                 let place = self.lower_to_place(lhs_expr);
 
@@ -290,6 +290,7 @@ impl<'mir> MirCtx<'mir> {
             hir::ExprKind::AddrOf(..) => todo!(),
             hir::ExprKind::Comma(..) => todo!(),
             hir::ExprKind::Sizeof(..) => todo!(),
+            hir::ExprKind::Empty => (),
         }
     }
 

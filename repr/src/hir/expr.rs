@@ -165,14 +165,8 @@ impl LoweringCtx<'_> {
                 self.cursor.goto_next_sibling();
 
                 let bin_op = self.lower_to_bin_op()?;
-                let op_node = self.cursor.node();
 
                 self.cursor.goto_parent();
-
-                let span = Span {
-                    lo: op_node.start_byte(),
-                    hi: op_node.end_byte(),
-                };
 
                 let rhs = Expr {
                     kind: ExprKind::Lit(Lit {
@@ -182,7 +176,13 @@ impl LoweringCtx<'_> {
                     span,
                 };
 
-                ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs))
+                ExprKind::Assign(
+                    Box::new(lhs.clone()),
+                    Box::new(Expr {
+                        kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
+                        span,
+                    }),
+                )
             }
             constants::UNARY_EXPRESSION | constants::POINTER_EXPRESSION => {
                 self.cursor.goto_first_child();
@@ -318,6 +318,7 @@ impl LoweringCtx<'_> {
                 ExprKind::Comma(exprs)
             }
             constants::SIZEOF_EXPRESSION => ExprKind::Sizeof(self.lower_to_sizeof()?),
+            constants::SEMICOLON_EXPRESSION => ExprKind::Empty,
             kind => bail!("Unsupported [ExprKind] node: {kind}"),
         })
     }

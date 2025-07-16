@@ -7,7 +7,7 @@ use log::trace;
 use crate::hir::{
     constants,
     datatypes::*,
-    resolver::{ResKind, Resolver},
+    resolver::{ResData, ResKind, Resolver},
 };
 
 impl LoweringCtx<'_> {
@@ -27,7 +27,12 @@ impl LoweringCtx<'_> {
         let res = if self.cursor.goto_next_sibling() {
             let ident = self.lower_to_ident()?;
 
-            let res = self.resolver.insert(ident, ResKind::Local(ty.clone()))?;
+            let ident_name = ident.name.clone();
+            let res_data = ResData {
+                ident,
+                kind: ResKind::Var(ty.clone()),
+            };
+            let res = self.resolver.insert(ident_name, res_data)?;
 
             Some(res)
         } else {
@@ -39,7 +44,7 @@ impl LoweringCtx<'_> {
         Ok(Param { res, ty, span })
     }
 
-    pub(crate) fn lower_to_fn_sig(&mut self) -> anyhow::Result<(Resolver, FnSig)> {
+    pub(crate) fn lower_to_fn_sig(&mut self) -> anyhow::Result<(Resolver<ResData>, FnSig)> {
         let node = self.cursor.node();
         trace!("Construct [FnSig] from node: {}", node.kind());
 
@@ -71,7 +76,12 @@ impl LoweringCtx<'_> {
         self.cursor.goto_parent();
         self.cursor.goto_parent();
 
-        let res = pre_resolver.insert(ident, ResKind::Fn(ty.clone(), params.clone()))?;
+        let ident_name = ident.name.clone();
+        let res_data = ResData {
+            ident,
+            kind: ResKind::Fn(ty.clone(), params.clone()),
+        };
+        let res = pre_resolver.insert(ident_name, res_data)?;
 
         let fn_sig = FnSig { res, ty, params };
 
@@ -86,16 +96,18 @@ impl LoweringCtx<'_> {
 
         self.cursor.goto_last_child();
 
-        let body = self.lower_to_expr()?;
+        let body = self.lower_to_stmt()?;
 
         self.cursor.goto_parent();
 
         let resolver = mem::replace(&mut self.resolver, pre_resolver);
+        let label_resolver = mem::take(&mut self.label_resolver);
 
         Ok(Fn {
             sig,
             body,
             resolver,
+            label_resolver,
         })
     }
 

@@ -2,19 +2,17 @@
 
 use std::collections::HashMap;
 
-use anyhow::bail;
 use la_arena::{Arena, Idx};
 
 use crate::hir::{Ident, Param, Ty};
 
-pub type ResIdx = Idx<ResData>;
+pub type ResIdx<T> = Idx<T>;
+pub type LabelIdx = Idx<String>;
 
 #[derive(Debug, Clone)]
 pub enum ResKind {
     Fn(Ty, Vec<Param>),
-    Union,
-    Struct,
-    Local(Ty),
+    Var(Ty),
 }
 
 #[derive(Debug, Clone)]
@@ -24,12 +22,12 @@ pub struct ResData {
 }
 
 #[derive(Debug, Clone)]
-pub struct Resolver {
-    pub arena: Arena<ResData>,
-    pub map: HashMap<String, Idx<ResData>>,
+pub struct Resolver<T> {
+    pub arena: Arena<T>,
+    pub map: HashMap<String, ResIdx<T>>,
 }
 
-impl Resolver {
+impl<T> Resolver<T> {
     pub fn new() -> Self {
         Self {
             arena: Arena::new(),
@@ -37,29 +35,24 @@ impl Resolver {
         }
     }
 
-    pub fn insert(&mut self, ident: Ident, kind: ResKind) -> anyhow::Result<ResIdx> {
-        let key: String = ident.name.clone();
-        let data = ResData { ident, kind };
+    pub fn insert(&mut self, key: String, data: T) -> anyhow::Result<ResIdx<T>> {
+        let res = self.arena.alloc(data);
 
-        let idx = self.arena.alloc(data);
+        self.map.insert(key, res);
 
-        if self.map.insert(key, idx).is_some() {
-            bail!("Variable shadowing is not sepported.");
-        }
-
-        Ok(idx)
+        Ok(res)
     }
 
-    pub fn lookup_idx(&self, key: &str) -> Option<ResIdx> {
+    pub fn lookup_res(&self, key: &str) -> Option<ResIdx<T>> {
         self.map.get(key).cloned()
     }
 
-    pub fn get_item(&self, res: &ResIdx) -> &ResData {
+    pub fn get_item(&self, res: &ResIdx<T>) -> &T {
         &self.arena[*res]
     }
 }
 
-impl Default for Resolver {
+impl<T> Default for Resolver<T> {
     fn default() -> Self {
         Self::new()
     }

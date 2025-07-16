@@ -1,7 +1,5 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use std::mem;
-
 use anyhow::{Context, bail};
 use log::trace;
 
@@ -100,26 +98,15 @@ impl LoweringCtx<'_> {
 
         Ok(match node.kind() {
             kind if kind.contains("literal") => ExprKind::Lit(self.lower_to_lit()?),
-            constants::COMPOUND_STATEMENT => ExprKind::Block(self.lower_to_block()?),
-            constants::RETURN_STATEMENT => {
-                self.cursor.goto_first_child();
-                self.cursor.goto_next_sibling();
-
-                let expr = self.lower_to_expr()?;
-
-                self.cursor.goto_parent();
-
-                ExprKind::Ret(Box::new(expr))
-            }
             constants::IDENTIFIER => {
                 let ident = self.lower_to_ident()?;
 
-                let idx = self
+                let res = self
                     .resolver
-                    .lookup_idx(&ident.name)
+                    .lookup_res(&ident.name)
                     .context("Use of unidentified variable.")?;
 
-                ExprKind::Local(idx)
+                ExprKind::Local(res)
             }
             constants::CALL_EXPRESSION => {
                 self.cursor.goto_first_child();
@@ -224,202 +211,175 @@ impl LoweringCtx<'_> {
 
                 expr_kind
             }
-            constants::IF_STATEMENT => {
-                self.cursor.goto_first_child();
-                self.cursor.goto_next_sibling();
+            // constants::WHILE_STATEMENT => {
+            //     self.cursor.goto_first_child();
+            //     self.cursor.goto_next_sibling();
 
-                let condition = self.lower_to_expr()?;
+            //     let condition = self.lower_to_expr()?;
 
-                self.cursor.goto_next_sibling();
+            //     self.cursor.goto_next_sibling();
 
-                let body = self.lower_to_expr()?;
+            //     let body = self.lower_to_expr()?;
 
-                let else_clause = if self.cursor.goto_next_sibling() {
-                    self.cursor.goto_first_child();
-                    self.cursor.goto_next_sibling();
+            //     self.cursor.goto_parent();
 
-                    let x = self.lower_to_expr()?;
+            //     ExprKind::Loop(
+            //         LoopSource::While,
+            //         Box::new(Expr {
+            //             kind: ExprKind::If(
+            //                 Box::new(condition),
+            //                 Box::new(body),
+            //                 Some(Box::new(Expr {
+            //                     kind: ExprKind::Break,
+            //                     span,
+            //                 })),
+            //             ),
+            //             span,
+            //         }),
+            //     )
+            // }
+            // constants::DO_STATEMENT => {
+            //     self.cursor.goto_first_child();
+            //     self.cursor.goto_next_sibling();
 
-                    self.cursor.goto_parent();
+            //     let body = self.lower_to_expr()?;
 
-                    Some(Box::new(x))
-                } else {
-                    None
-                };
+            //     self.cursor.goto_next_sibling();
+            //     self.cursor.goto_next_sibling();
 
-                self.cursor.goto_parent();
+            //     let condition = self.lower_to_expr()?;
 
-                ExprKind::If(Box::new(condition), Box::new(body), else_clause)
-            }
-            constants::WHILE_STATEMENT => {
-                self.cursor.goto_first_child();
-                self.cursor.goto_next_sibling();
+            //     self.cursor.goto_parent();
 
-                let condition = self.lower_to_expr()?;
+            //     let loop_expr = ExprKind::Loop(
+            //         LoopSource::DoWhile,
+            //         Box::new(Expr {
+            //             kind: ExprKind::If(
+            //                 Box::new(condition),
+            //                 Box::new(body.clone()),
+            //                 Some(Box::new(Expr {
+            //                     kind: ExprKind::Break,
+            //                     span,
+            //                 })),
+            //             ),
+            //             span,
+            //         }),
+            //     );
 
-                self.cursor.goto_next_sibling();
+            //     let (mut stmts, resolver) = match body.kind {
+            //         ExprKind::Block(block) => (block.stmts, block.resolver),
+            //         _ => {
+            //             let span = body.span;
 
-                let body = self.lower_to_expr()?;
+            //             (
+            //                 vec![Stmt {
+            //                     kind: StmtKind::Semi(body),
+            //                     span,
+            //                 }],
+            //                 self.resolver.clone(),
+            //             )
+            //         }
+            //     };
 
-                self.cursor.goto_parent();
+            //     stmts.push(Stmt {
+            //         kind: StmtKind::Expr(Expr {
+            //             kind: loop_expr,
+            //             span,
+            //         }),
+            //         span,
+            //     });
 
-                ExprKind::Loop(
-                    LoopSource::While,
-                    Box::new(Expr {
-                        kind: ExprKind::If(
-                            Box::new(condition),
-                            Box::new(body),
-                            Some(Box::new(Expr {
-                                kind: ExprKind::Break,
-                                span,
-                            })),
-                        ),
-                        span,
-                    }),
-                )
-            }
-            constants::DO_STATEMENT => {
-                self.cursor.goto_first_child();
-                self.cursor.goto_next_sibling();
+            //     ExprKind::Block(Block {
+            //         stmts,
+            //         resolver,
+            //         span,
+            //     })
+            // }
+            // constants::FOR_STATEMENT => {
+            //     self.cursor.goto_first_child();
+            //     self.cursor.goto_next_sibling();
+            //     self.cursor.goto_next_sibling();
 
-                let body = self.lower_to_expr()?;
+            //     let pre_resolver = self.resolver.clone();
 
-                self.cursor.goto_next_sibling();
-                self.cursor.goto_next_sibling();
+            //     let initialization = self.lower_to_stmt()?;
 
-                let condition = self.lower_to_expr()?;
+            //     self.cursor.goto_next_sibling();
 
-                self.cursor.goto_parent();
+            //     let condition = self.lower_to_expr()?;
 
-                let loop_expr = ExprKind::Loop(
-                    LoopSource::DoWhile,
-                    Box::new(Expr {
-                        kind: ExprKind::If(
-                            Box::new(condition),
-                            Box::new(body.clone()),
-                            Some(Box::new(Expr {
-                                kind: ExprKind::Break,
-                                span,
-                            })),
-                        ),
-                        span,
-                    }),
-                );
+            //     self.cursor.goto_next_sibling();
+            //     self.cursor.goto_next_sibling();
 
-                let (mut stmts, resolver) = match body.kind {
-                    ExprKind::Block(block) => (block.stmts, block.resolver),
-                    _ => {
-                        let span = body.span;
+            //     let update_stmt = Stmt {
+            //         kind: StmtKind::Semi(self.lower_to_expr()?),
+            //         span,
+            //     };
 
-                        (
-                            vec![Stmt {
-                                kind: StmtKind::Semi(body),
-                                span,
-                            }],
-                            self.resolver.clone(),
-                        )
-                    }
-                };
+            //     self.cursor.goto_next_sibling();
+            //     self.cursor.goto_next_sibling();
 
-                stmts.push(Stmt {
-                    kind: StmtKind::Expr(Expr {
-                        kind: loop_expr,
-                        span,
-                    }),
-                    span,
-                });
+            //     let mut body = self.lower_to_expr()?;
 
-                ExprKind::Block(Block {
-                    stmts,
-                    resolver,
-                    span,
-                })
-            }
-            constants::FOR_STATEMENT => {
-                self.cursor.goto_first_child();
-                self.cursor.goto_next_sibling();
-                self.cursor.goto_next_sibling();
+            //     self.cursor.goto_parent();
 
-                let pre_resolver = self.resolver.clone();
+            //     let resolver = mem::replace(&mut self.resolver, pre_resolver);
 
-                let initialization = self.lower_to_stmt()?;
+            //     match &mut body.kind {
+            //         ExprKind::Block(block) => {
+            //             block.stmts.push(update_stmt);
+            //         }
+            //         _ => {
+            //             let span = body.span;
 
-                self.cursor.goto_next_sibling();
+            //             let mut block = Block {
+            //                 stmts: vec![Stmt {
+            //                     kind: StmtKind::Semi(body),
+            //                     span,
+            //                 }],
+            //                 resolver: resolver.clone(),
+            //                 span,
+            //             };
 
-                let condition = self.lower_to_expr()?;
+            //             block.stmts.push(update_stmt);
 
-                self.cursor.goto_next_sibling();
-                self.cursor.goto_next_sibling();
+            //             body = Expr {
+            //                 kind: ExprKind::Block(block),
+            //                 span,
+            //             }
+            //         }
+            //     }
 
-                let update_stmt = Stmt {
-                    kind: StmtKind::Semi(self.lower_to_expr()?),
-                    span,
-                };
+            //     let loop_expr = ExprKind::Loop(
+            //         LoopSource::For,
+            //         Box::new(Expr {
+            //             kind: ExprKind::If(
+            //                 Box::new(condition),
+            //                 Box::new(body),
+            //                 Some(Box::new(Expr {
+            //                     kind: ExprKind::Break,
+            //                     span,
+            //                 })),
+            //             ),
+            //             span,
+            //         }),
+            //     );
 
-                self.cursor.goto_next_sibling();
-                self.cursor.goto_next_sibling();
+            //     let mut stmts = initialization;
+            //     stmts.push(Stmt {
+            //         kind: StmtKind::Expr(Expr {
+            //             kind: loop_expr,
+            //             span,
+            //         }),
+            //         span,
+            //     });
 
-                let mut body = self.lower_to_expr()?;
-
-                self.cursor.goto_parent();
-
-                let resolver = mem::replace(&mut self.resolver, pre_resolver);
-
-                match &mut body.kind {
-                    ExprKind::Block(block) => {
-                        block.stmts.push(update_stmt);
-                    }
-                    _ => {
-                        let span = body.span;
-
-                        let mut block = Block {
-                            stmts: vec![Stmt {
-                                kind: StmtKind::Semi(body),
-                                span,
-                            }],
-                            resolver: resolver.clone(),
-                            span,
-                        };
-
-                        block.stmts.push(update_stmt);
-
-                        body = Expr {
-                            kind: ExprKind::Block(block),
-                            span,
-                        }
-                    }
-                }
-
-                let loop_expr = ExprKind::Loop(
-                    LoopSource::For,
-                    Box::new(Expr {
-                        kind: ExprKind::If(
-                            Box::new(condition),
-                            Box::new(body),
-                            Some(Box::new(Expr {
-                                kind: ExprKind::Break,
-                                span,
-                            })),
-                        ),
-                        span,
-                    }),
-                );
-
-                let mut stmts = initialization;
-                stmts.push(Stmt {
-                    kind: StmtKind::Expr(Expr {
-                        kind: loop_expr,
-                        span,
-                    }),
-                    span,
-                });
-
-                ExprKind::Block(Block {
-                    stmts,
-                    resolver,
-                    span,
-                })
-            }
+            //     ExprKind::Block(Block {
+            //         stmts,
+            //         resolver,
+            //         span,
+            //     })
+            // }
             constants::ASSIGNMENT_EXPRESSION => {
                 self.cursor.goto_first_child();
 
@@ -474,8 +434,6 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Index(Box::new(target), Box::new(index), span)
             }
-            constants::BREAK_STATEMENT => ExprKind::Break,
-            constants::CONTINUE_STATEMENT => ExprKind::Continue,
             constants::CAST_EXPRESSION => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();

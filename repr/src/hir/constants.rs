@@ -1,4 +1,4 @@
-//! Words used by tree-sitter-c library as constant variables.
+//! Identifiers used by tree-sitter-c library to represent nodes.
 
 /// Constant word used for [`BinOpKind`]'s construction representing [`BinOpKind::Add`].
 pub(crate) const ADD: &str = "+";
@@ -101,8 +101,6 @@ pub(crate) const CHAR_LITERAL: &str = "char_literal";
 /// Constant word used for [`LitKind`]'s construction representing [`LitKind::Int`] or [`LitKind::Float`].
 pub(crate) const NUMBER_LITERAL: &str = "number_literal";
 
-/// Constant word used for [`StmtKind`]'s construction representing [`StmtKind::Decl`].
-pub(crate) const DECLARATION: &str = "declaration";
 /// Constant word used for [`DeclStmt`]'s construction determining whether the initialization part exits or not.
 pub(crate) const INIT_DECLARATOR: &str = "init_declarator";
 /// Constant word used for [`DeclStmt`]'s construction the type to be [`Ty::Array`].
@@ -110,26 +108,7 @@ pub(crate) const ARRAY_DECLARATOR: &str = "array_declarator";
 /// Constant word used for [`DeclStmt`]'s construction the type to be [`Ty::Ptr`].
 pub(crate) const POINTER_DECLARATOR: &str = "pointer_declarator";
 
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Ret`] respectively.
-pub(crate) const RETURN_STATEMENT: &str = "return_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Call`] respectively.
-pub(crate) const EXPRESSION_STATEMENT: &str = "expression_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::If`] respectively.  
-pub(crate) const IF_STATEMENT: &str = "if_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Loop`] respectively.  
-pub(crate) const WHILE_STATEMENT: &str = "while_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Loop`] respectively.  
-pub(crate) const DO_STATEMENT: &str = "do_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Loop`] respectively.  
-pub(crate) const FOR_STATEMENT: &str = "for_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Break`] respectively.  
-pub(crate) const BREAK_STATEMENT: &str = "break_statement";
-/// Constant word used for [`StmtKind`]'s and [`ExprKind`]'s construction representing [`StmtKind::Semi`] and [`ExprKind::Continue`] respectively.  
-pub(crate) const CONTINUE_STATEMENT: &str = "continue_statement";
-
-/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Block`].
-pub(crate) const COMPOUND_STATEMENT: &str = "compound_statement";
-/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Path`].  
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Local`].  
 pub(crate) const IDENTIFIER: &str = "identifier";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Call`].  
 pub(crate) const CALL_EXPRESSION: &str = "call_expression";
@@ -143,7 +122,7 @@ pub(crate) const UNARY_EXPRESSION: &str = "unary_expression";
 pub(crate) const POINTER_EXPRESSION: &str = "pointer_expression";
 /// Constant word used for [`ExprKind`]'s construction representing an [`ExprKind`].  
 pub(crate) const PARENTHESIZED_EXPRESSION: &str = "parenthesized_expression";
-/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Assign`] or [`ExprKind::AssignOp`].  
+/// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Assign`].  
 pub(crate) const ASSIGNMENT_EXPRESSION: &str = "assignment_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::Field`].  
 pub(crate) const FIELD_EXPRESSION: &str = "field_expression";
@@ -157,6 +136,31 @@ pub(crate) const INITIALIZER_LIST: &str = "initializer_list";
 pub(crate) const COMMA_EXPRESSION: &str = "comma_expression";
 /// Constant word used for [`ExprKind`]'s construction representing a [`ExprKind::SizeOf`].  
 pub(crate) const SIZEOF_EXPRESSION: &str = "sizeof_expression";
+
+/// Constant word used for [`StmtKind`]'s construction representing a [`StmtKind::Block`].
+pub(crate) const COMPOUND_STATEMENT: &str = "compound_statement";
+/// Constant word used for [`StmtKind`]'s construction representing a [`StmtKind::Expr`].
+pub(crate) const EXPRESSION_STATEMENT: &str = "expression_statement";
+/// Constant word used for [`StmtKind`]'s construction representing a [`StmtKind::Decl`].
+pub(crate) const DECLARATION: &str = "declaration";
+/// Constant word used for [`StmtKind`]'s construction representing a [`StmtKind::Ret`].
+pub(crate) const RETURN_STATEMENT: &str = "return_statement";
+/// Constant word used for [`StmtKind`]'s construction representing a [`StmtKind::Label`].
+pub(crate) const LABELED_STATEMENT: &str = "labeled_statement";
+/// Constant word used for [`StmtKind`]'s construction representing a [`StmtKind::Goto`].
+pub(crate) const GOTO_STATEMENT: &str = "goto_statement";
+/// Constant word used for [`StmtKind`]'s construction representing a [`StmtKind::If`].
+pub(crate) const IF_STATEMENT: &str = "if_statement";
+/// TODO
+pub(crate) const WHILE_STATEMENT: &str = "while_statement";
+/// TODO
+pub(crate) const DO_STATEMENT: &str = "do_statement";
+/// TODO
+pub(crate) const FOR_STATEMENT: &str = "for_statement";
+/// TODO
+pub(crate) const BREAK_STATEMENT: &str = "break_statement";
+/// TODO
+pub(crate) const CONTINUE_STATEMENT: &str = "continue_statement";
 
 /// Constant word used for [`ItemKind`]'s construction representing a [`ItemKind::Func`].  
 pub(crate) const FUNCTION_DEFINITION: &str = "function_definition";

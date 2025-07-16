@@ -2,7 +2,7 @@
 
 use tree_sitter::TreeCursor;
 
-use crate::hir::resolver::{ResIdx, Resolver};
+use crate::hir::resolver::{LabelIdx, ResData, ResIdx, Resolver};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Span {
@@ -39,30 +39,40 @@ pub struct Ident {
 }
 
 #[derive(Debug, Clone)]
-pub struct DeclStmt {
-    pub res: ResIdx,
+pub struct Block {
+    pub stmts: Vec<Stmt>,
+    pub resolver: Resolver<ResData>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct Decl {
     pub ty: Ty,
+    pub res: ResIdx<ResData>,
     pub init: Option<Expr>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
+pub struct DeclStmt {
+    pub decls: Vec<Decl>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
 pub enum StmtKind {
-    Decl(DeclStmt),
+    Block(Block),
     Expr(Expr),
-    Semi(Expr),
+    Decl(DeclStmt),
+    Ret(Option<Expr>),
+    Label(LabelIdx, Box<Stmt>),
+    Goto(LabelIdx),
+    If(Expr, Box<Stmt>, Option<Box<Stmt>>),
 }
 
 #[derive(Debug, Clone)]
 pub struct Stmt {
     pub kind: StmtKind,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub struct Block {
-    pub stmts: Vec<Stmt>,
-    pub resolver: Resolver,
     pub span: Span,
 }
 
@@ -114,13 +124,6 @@ pub enum UnOp {
 }
 
 #[derive(Debug, Clone)]
-pub enum LoopSource {
-    While,
-    DoWhile,
-    For,
-}
-
-#[derive(Debug, Clone)]
 pub enum SizeofKind {
     Ty(Ty),
     Expr(Box<Expr>),
@@ -134,17 +137,11 @@ pub struct Sizeof {
 
 #[derive(Debug, Clone)]
 pub enum ExprKind {
-    Block(Block),
     Lit(Lit),
-    Ret(Box<Expr>),
-    Local(ResIdx),
+    Local(ResIdx<ResData>),
     Call(Box<Expr>, Vec<Expr>),
     Binary(BinOp, Box<Expr>, Box<Expr>),
     Unary(UnOp, Box<Expr>),
-    If(Box<Expr>, Box<Expr>, Option<Box<Expr>>),
-    Loop(LoopSource, Box<Expr>),
-    Break,
-    Continue,
     Assign(Box<Expr>, Box<Expr>),
     Field(Box<Expr>, Ident),
     Index(Box<Expr>, Box<Expr>, Span),
@@ -163,14 +160,14 @@ pub struct Expr {
 
 #[derive(Debug, Clone)]
 pub struct Param {
-    pub res: Option<ResIdx>,
+    pub res: Option<ResIdx<ResData>>,
     pub ty: Ty,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
 pub struct FnSig {
-    pub res: ResIdx,
+    pub res: ResIdx<ResData>,
     pub ty: Ty,
     pub params: Vec<Param>,
 }
@@ -178,8 +175,10 @@ pub struct FnSig {
 #[derive(Debug, Clone)]
 pub struct Fn {
     pub sig: FnSig,
-    pub body: Expr,
-    pub resolver: Resolver,
+    pub body: Stmt,
+
+    pub resolver: Resolver<ResData>,
+    pub label_resolver: Resolver<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -199,7 +198,8 @@ pub struct Item {
 pub struct LoweringCtx<'hir> {
     pub items: Vec<Item>,
 
-    pub resolver: Resolver,
+    pub resolver: Resolver<ResData>,
+    pub label_resolver: Resolver<String>,
 
     pub cursor: TreeCursor<'hir>,
     pub source_code: &'hir [u8],

@@ -5,14 +5,23 @@ use std::mem;
 use anyhow::bail;
 use log::trace;
 
-use crate::hir::{constants, datatypes::*, resolver::ResKind};
+use crate::hir::{
+    constants,
+    datatypes::*,
+    resolver::{ResData, ResKind},
+};
 
 impl LoweringCtx<'_> {
-    fn process_decl(&mut self, mut ty: Ty) -> anyhow::Result<(Ty, Ident)> {
+    fn lower_to_decl(&mut self, ty: Ty) -> anyhow::Result<Decl> {
         let node = self.cursor.node();
-        trace!("Process [DeclStmt] from node: {}", node.kind());
+        trace!("Process declaration from node: {}", node.kind());
 
-        Ok(match node.kind() {
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
+        let (ty, ident) = match node.kind() {
             constants::ARRAY_DECLARATOR => {
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
@@ -20,21 +29,20 @@ impl LoweringCtx<'_> {
 
                 let array_len = self.lower_to_expr()?;
 
-                let span = ty.span;
-
-                ty = Ty {
+                let ty_span = ty.span;
+                let ty = Ty {
                     kind: TyKind::Array(Box::new(ty), Box::new(array_len)),
-                    span,
+                    span: ty_span,
                 };
 
                 self.cursor.goto_previous_sibling();
                 self.cursor.goto_previous_sibling();
 
-                let result = self.process_decl(ty)?;
+                let result = self.lower_to_decl(ty)?;
 
                 self.cursor.goto_parent();
 
-                result
+                return Ok(result);
             }
             constants::POINTER_DECLARATOR => {
                 self.cursor.goto_first_child();
@@ -44,21 +52,33 @@ impl LoweringCtx<'_> {
 
                 self.cursor.goto_parent();
 
-                let span = ty.span;
+                let ty_span = ty.span;
+                let ty = Ty {
+                    kind: TyKind::Ptr(Box::new(ty)),
+                    span: ty_span,
+                };
 
-                (
-                    Ty {
-                        kind: TyKind::Ptr(Box::new(ty)),
-                        span,
-                    },
-                    ident,
-                )
+                (ty, ident)
             }
             _ => (ty, self.lower_to_ident()?),
+        };
+
+        let ident_name = ident.name.clone();
+        let res_data = ResData {
+            ident,
+            kind: ResKind::Var(ty.clone()),
+        };
+        let res = self.resolver.insert(ident_name, res_data)?;
+
+        Ok(Decl {
+            ty,
+            res,
+            init: None,
+            span,
         })
     }
 
-    fn lower_to_decl_stmt(&mut self) -> anyhow::Result<Vec<DeclStmt>> {
+    fn lower_to_decl_stmt(&mut self) -> anyhow::Result<DeclStmt> {
         let node = self.cursor.node();
         trace!("Construct [DeclStmt] from node: {}", node.kind());
 
@@ -73,45 +93,33 @@ impl LoweringCtx<'_> {
 
         self.cursor.goto_next_sibling();
 
-        let mut decl_stmts = vec![];
+        let mut decls = vec![];
 
         loop {
             let ty = ty.clone();
 
-            let (ty, ident, init) = match self.cursor.node().kind() {
+            let decl = match self.cursor.node().kind() {
                 constants::INIT_DECLARATOR => {
                     self.cursor.goto_first_child();
 
-                    let (ty, ident) = self.process_decl(ty)?;
+                    let mut decl = self.lower_to_decl(ty)?;
 
                     self.cursor.goto_next_sibling();
                     self.cursor.goto_next_sibling();
 
-                    let init = self.lower_to_expr()?;
+                    decl.init = Some(self.lower_to_expr()?);
 
                     self.cursor.goto_parent();
 
-                    (ty, ident, Some(init))
+                    decl
                 }
-                _ => {
-                    let (ty, ident) = self.process_decl(ty)?;
-
-                    (ty, ident, None)
-                }
+                _ => self.lower_to_decl(ty)?,
             };
-
-            let idx = self.resolver.insert(ident, ResKind::Local(ty.clone()))?;
-
-            let decl_stmt = DeclStmt {
-                res: idx,
-                ty,
-                init,
-                span,
-            };
-
-            decl_stmts.push(decl_stmt);
 
             self.cursor.goto_next_sibling();
+
+            decls.push(decl);
+
             if !self.cursor.goto_next_sibling() {
                 break;
             }
@@ -119,56 +127,10 @@ impl LoweringCtx<'_> {
 
         self.cursor.goto_parent();
 
-        Ok(decl_stmts)
+        Ok(DeclStmt { decls, span })
     }
 
-    fn lower_to_stmt_kind(&mut self) -> anyhow::Result<Vec<StmtKind>> {
-        let node = self.cursor.node();
-        trace!("Construct [StmtKind] from node: {}", node.kind());
-
-        Ok(match node.kind() {
-            constants::DECLARATION => self
-                .lower_to_decl_stmt()?
-                .into_iter()
-                .map(StmtKind::Decl)
-                .collect(),
-            constants::RETURN_STATEMENT
-            | constants::EXPRESSION_STATEMENT
-            | constants::BREAK_STATEMENT
-            | constants::CONTINUE_STATEMENT => {
-                vec![StmtKind::Semi(self.lower_to_expr()?)]
-            }
-            constants::IF_STATEMENT
-            | constants::WHILE_STATEMENT
-            | constants::DO_STATEMENT
-            | constants::FOR_STATEMENT
-            | constants::COMPOUND_STATEMENT => {
-                vec![StmtKind::Expr(self.lower_to_expr()?)]
-            }
-            kind => bail!("Unsupported [StmtKind] node: {kind}"),
-        })
-    }
-
-    pub(crate) fn lower_to_stmt(&mut self) -> anyhow::Result<Vec<Stmt>> {
-        let node = self.cursor.node();
-        trace!("Construct [Stmt] from node: {}", node.kind());
-
-        let span = Span {
-            lo: node.start_byte(),
-            hi: node.end_byte(),
-        };
-
-        Ok(self
-            .lower_to_stmt_kind()?
-            .into_iter()
-            .map(|stmt_kind| Stmt {
-                kind: stmt_kind,
-                span,
-            })
-            .collect())
-    }
-
-    pub(crate) fn lower_to_block(&mut self) -> anyhow::Result<Block> {
+    fn lower_to_block(&mut self) -> anyhow::Result<Block> {
         let node = self.cursor.node();
         trace!("Construct [Block] from node: {}", node.kind());
 
@@ -185,7 +147,7 @@ impl LoweringCtx<'_> {
         let mut stmts = vec![];
 
         while self.cursor.node().kind() != "}" {
-            stmts.append(&mut self.lower_to_stmt()?);
+            stmts.push(self.lower_to_stmt()?);
 
             self.cursor.goto_next_sibling();
         }
@@ -197,6 +159,125 @@ impl LoweringCtx<'_> {
         Ok(Block {
             stmts,
             resolver,
+            span,
+        })
+    }
+
+    fn lower_to_stmt_kind(&mut self) -> anyhow::Result<StmtKind> {
+        let node = self.cursor.node();
+        trace!("Construct [StmtKind] from node: {}", node.kind());
+
+        Ok(match node.kind() {
+            constants::COMPOUND_STATEMENT => StmtKind::Block(self.lower_to_block()?),
+            constants::EXPRESSION_STATEMENT => StmtKind::Expr(self.lower_to_expr()?),
+            constants::DECLARATION => StmtKind::Decl(self.lower_to_decl_stmt()?),
+            constants::RETURN_STATEMENT => {
+                self.cursor.goto_first_child();
+                self.cursor.goto_next_sibling();
+
+                let ret_expr = if self.cursor.node().kind().contains(";") {
+                    None
+                } else {
+                    Some(self.lower_to_expr()?)
+                };
+
+                self.cursor.goto_parent();
+
+                StmtKind::Ret(ret_expr)
+            }
+            constants::LABELED_STATEMENT => {
+                self.cursor.goto_first_child();
+
+                let ident = self.lower_to_ident()?;
+
+                self.cursor.goto_next_sibling();
+                self.cursor.goto_next_sibling();
+
+                let stmt = self.lower_to_stmt()?;
+
+                self.cursor.goto_parent();
+
+                let label_res = self
+                    .label_resolver
+                    .lookup_res(&ident.name)
+                    .unwrap_or_else(|| {
+                        self.label_resolver
+                            .insert(ident.name.clone(), ident.name)
+                            .expect("Failed to insert label into resolver.")
+                    });
+
+                StmtKind::Label(label_res, Box::new(stmt))
+            }
+            constants::GOTO_STATEMENT => {
+                self.cursor.goto_first_child();
+                self.cursor.goto_next_sibling();
+
+                let ident = self.lower_to_ident()?;
+
+                self.cursor.goto_parent();
+
+                let label_res = self
+                    .label_resolver
+                    .lookup_res(&ident.name)
+                    .unwrap_or_else(|| {
+                        self.label_resolver
+                            .insert(ident.name.clone(), ident.name)
+                            .expect("Failed to insert label into resolver.")
+                    });
+
+                StmtKind::Goto(label_res)
+            }
+            constants::IF_STATEMENT => {
+                self.cursor.goto_first_child();
+                self.cursor.goto_next_sibling();
+
+                let cond_expr = self.lower_to_expr()?;
+
+                self.cursor.goto_next_sibling();
+
+                let body_stmt = self.lower_to_stmt()?;
+
+                let else_stmt = if self.cursor.goto_next_sibling() {
+                    self.cursor.goto_first_child();
+                    self.cursor.goto_next_sibling();
+
+                    let else_expr = self.lower_to_stmt()?;
+
+                    self.cursor.goto_parent();
+
+                    Some(else_expr)
+                } else {
+                    None
+                };
+
+                self.cursor.goto_parent();
+
+                StmtKind::If(cond_expr, Box::new(body_stmt), else_stmt.map(Box::new))
+            }
+            constants::WHILE_STATEMENT
+            | constants::DO_STATEMENT
+            | constants::FOR_STATEMENT
+            | constants::BREAK_STATEMENT
+            | constants::CONTINUE_STATEMENT => {
+                todo!()
+            }
+            kind => bail!("Unsupported [StmtKind] node: {kind}"),
+        })
+    }
+
+    pub(crate) fn lower_to_stmt(&mut self) -> anyhow::Result<Stmt> {
+        let node = self.cursor.node();
+        trace!("Construct [Stmt] from node: {}", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
+        let stmt_kind = self.lower_to_stmt_kind()?;
+
+        Ok(Stmt {
+            kind: stmt_kind,
             span,
         })
     }

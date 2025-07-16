@@ -10,24 +10,33 @@
 mod datatypes;
 
 pub use datatypes::*;
+use smallvec::SmallVec;
 
 use std::collections::HashMap;
 
 use la_arena::{Arena, RawIdx};
-use smallvec::SmallVec;
 
-use crate::hir::{self, PrimTyKind, Span, Ty, TyKind, resolver::Resolver};
+use crate::hir::{
+    self, PrimTyKind, Span, Ty, TyKind,
+    resolver::{ResData, Resolver},
+};
 
 impl<'mir> MirCtx<'mir> {
-    pub fn new(resolver: &'mir Resolver, span: Span) -> Self {
+    pub fn new(
+        resolver: &'mir Resolver<ResData>,
+        label_resolver: &'mir Resolver<String>,
+        span: Span,
+    ) -> Self {
         Self {
             body: Body {
                 basic_blocks: Arena::new(),
                 local_decls: Arena::new(),
                 resolver,
+                label_resolver,
                 span,
             },
             local_map: HashMap::new(),
+            bb_map: HashMap::new(),
         }
     }
 
@@ -67,60 +76,127 @@ impl<'mir> MirCtx<'mir> {
         }
 
         let bb = self.alloc_bb();
-        _ = self.lower_to_basic_block(&item.body, bb);
+        self.lower_to_bb(&item.body, bb);
 
         Ok(self.body)
     }
 
-    pub(crate) fn lower_to_basic_block(
-        &mut self,
-        expr: &'mir hir::Expr,
-        mut bb: BasicBlock,
-    ) -> Option<BasicBlock> {
-        let span = expr.span;
+    pub(crate) fn lower_to_bb(&mut self, stmt: &'mir hir::Stmt, mut bb: BasicBlock) -> BasicBlock {
+        let span = stmt.span;
 
-        match &expr.kind {
-            hir::ExprKind::Block(block) => {
+        match &stmt.kind {
+            hir::StmtKind::Block(block) => {
                 let pre_resolver = self.body.resolver;
                 self.body.resolver = &block.resolver;
 
                 for stmt in &block.stmts {
-                    bb = self.lower_stmt(stmt, bb);
+                    bb = self.lower_to_bb(stmt, bb);
                 }
 
                 self.body.resolver = pre_resolver;
 
-                Some(bb)
+                bb
             }
-            hir::ExprKind::Lit(..) => todo!(),
-            hir::ExprKind::Ret(expr) => {
-                let rvalue = self.lower_to_rvalue(expr, bb);
+            hir::StmtKind::Expr(expr) => {
+                self.lower_expr(expr, bb);
 
-                let bb_data = self.retrive_bb(bb);
+                bb
+            }
+            hir::StmtKind::Decl(decl_stmt) => {
+                for decl in &decl_stmt.decls {
+                    let hir::Decl { ty, res, init, .. } = decl;
 
-                bb_data.statements.push(Statement {
-                    kind: StatementKind::Assign(
-                        Place {
-                            local: Local::from_raw(RawIdx::from_u32(0)),
-                            projections: vec![],
-                        },
-                        rvalue,
-                    ),
-                    span,
-                });
+                    let init_rvalue = init
+                        .as_ref()
+                        .map(|init_expr| self.lower_to_rvalue(init_expr, bb));
 
-                bb_data.terminator = Some(Terminator {
+                    let res_data = self.body.resolver.get_item(res);
+
+                    let local =
+                        self.alloc_local(Some(res_data.ident.name.clone()), ty, decl_stmt.span);
+
+                    self.local_map.insert(*res, local);
+
+                    if let Some(init_rvalue) = init_rvalue {
+                        self.retrive_bb(bb).statements.push(Statement {
+                            kind: StatementKind::Assign(
+                                Place {
+                                    local,
+                                    projections: vec![],
+                                },
+                                init_rvalue,
+                            ),
+                            span,
+                        });
+                    }
+                }
+
+                bb
+            }
+            hir::StmtKind::Ret(ret_expr) => {
+                if let Some(ret_expr) = ret_expr {
+                    let rvalue = self.lower_to_rvalue(ret_expr, bb);
+
+                    self.retrive_bb(bb).statements.push(Statement {
+                        kind: StatementKind::Assign(
+                            Place {
+                                local: Local::from_raw(RawIdx::from_u32(0)),
+                                projections: vec![],
+                            },
+                            rvalue,
+                        ),
+                        span,
+                    });
+                }
+
+                self.retrive_bb(bb).terminator = Some(Terminator {
                     kind: TerminatorKind::Return,
                     span,
                 });
 
-                None
+                bb
             }
-            hir::ExprKind::Local(..) => todo!(),
-            hir::ExprKind::Call(..) => todo!(),
-            hir::ExprKind::Binary(..) => Some(bb),
-            hir::ExprKind::Unary(..) => Some(bb),
-            hir::ExprKind::If(cond_expr, body_expr, else_expr) => {
+            hir::StmtKind::Label(label_idx, stmt) => {
+                let next_bb = match self.bb_map.get(label_idx) {
+                    Some(next_bb) => *next_bb,
+                    None => {
+                        let next_bb = self.alloc_bb();
+
+                        self.bb_map.insert(*label_idx, next_bb);
+
+                        next_bb
+                    }
+                };
+
+                self.retrive_bb(bb).terminator = Some(Terminator {
+                    kind: TerminatorKind::Goto { bb: next_bb },
+                    span,
+                });
+
+                self.lower_to_bb(stmt, next_bb);
+
+                next_bb
+            }
+            hir::StmtKind::Goto(label_idx) => {
+                let next_bb = match self.bb_map.get(label_idx) {
+                    Some(next_bb) => *next_bb,
+                    None => {
+                        let next_bb = self.alloc_bb();
+
+                        self.bb_map.insert(*label_idx, next_bb);
+
+                        next_bb
+                    }
+                };
+
+                self.retrive_bb(bb).terminator = Some(Terminator {
+                    kind: TerminatorKind::Goto { bb: next_bb },
+                    span,
+                });
+
+                self.alloc_bb()
+            }
+            hir::StmtKind::If(cond_expr, body_stmt, else_stmt) => {
                 let cond_rvalue = self.lower_to_rvalue(cond_expr, bb);
 
                 let cond_local = self.alloc_local(
@@ -137,87 +213,62 @@ impl<'mir> MirCtx<'mir> {
                     projections: vec![],
                 };
 
+                let next_bb = self.alloc_bb();
+
                 let body_bb = self.alloc_bb();
-                let body_end_bb = self.lower_to_basic_block(body_expr, body_bb);
+                let body_last_bb = self.lower_to_bb(body_stmt, body_bb);
 
-                let last_bb = match else_expr {
-                    Some(else_expr) => {
-                        let else_bb = self.alloc_bb();
-                        let else_end_bb = self.lower_to_basic_block(else_expr, else_bb);
+                self.retrive_bb(body_last_bb).terminator = Some(Terminator {
+                    kind: TerminatorKind::Goto { bb: next_bb },
+                    span,
+                });
 
-                        let last_bb = self.alloc_bb();
+                let else_bb = if let Some(else_stmt) = else_stmt {
+                    let else_bb = self.alloc_bb();
+                    let else_last_bb = self.lower_to_bb(else_stmt, else_bb);
 
-                        if let Some(body_last_bb) = body_end_bb {
-                            self.retrive_bb(body_last_bb).terminator = Some(Terminator {
-                                kind: TerminatorKind::Goto { bb: last_bb },
-                                span,
-                            });
-                        }
+                    self.retrive_bb(else_last_bb).terminator = Some(Terminator {
+                        kind: TerminatorKind::Goto { bb: next_bb },
+                        span,
+                    });
 
-                        if let Some(else_last_bb) = else_end_bb {
-                            self.retrive_bb(else_last_bb).terminator = Some(Terminator {
-                                kind: TerminatorKind::Goto { bb: last_bb },
-                                span,
-                            });
-                        }
-
-                        let bb_data = self.retrive_bb(bb);
-
-                        bb_data.statements.push(Statement {
-                            kind: StatementKind::Assign(cond_place.clone(), cond_rvalue),
-                            span,
-                        });
-
-                        bb_data.terminator = Some(Terminator {
-                            kind: TerminatorKind::SwitchInt {
-                                discr: Operand::Place(cond_place),
-                                targets: SwitchTargets {
-                                    value: SmallVec::from_slice(&[0]),
-                                    bbs: SmallVec::from_slice(&[else_bb, body_bb]),
-                                },
-                            },
-                            span,
-                        });
-
-                        last_bb
-                    }
-                    None => {
-                        let last_bb = self.alloc_bb();
-
-                        if let Some(body_last_bb) = body_end_bb {
-                            self.retrive_bb(body_last_bb).terminator = Some(Terminator {
-                                kind: TerminatorKind::Goto { bb: last_bb },
-                                span,
-                            });
-                        }
-
-                        let bb_data = self.retrive_bb(bb);
-
-                        bb_data.statements.push(Statement {
-                            kind: StatementKind::Assign(cond_place.clone(), cond_rvalue),
-                            span,
-                        });
-
-                        bb_data.terminator = Some(Terminator {
-                            kind: TerminatorKind::SwitchInt {
-                                discr: Operand::Place(cond_place),
-                                targets: SwitchTargets {
-                                    value: SmallVec::from_slice(&[0]),
-                                    bbs: SmallVec::from_slice(&[last_bb, body_bb]),
-                                },
-                            },
-                            span,
-                        });
-
-                        last_bb
-                    }
+                    else_bb
+                } else {
+                    next_bb
                 };
 
-                Some(last_bb)
+                let bb_data = self.retrive_bb(bb);
+
+                bb_data.statements.push(Statement {
+                    kind: StatementKind::Assign(cond_place.clone(), cond_rvalue),
+                    span,
+                });
+
+                bb_data.terminator = Some(Terminator {
+                    kind: TerminatorKind::SwitchInt {
+                        discr: Operand::Place(cond_place),
+                        targets: SwitchTargets {
+                            value: SmallVec::from_slice(&[1]),
+                            bbs: SmallVec::from_slice(&[body_bb, else_bb]),
+                        },
+                    },
+                    span,
+                });
+
+                next_bb
             }
-            hir::ExprKind::Loop(..) => todo!(),
-            hir::ExprKind::Break => todo!(),
-            hir::ExprKind::Continue => todo!(),
+        }
+    }
+
+    pub(crate) fn lower_expr(&mut self, expr: &'mir hir::Expr, bb: BasicBlock) {
+        let span = expr.span;
+
+        match &expr.kind {
+            hir::ExprKind::Lit(..) => todo!(),
+            hir::ExprKind::Local(..) => todo!(),
+            hir::ExprKind::Call(..) => todo!(),
+            hir::ExprKind::Binary(..) => (),
+            hir::ExprKind::Unary(..) => (),
             hir::ExprKind::Assign(lhs_expr, rhs_expr) => {
                 let place = self.lower_to_place(lhs_expr);
 
@@ -229,8 +280,6 @@ impl<'mir> MirCtx<'mir> {
                     kind: StatementKind::Assign(place.clone(), rvalue),
                     span,
                 });
-
-                None
             }
             hir::ExprKind::Field(..) => todo!(),
             hir::ExprKind::Index(..) => todo!(),
@@ -239,48 +288,6 @@ impl<'mir> MirCtx<'mir> {
             hir::ExprKind::AddrOf(..) => todo!(),
             hir::ExprKind::Comma(..) => todo!(),
             hir::ExprKind::Sizeof(..) => todo!(),
-        }
-    }
-
-    pub(crate) fn lower_stmt(&mut self, stmt: &'mir hir::Stmt, bb: BasicBlock) -> BasicBlock {
-        let span = stmt.span;
-
-        match &stmt.kind {
-            hir::StmtKind::Decl(decl_stmt) => {
-                let init_rvalue = decl_stmt
-                    .init
-                    .as_ref()
-                    .map(|init_expr| self.lower_to_rvalue(init_expr, bb));
-
-                let res_data = self.body.resolver.get_item(&decl_stmt.res);
-
-                let local = self.alloc_local(
-                    Some(res_data.ident.name.clone()),
-                    &decl_stmt.ty,
-                    decl_stmt.span,
-                );
-
-                self.local_map.insert(decl_stmt.res, local);
-
-                let bb_data = self.retrive_bb(bb);
-
-                if let Some(init_rvalue) = init_rvalue {
-                    bb_data.statements.push(Statement {
-                        kind: StatementKind::Assign(
-                            Place {
-                                local,
-                                projections: vec![],
-                            },
-                            init_rvalue,
-                        ),
-                        span,
-                    });
-                }
-
-                bb
-            }
-            hir::StmtKind::Expr(expr) => self.lower_to_basic_block(expr, bb).unwrap_or(bb),
-            hir::StmtKind::Semi(expr) => self.lower_to_basic_block(expr, bb).unwrap_or(bb),
         }
     }
 

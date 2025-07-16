@@ -10,7 +10,7 @@ use repr::{
 
 #[allow(clippy::print_stdout)]
 fn main() -> anyhow::Result<()> {
-    env_logger::init();
+    env_logger::builder().format_source_path(true).init();
 
     let args = cli_utils::parse_args();
 
@@ -35,7 +35,7 @@ fn main() -> anyhow::Result<()> {
     for item in lowering_ctx.items {
         match item.kind {
             hir::ItemKind::Fn(f) => {
-                let ctx = MirCtx::new(&lowering_ctx.resolver, f.body.span);
+                let ctx = MirCtx::new(&lowering_ctx.resolver, &f.label_resolver, f.body.span);
                 let mir_body = ctx.lower_to_mir(&f);
 
                 if let Ok(mir_body) = mir_body {

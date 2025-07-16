@@ -264,7 +264,7 @@ impl LoweringCtx<'_> {
                     loop_start:
                         if (!$cond) goto loop_end;
                         $body;
-                        goto loop_start:
+                        goto loop_start;
                     loop_end:
                 */
 
@@ -320,7 +320,57 @@ impl LoweringCtx<'_> {
                 })
             }
             constants::DO_STATEMENT => {
-                todo!()
+                /*
+                    loop_start:
+                        $body;
+                        if ($cond) goto loop_start;
+                    loop_end:
+                */
+
+                let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
+                let label_res_start = self.label_resolver.insert(loop_start.clone(), ())?;
+
+                let loop_end = format!("loop_end_{}_{}", span.lo, span.hi);
+                let label_res_end = self.label_resolver.insert(loop_end.clone(), ())?;
+
+                self.cursor.goto_first_child();
+                self.cursor.goto_next_sibling();
+
+                let body_stmt = self.lower_to_stmt()?;
+
+                self.cursor.goto_next_sibling();
+                self.cursor.goto_next_sibling();
+
+                let cond_expr = self.lower_to_expr()?;
+
+                self.cursor.goto_parent();
+
+                StmtKind::Block(Block {
+                    stmts: vec![
+                        Stmt {
+                            kind: StmtKind::Label(label_res_start, None),
+                            span,
+                        },
+                        body_stmt,
+                        Stmt {
+                            kind: StmtKind::If(
+                                cond_expr,
+                                Box::new(Stmt {
+                                    kind: StmtKind::Goto(label_res_start),
+                                    span,
+                                }),
+                                None,
+                            ),
+                            span,
+                        },
+                        Stmt {
+                            kind: StmtKind::Label(label_res_end, None),
+                            span,
+                        },
+                    ],
+                    resolver: self.resolver.clone(),
+                    span,
+                })
             }
             constants::FOR_STATEMENT => {
                 todo!()

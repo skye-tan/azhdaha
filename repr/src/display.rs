@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 use itertools::Itertools;
 
-use crate::hir::{BinOp, Lit, LitKind, PrimTyKind, Ty, TyKind, UnOp};
+use crate::hir::{BinOp, Lit, LitKind, PrimTyKind, Ty, TyKind, TyQual, UnOp};
 use crate::mir::{
     Body, Local, Operand, Place, Rvalue, Statement, StatementKind, Terminator, TerminatorKind,
 };
@@ -67,6 +67,7 @@ impl MirDisplay for PrimTyKind {
     fn mir_display(&self, _body: &Body) -> String {
         match self {
             PrimTyKind::Int => "int".to_owned(),
+            PrimTyKind::Bool => "bool".to_owned(),
             PrimTyKind::Float => "float".to_owned(),
             PrimTyKind::Double => "double".to_owned(),
             PrimTyKind::Char => "char".to_owned(),
@@ -75,13 +76,38 @@ impl MirDisplay for PrimTyKind {
     }
 }
 
+impl MirDisplay for TyKind {
+    fn mir_display(&self, body: &Body) -> String {
+        match &self {
+            TyKind::PrimTy(prim_ty_kind) => prim_ty_kind.mir_display(body),
+            TyKind::Array(ty_kind, _) => format!("[{}]", ty_kind.mir_display(body)),
+            TyKind::Ptr(ty_kind) => format!("*{}", ty_kind.mir_display(body)),
+        }
+    }
+}
+
+impl MirDisplay for TyQual {
+    fn mir_display(&self, _body: &Body) -> String {
+        match &self {
+            TyQual::Const => "const".to_owned(),
+            TyQual::Volatile => "volatile".to_owned(),
+            TyQual::Atomic => "atomic".to_owned(),
+            TyQual::Linear => "linear".to_owned(),
+        }
+    }
+}
+
 impl MirDisplay for Ty {
     fn mir_display(&self, body: &Body) -> String {
-        match &self.kind {
-            TyKind::PrimTy(prim_ty_kind) => prim_ty_kind.mir_display(body),
-            TyKind::Array(ty, _) => format!("[{}]", ty.mir_display(body)),
-            TyKind::Ptr(ty) => format!("*{}", ty.mir_display(body)),
+        let mut result = String::new();
+
+        for qual in self.quals.iter() {
+            result.push_str(&format!("{} ", qual.mir_display(body)));
         }
+
+        result.push_str(&self.kind.mir_display(body));
+
+        result
     }
 }
 

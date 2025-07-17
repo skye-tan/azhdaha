@@ -133,6 +133,7 @@ impl<'mir> MirCtx<'mir> {
                     None,
                     &Ty {
                         kind: TyKind::PrimTy(PrimTyKind::Int),
+                        quals: vec![],
                         span: cond_expr.span,
                     },
                     cond_expr.span,

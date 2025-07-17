@@ -13,7 +13,7 @@ mod expr;
 /// Contains the methods needed to lower ast to HIR's [`Item`], [`ItemKind`], [`Fn`], [`FnSig`], and [`Param`].
 mod item;
 /// Contains the methods needed to lower ast to HIR's [`PrimTyKind`], [`TyKind`], [`Ty`], [`Ident`], [`LitKind`], and [`Lit`].
-mod path;
+mod local;
 
 /// Contains constant values used to generate the HIR.
 mod constants;

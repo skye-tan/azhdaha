@@ -12,7 +12,7 @@ use crate::hir::{
 };
 
 impl LoweringCtx<'_> {
-    fn lower_to_decl(&mut self, ty: Ty) -> anyhow::Result<Decl> {
+    fn lower_to_decl(&mut self, mut ty: Ty) -> anyhow::Result<Decl> {
         let node = self.cursor.node();
         trace!("Process declaration from node: {}", node.kind());
 
@@ -29,11 +29,7 @@ impl LoweringCtx<'_> {
 
                 let array_len = self.lower_to_expr()?;
 
-                let ty_span = ty.span;
-                let ty = Ty {
-                    kind: TyKind::Array(Box::new(ty), Box::new(array_len)),
-                    span: ty_span,
-                };
+                ty.kind = TyKind::Array(Box::new(ty.kind), Box::new(array_len));
 
                 self.cursor.goto_previous_sibling();
                 self.cursor.goto_previous_sibling();
@@ -52,11 +48,7 @@ impl LoweringCtx<'_> {
 
                 self.cursor.goto_parent();
 
-                let ty_span = ty.span;
-                let ty = Ty {
-                    kind: TyKind::Ptr(Box::new(ty)),
-                    span: ty_span,
-                };
+                ty.kind = TyKind::Ptr(Box::new(ty.kind));
 
                 (ty, ident)
             }

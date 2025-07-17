@@ -13,6 +13,7 @@ pub struct Span {
 #[derive(Debug, Clone)]
 pub enum PrimTyKind {
     Int,
+    Bool,
     Float,
     Double,
     Char,
@@ -22,13 +23,22 @@ pub enum PrimTyKind {
 #[derive(Debug, Clone)]
 pub enum TyKind {
     PrimTy(PrimTyKind),
-    Array(Box<Ty>, Box<Expr>),
-    Ptr(Box<Ty>),
+    Array(Box<TyKind>, Box<Expr>),
+    Ptr(Box<TyKind>),
+}
+
+#[derive(Debug, Clone)]
+pub enum TyQual {
+    Const,
+    Volatile,
+    Atomic,
+    Linear,
 }
 
 #[derive(Debug, Clone)]
 pub struct Ty {
     pub kind: TyKind,
+    pub quals: Vec<TyQual>,
     pub span: Span,
 }
 

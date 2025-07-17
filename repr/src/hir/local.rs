@@ -13,6 +13,7 @@ impl LoweringCtx<'_> {
         Ok(
             match std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])? {
                 constants::INT => PrimTyKind::Int,
+                constants::BOOL => PrimTyKind::Bool,
                 constants::FLOAT => PrimTyKind::Float,
                 constants::DOUBLE => PrimTyKind::Double,
                 constants::CHAR => PrimTyKind::Char,
@@ -27,7 +28,9 @@ impl LoweringCtx<'_> {
         trace!("Construct [TyKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_to_prim_ty_kind()?),
+            constants::PRIMITIVE_TYPE | constants::TYPE_IDENTIFIER => {
+                TyKind::PrimTy(self.lower_to_prim_ty_kind()?)
+            }
             constants::TYPE_DESCRIPTOR => {
                 self.cursor.goto_first_child();
 
@@ -41,6 +44,19 @@ impl LoweringCtx<'_> {
         })
     }
 
+    fn lower_to_ty_qual(&mut self) -> anyhow::Result<TyQual> {
+        let node = self.cursor.node();
+        trace!("Construct [TyQual] from node: {}", node.kind());
+
+        Ok(match node.kind() {
+            constants::CONST => TyQual::Const,
+            constants::VOLATILE => TyQual::Volatile,
+            constants::ATOMIC => TyQual::Atomic,
+            constants::LINEAR => TyQual::Linear,
+            kind => bail!("Unsupported [TyQual] node: {kind}"),
+        })
+    }
+
     pub(crate) fn lower_to_ty(&mut self) -> anyhow::Result<Ty> {
         let node = self.cursor.node();
         trace!("Construct [Ty] from node: {}", node.kind());
@@ -50,8 +66,20 @@ impl LoweringCtx<'_> {
             hi: node.end_byte(),
         };
 
+        let mut quals = vec![];
+
+        while self.cursor.node().kind() == constants::TYPE_QUALIFIER {
+            self.cursor.goto_first_child();
+
+            quals.push(self.lower_to_ty_qual()?);
+
+            self.cursor.goto_parent();
+            self.cursor.goto_next_sibling();
+        }
+
         Ok(Ty {
             kind: self.lower_to_ty_kind()?,
+            quals,
             span,
         })
     }

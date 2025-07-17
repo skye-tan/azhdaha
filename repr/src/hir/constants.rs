@@ -80,6 +80,8 @@ pub(crate) const DEREF: &str = "*";
 
 /// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Int`].
 pub(crate) const INT: &str = "int";
+/// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::BOOL`].
+pub(crate) const BOOL: &str = "_Bool";
 /// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Float`].
 pub(crate) const FLOAT: &str = "float";
 /// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Double`].
@@ -89,10 +91,23 @@ pub(crate) const CHAR: &str = "char";
 /// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Void`].
 pub(crate) const VOID: &str = "void";
 
-/// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
-pub(crate) const PRIMITIVE_TYPE: &str = "primitive_type";
 /// An identifiers used for [`TyKind`]'s construction representing a [`TyKind`].
 pub(crate) const TYPE_DESCRIPTOR: &str = "type_descriptor";
+/// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
+pub(crate) const TYPE_IDENTIFIER: &str = "type_identifier";
+/// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
+pub(crate) const PRIMITIVE_TYPE: &str = "primitive_type";
+
+/// An identifiers used for [`TyQual`]'s construction representing a [`TyQual`].
+pub(crate) const TYPE_QUALIFIER: &str = "type_qualifier";
+/// An identifiers used for [`TyQual`]'s construction representing a [`TyQual::Const`].
+pub(crate) const CONST: &str = "const";
+/// An identifiers used for [`TyQual`]'s construction representing a [`TyQual::Volatile`].
+pub(crate) const VOLATILE: &str = "volatile";
+/// An identifiers used for [`TyQual`]'s construction representing a [`TyQual::Atomic`].
+pub(crate) const ATOMIC: &str = "_Atomic";
+/// An identifiers used for [`TyQual`]'s construction representing a [`TyQual::Linear`].
+pub(crate) const LINEAR: &str = "_Linear";
 
 /// An identifiers used for [`LitKind`]'s construction representing a [`LitKind::Str`].
 pub(crate) const STRING_LITERAL: &str = "string_literal";

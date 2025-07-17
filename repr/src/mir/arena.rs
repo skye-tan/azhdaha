@@ -5,7 +5,7 @@ use crate::{
     mir::datatypes::*,
 };
 
-impl<'mir> MirCtx<'mir> {
+impl MirCtx<'_> {
     pub(crate) fn alloc_bb(&mut self) -> BasicBlock {
         self.body.basic_blocks.alloc(BasicBlockData::default())
     }

@@ -131,15 +131,6 @@ impl LoweringCtx<'_> {
 
                 ExprKind::Call(Box::new(path), arguments)
             }
-            constants::EXPRESSION_STATEMENT => {
-                self.cursor.goto_first_child();
-
-                let expr_kind = self.lower_to_expr_kind()?;
-
-                self.cursor.goto_parent();
-
-                expr_kind
-            }
             constants::BINARY_EXPRESSION => {
                 self.cursor.goto_first_child();
 

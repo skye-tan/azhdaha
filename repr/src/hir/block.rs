@@ -174,7 +174,15 @@ impl LoweringCtx<'_> {
 
         Ok(match node.kind() {
             constants::COMPOUND_STATEMENT => StmtKind::Block(self.lower_to_block()?),
-            constants::EXPRESSION_STATEMENT => StmtKind::Expr(self.lower_to_expr()?),
+            constants::EXPRESSION_STATEMENT => {
+                self.cursor.goto_first_child();
+
+                let expr = self.lower_to_expr()?;
+
+                self.cursor.goto_parent();
+
+                StmtKind::Expr(expr)
+            }
             constants::DECLARATION => StmtKind::Decl(self.lower_to_decl_stmt()?),
             constants::RETURN_STATEMENT => {
                 self.cursor.goto_first_child();

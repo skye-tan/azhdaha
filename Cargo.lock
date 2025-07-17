@@ -12,6 +12,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "analyzer"
+version = "0.1.0"
+dependencies = [
+ "repr",
+]
+
+[[package]]
 name = "anstream"
 version = "0.6.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -82,6 +89,7 @@ dependencies = [
 name = "azhdaha"
 version = "0.1.0"
 dependencies = [
+ "analyzer",
  "anyhow",
  "ast-utils",
  "cli-utils",

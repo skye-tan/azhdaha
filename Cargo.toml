@@ -11,16 +11,17 @@ resolver = "2"
 edition = "2024"
 
 [workspace.dependencies]
-log = "0.4.26"
 anyhow = "1.0.96"
 compile_commands = "0.3.0"
-tree-sitter = "0.25.2"
+env_logger = "0.11.7"
+itertools = "0.14.0"
 la-arena = "0.3.1"
+log = "0.4.26"
 smallvec = "1.15.1"
+tree-sitter = "0.25.2"
 
 [workspace.lints.clippy]
 print_stdout = "deny"
 print_stderr = "deny"
-
 missing_panics_doc = "deny"
 missing_docs_in_private_items = "warn"

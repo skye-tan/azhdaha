@@ -8,9 +8,9 @@ workspace = true
 
 [dependencies]
 ast-utils = { version = "0.1.0", path = "../ast-utils" }
-log.workspace = true
 anyhow.workspace = true
-tree-sitter.workspace = true
+itertools.workspace = true
 la-arena.workspace = true
+log.workspace = true
 smallvec.workspace = true
-itertools = "0.14.0"
+tree-sitter.workspace = true

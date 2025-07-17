@@ -6,20 +6,20 @@
 
 use ast_utils::AstRepr;
 
-/// Contains the methods needed to lower [`Block`], [`Stmt`], [`StmtKind`], and [`DeclStmt`].
+/// Contains the methods needed to lower ast to HIR's [`Block`], [`Stmt`], [`StmtKind`], and [`DeclStmt`].
 mod block;
-/// Contains the methods needed to lower [`Expr`], [`ExprKind`], [`Sizeof`], [`SizeofKind`], [`UnOp`], [`BinOp`], and [`BinOpKind`].
+/// Contains the methods needed to lower ast to HIR's [`Expr`], [`ExprKind`], [`Sizeof`], [`SizeofKind`], [`UnOp`], and [`BinOp`].
 mod expr;
-/// Contains the methods needed to lower [`Item`], [`ItemKind`], [`Fn`], [`FnSig`], and [`Param`].
+/// Contains the methods needed to lower ast to HIR's [`Item`], [`ItemKind`], [`Fn`], [`FnSig`], and [`Param`].
 mod item;
-/// Contains the methods needed to lower [`Path`], [`PrimTyKind`], [`TyKind`], [`Ty`], [`Ident`], [`LitKind`], and [`Lit`].
+/// Contains the methods needed to lower ast to HIR's [`PrimTyKind`], [`TyKind`], [`Ty`], [`Ident`], [`LitKind`], and [`Lit`].
 mod path;
 
 /// Contains constant values used to generate the HIR.
 mod constants;
 /// Contains datatypes used to represent the HIR.
 mod datatypes;
-/// Contains symbol-resolver's implementation.
+/// Contains symbol resolver's implementation.
 pub(crate) mod resolver;
 
 pub use datatypes::*;

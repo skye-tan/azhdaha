@@ -7,9 +7,10 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
-cli-utils = { version = "0.1.0", path = "../cli-utils" }
+analyzer = { version = "0.1.0", path = "../analyzer" }
 ast-utils = { version = "0.1.0", path = "../ast-utils" }
+cli-utils = { version = "0.1.0", path = "../cli-utils" }
 repr = { version = "0.1.0", path = "../repr" }
-log.workspace = true
 anyhow.workspace = true
-env_logger = "0.11.7"
+env_logger.workspace = true
+log.workspace = true

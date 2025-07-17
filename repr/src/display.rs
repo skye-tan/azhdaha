@@ -144,6 +144,7 @@ impl MirDisplay for Rvalue {
                         .join(", ")
                 )
             }
+            Rvalue::Empty => String::new(),
         }
     }
 }

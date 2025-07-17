@@ -2,26 +2,28 @@ use std::process::Command;
 
 use compile_commands::{CompilationDatabase, CompileArgs};
 
-/// The flag which indicates that only preprocess phase should be done.
+/// Indicates that only preprocess phase should be done.
 const PREPROCESS_ONLY_FLAG: &str = "-E";
 
-/// The flag which inhibits generation of linemarkers in the output from the preprocessor.
+/// Inhibits generation of linemarkers in the output from the preprocessor.
 const INHABIT_LINEMARKS_FLAG: &str = "-P";
 
-/// The flag which is used to include headers.
+/// Includes headers in the given directory.
 #[allow(dead_code)]
 const INCLUDE_FLAG: &str = "-I";
 
 /// Replace headers with annotated versions and expand macros.
 ///
-/// In order to only perform the preprocessing on the source code, [`PREPROCESS_ONLY_FLAG`] flag
-/// is appended to the arguments.
+/// In order to only perform the preprocessing on the source code, [`PREPROCESS_ONLY_FLAG`]
+/// is inserted into the arguments.
 ///
 /// Headers used in the source code must be replaced with annotated versions which is accomplished by
-/// inserting [`INCLUDE_FLAG`] flag pointing to a directory containing the annotated headers.
+/// inserting [`INCLUDE_FLAG`] pointing to a directory containing the annotated headers.
 ///
-/// The LINEAR macro used in the source codes must be replaced by `_Linear` type qualifier which is accomplished by
-/// inserting [`INCLUDE_FLAG`] flag pointing to a directory containing the edited header.
+/// The "LINEAR" macro used in the source code must be replaced by "_Linear" type qualifier which is
+/// accomplished by inserting [`INCLUDE_FLAG`] which defines the macro.
+///
+/// TODO: Might consider using "-undef" flag for further simplification.
 ///
 pub(crate) fn preprocess(compile_commands: &CompilationDatabase) -> anyhow::Result<Vec<Vec<u8>>> {
     let mut results = vec![];
@@ -33,7 +35,7 @@ pub(crate) fn preprocess(compile_commands: &CompilationDatabase) -> anyhow::Resu
         };
 
         if !compile_command.directory.exists() {
-            log::warn!("Directory '{}' does not exist.", directory);
+            log::warn!("Directory '{directory}' does not exist.");
             continue;
         }
 
@@ -52,9 +54,9 @@ pub(crate) fn preprocess(compile_commands: &CompilationDatabase) -> anyhow::Resu
 
         results.push(
             Command::new(command)
-                .args(args)
                 .arg(PREPROCESS_ONLY_FLAG)
                 .arg(INHABIT_LINEMARKS_FLAG)
+                .args(args)
                 .current_dir(directory)
                 .output()?
                 .stdout,

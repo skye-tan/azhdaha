@@ -44,7 +44,7 @@ impl<'hir> LoweringCtx<'hir> {
                     }
                 }
                 Err(error) => {
-                    log::warn!("Failed to construct item - {:?}", error);
+                    log::warn!("Failed to construct item - {error:?}");
                 }
             }
 

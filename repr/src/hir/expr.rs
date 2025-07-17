@@ -104,7 +104,7 @@ impl LoweringCtx<'_> {
                 let res = self
                     .resolver
                     .lookup_res(&ident.name)
-                    .context("Use of unidentified variable.")?;
+                    .context(format!("Use of undeclared identifier: {}", &ident.name))?;
 
                 ExprKind::Local(res)
             }

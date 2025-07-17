@@ -23,7 +23,7 @@ pub struct Args {
 ///
 /// # Errors
 ///
-/// Return [`Err`] if file does not exist or parsing fails.
+/// Return [`Err`] if the file does not exist or parsing fails.
 ///
 fn parse_compile_commands(path_to_file: &str) -> anyhow::Result<CompilationDatabase> {
     serde_json::from_str::<CompilationDatabase>(

@@ -158,8 +158,6 @@ pub(crate) const SEMICOLON_EXPRESSION: &str = ";";
 pub(crate) const COMPOUND_STATEMENT: &str = "compound_statement";
 /// An identifiers used for [`StmtKind`]'s construction representing a [`StmtKind::Expr`].
 pub(crate) const EXPRESSION_STATEMENT: &str = "expression_statement";
-/// An identifiers used for [`StmtKind`]'s construction representing a [`StmtKind::Decl`].
-pub(crate) const DECLARATION: &str = "declaration";
 /// An identifiers used for [`StmtKind`]'s construction representing a [`StmtKind::Ret`].
 pub(crate) const RETURN_STATEMENT: &str = "return_statement";
 /// An identifiers used for [`StmtKind`]'s construction representing a [`StmtKind::Label`].
@@ -182,5 +180,11 @@ pub(crate) const BREAK_STATEMENT: &str = "break_statement";
 /// An identifiers used for [`StmtKind`]'s construction representing a [`StmtKind::Goto`].
 pub(crate) const CONTINUE_STATEMENT: &str = "continue_statement";
 
+/// An identifiers used for [`StmtKind`]'s construction representing a [`ItemKind::ProtoType`],
+/// [`ItemKind::Global`], or [`StmtKind::Decl`].
+pub(crate) const DECLARATION: &str = "declaration";
+
 /// An identifiers used for [`ItemKind`]'s construction representing an [`ItemKind::Func`].  
 pub(crate) const FUNCTION_DEFINITION: &str = "function_definition";
+/// An identifiers used for [`ItemKind`]'s construction representing an [`ItemKind::ProtoType`].
+pub(crate) const FUNCTION_DECLARATOR: &str = "function_declarator";

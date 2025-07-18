@@ -6,11 +6,12 @@
 
 use std::collections::HashMap;
 
+use anyhow::Context;
 use la_arena::Arena;
 
 use crate::hir::{
     self, Span,
-    resolver::{ResData, Resolver},
+    resolver::{Resolver, SymbolKind},
 };
 
 /// Contains the methods needed to manage arenas and resolvers.
@@ -27,16 +28,16 @@ pub use datatypes::*;
 
 impl<'mir> MirCtx<'mir> {
     pub fn new(
-        resolver: &'mir Resolver<ResData>,
+        symbol_resolver: &'mir Resolver<SymbolKind>,
         label_resolver: &'mir Resolver<()>,
         span: Span,
     ) -> Self {
         Self {
+            label_resolver,
             body: Body {
+                symbol_resolver,
                 basic_blocks: Arena::new(),
                 local_decls: Arena::new(),
-                resolver,
-                label_resolver,
                 span,
             },
             local_map: HashMap::new(),
@@ -44,22 +45,33 @@ impl<'mir> MirCtx<'mir> {
         }
     }
 
-    pub fn lower_to_mir(mut self, item: &'mir hir::Fn) -> anyhow::Result<Body<'mir>> {
-        self.alloc_local(None, &item.sig.ty, item.body.span);
+    pub fn lower_to_mir(mut self, func: &'mir hir::Func) -> anyhow::Result<Body<'mir>> {
+        let func_sig = match self.body.symbol_resolver.get_data_by_res(&func.sig) {
+            SymbolKind::Func(func_sig) => func_sig,
+            SymbolKind::Local(..) => unreachable!(),
+        };
 
-        for param in &item.sig.params {
-            if let Some(res) = &param.res {
-                let res_data = item.resolver.get_item(res);
+        self.alloc_local(None, &func_sig.ret_ty, func.body.span);
 
-                let local =
-                    self.alloc_local(Some(res_data.ident.name.clone()), &param.ty, param.span);
+        for param in &func_sig.params {
+            if let Some(ident) = &param.ident {
+                let symbol = self
+                    .body
+                    .symbol_resolver
+                    .get_res_by_name(&ident.name)
+                    .context(format!(
+                        "Parameter {} have not been inserted into resolver.",
+                        ident.name
+                    ))?;
 
-                self.local_map.insert(*res, local);
+                let local = self.alloc_local(Some(ident.name.clone()), &param.ty, param.span);
+
+                self.local_map.insert(symbol, local);
             }
         }
 
         let bb = self.alloc_bb();
-        self.lower_to_bb(&item.body, bb);
+        self.lower_to_bb(&func.body, bb);
 
         Ok(self.body)
     }

@@ -7,7 +7,7 @@ use smallvec::SmallVec;
 
 use crate::hir::{
     BinOp, Lit, Span, Ty, UnOp,
-    resolver::{LabelIdx, ResData, ResIdx, Resolver},
+    resolver::{Label, Resolver, Symbol, SymbolKind},
 };
 
 #[derive(Debug, Clone)]
@@ -25,7 +25,7 @@ pub struct Place {
 #[derive(Debug, Clone)]
 pub enum Const {
     Lit(Lit),
-    Fn(ResIdx<ResData>),
+    Symbol(Symbol),
 }
 
 #[derive(Debug, Clone)]
@@ -90,26 +90,27 @@ pub type Local = Idx<LocalDecl>;
 
 #[derive(Debug, Clone)]
 pub struct LocalDecl {
-    pub debug_ident: Option<String>,
+    pub debug_name: Option<String>,
     pub ty: Ty,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
 pub struct Body<'mir> {
+    pub symbol_resolver: &'mir Resolver<SymbolKind>,
+
     pub basic_blocks: Arena<BasicBlockData>,
     pub local_decls: Arena<LocalDecl>,
-
-    pub resolver: &'mir Resolver<ResData>,
-    pub label_resolver: &'mir Resolver<()>,
 
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
 pub struct MirCtx<'mir> {
+    pub label_resolver: &'mir Resolver<()>,
+
     pub body: Body<'mir>,
 
-    pub local_map: HashMap<ResIdx<ResData>, Local>,
-    pub bb_map: HashMap<LabelIdx, BasicBlock>,
+    pub bb_map: HashMap<Label, BasicBlock>,
+    pub local_map: HashMap<Symbol, Local>,
 }

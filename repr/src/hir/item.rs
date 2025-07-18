@@ -2,13 +2,10 @@
 
 use std::mem;
 
+use anyhow::Context;
 use log::trace;
 
-use crate::hir::{
-    constants,
-    datatypes::*,
-    resolver::{ResData, ResKind, Resolver},
-};
+use crate::hir::{constants, datatypes::*, resolver::SymbolKind};
 
 impl LoweringCtx<'_> {
     pub(crate) fn lower_to_param(&mut self) -> anyhow::Result<Param> {
@@ -24,33 +21,24 @@ impl LoweringCtx<'_> {
 
         let ty = self.lower_to_ty()?;
 
-        let res = if self.cursor.goto_next_sibling() {
-            let ident = self.lower_to_ident()?;
-
-            let ident_name = ident.name.clone();
-            let res_data = ResData {
-                ident,
-                kind: ResKind::Var(ty.clone()),
-            };
-            let res = self.resolver.insert(ident_name, res_data)?;
-
-            Some(res)
+        let ident = if self.cursor.goto_next_sibling() {
+            Some(self.lower_to_ident()?)
         } else {
             None
         };
 
         self.cursor.goto_parent();
 
-        Ok(Param { res, ty, span })
+        Ok(Param { ty, ident, span })
     }
 
-    pub(crate) fn lower_to_fn_sig(&mut self) -> anyhow::Result<(Resolver<ResData>, FnSig)> {
+    pub(crate) fn lower_to_func_sig(&mut self) -> anyhow::Result<FuncSig> {
         let node = self.cursor.node();
-        trace!("Construct [FnSig] from node: {}", node.kind());
+        trace!("Construct [FuncSig] from node: {}", node.kind());
 
         self.cursor.goto_first_child();
 
-        let ty = self.lower_to_ty()?;
+        let ret_ty = self.lower_to_ty()?;
 
         self.cursor.goto_next_sibling();
         self.cursor.goto_first_child();
@@ -60,8 +48,6 @@ impl LoweringCtx<'_> {
         self.cursor.goto_next_sibling();
         self.cursor.goto_first_child();
         self.cursor.goto_next_sibling();
-
-        let mut pre_resolver = self.resolver.clone();
 
         let mut params = vec![];
 
@@ -76,23 +62,39 @@ impl LoweringCtx<'_> {
         self.cursor.goto_parent();
         self.cursor.goto_parent();
 
-        let ident_name = ident.name.clone();
-        let res_data = ResData {
+        Ok(FuncSig {
+            ret_ty,
             ident,
-            kind: ResKind::Fn(ty.clone(), params.clone()),
-        };
-        let res = pre_resolver.insert(ident_name, res_data)?;
-
-        let fn_sig = FnSig { res, ty, params };
-
-        Ok((pre_resolver, fn_sig))
+            params,
+        })
     }
 
-    pub(crate) fn lower_to_fn(&mut self) -> anyhow::Result<Fn> {
+    pub(crate) fn lower_to_func(&mut self) -> anyhow::Result<Func> {
         let node = self.cursor.node();
-        trace!("Construct [Fn] from node: {}", node.kind());
+        trace!("Construct [Func] from node: {}", node.kind());
 
-        let (pre_resolver, sig) = self.lower_to_fn_sig()?;
+        let func_sig = self.lower_to_func_sig()?;
+
+        let symbol = self.symbol_resolver.insert_symbol(
+            func_sig.ident.name.clone(),
+            SymbolKind::Func(func_sig.clone()),
+        );
+
+        let saved_symbol_resolver = self.symbol_resolver.clone();
+
+        for param in func_sig.params.into_iter() {
+            if let Some(ident) = param.ident {
+                _ = self.symbol_resolver.insert_symbol(
+                    ident.name.clone(),
+                    SymbolKind::Local(Decl {
+                        ty: param.ty,
+                        ident,
+                        init: None,
+                        span: param.span,
+                    }),
+                );
+            }
+        }
 
         self.cursor.goto_last_child();
 
@@ -100,14 +102,13 @@ impl LoweringCtx<'_> {
 
         self.cursor.goto_parent();
 
-        let resolver = mem::replace(&mut self.resolver, pre_resolver);
+        self.symbol_resolver = saved_symbol_resolver;
         let label_resolver = mem::take(&mut self.label_resolver);
 
-        Ok(Fn {
-            sig,
-            body,
-            resolver,
+        Ok(Func {
             label_resolver,
+            sig: symbol,
+            body,
         })
     }
 
@@ -116,7 +117,23 @@ impl LoweringCtx<'_> {
         trace!("Construct [ItemKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constants::FUNCTION_DEFINITION => Some(ItemKind::Fn(Box::new(self.lower_to_fn()?))),
+            constants::FUNCTION_DEFINITION => Some(ItemKind::Func(self.lower_to_func()?)),
+            constants::DECLARATION => {
+                let child_node = node.child(1).context("Unknown declaration.")?;
+
+                match child_node.kind() {
+                    constants::FUNCTION_DECLARATOR => {
+                        let func_sig = self.lower_to_func_sig()?;
+
+                        let symbol = self
+                            .symbol_resolver
+                            .insert_symbol(func_sig.ident.name.clone(), SymbolKind::Func(func_sig));
+
+                        Some(ItemKind::ProtoType(symbol))
+                    }
+                    _ => Some(ItemKind::GlobalVar(self.lower_to_decl_stmt()?)),
+                }
+            }
             kind => {
                 trace!("Unsupported [ItemKind] node: {kind}");
                 None

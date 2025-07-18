@@ -4,7 +4,7 @@ use la_arena::RawIdx;
 use smallvec::SmallVec;
 
 use crate::{
-    hir::{self, PrimTyKind, Ty, TyKind},
+    hir::{self, PrimTyKind, Ty, TyKind, resolver::SymbolKind},
     mir::datatypes::*,
 };
 
@@ -14,14 +14,14 @@ impl<'mir> MirCtx<'mir> {
 
         match &stmt.kind {
             hir::StmtKind::Block(block) => {
-                let pre_resolver = self.body.resolver;
-                self.body.resolver = &block.resolver;
+                let pre_resolver = self.body.symbol_resolver;
+                self.body.symbol_resolver = &block.symbol_resolver;
 
                 for stmt in &block.stmts {
                     bb = self.lower_to_bb(stmt, bb);
                 }
 
-                self.body.resolver = pre_resolver;
+                self.body.symbol_resolver = pre_resolver;
 
                 bb
             }
@@ -32,21 +32,26 @@ impl<'mir> MirCtx<'mir> {
             }
             hir::StmtKind::Decl(decl_stmt) => {
                 for decl in &decl_stmt.decls {
-                    let hir::Decl { ty, res, init, .. } = decl;
+                    let hir::Decl {
+                        ty,
+                        ident,
+                        init,
+                        span,
+                    } = match self.body.symbol_resolver.get_data_by_res(decl) {
+                        SymbolKind::Local(decl) => decl,
+                        SymbolKind::Func(..) => unreachable!(),
+                    };
 
                     let init_rvalue = init
                         .as_ref()
                         .map(|init_expr| self.lower_to_rvalue(init_expr, bb));
 
-                    let res_data = self.body.resolver.get_item(res);
+                    let local = self.alloc_local(Some(ident.name.clone()), ty, decl_stmt.span);
 
-                    let local =
-                        self.alloc_local(Some(res_data.ident.name.clone()), ty, decl_stmt.span);
-
-                    self.local_map.insert(*res, local);
+                    self.local_map.insert(*decl, local);
 
                     if let Some(init_rvalue) = init_rvalue {
-                        self.retrive_bb(bb).statements.push(Statement {
+                        self.retrieve_bb(bb).statements.push(Statement {
                             kind: StatementKind::Assign(
                                 Place {
                                     local,
@@ -54,7 +59,7 @@ impl<'mir> MirCtx<'mir> {
                                 },
                                 init_rvalue,
                             ),
-                            span,
+                            span: *span,
                         });
                     }
                 }
@@ -65,7 +70,7 @@ impl<'mir> MirCtx<'mir> {
                 if let Some(ret_expr) = ret_expr {
                     let rvalue = self.lower_to_rvalue(ret_expr, bb);
 
-                    self.retrive_bb(bb).statements.push(Statement {
+                    self.retrieve_bb(bb).statements.push(Statement {
                         kind: StatementKind::Assign(
                             Place {
                                 local: Local::from_raw(RawIdx::from_u32(0)),
@@ -77,7 +82,7 @@ impl<'mir> MirCtx<'mir> {
                     });
                 }
 
-                self.retrive_bb(bb).terminator = Some(Terminator {
+                self.retrieve_bb(bb).terminator = Some(Terminator {
                     kind: TerminatorKind::Return,
                     span,
                 });
@@ -96,7 +101,7 @@ impl<'mir> MirCtx<'mir> {
                     }
                 };
 
-                self.retrive_bb(bb).terminator = Some(Terminator {
+                self.retrieve_bb(bb).terminator = Some(Terminator {
                     kind: TerminatorKind::Goto { bb: next_bb },
                     span,
                 });
@@ -119,11 +124,15 @@ impl<'mir> MirCtx<'mir> {
                     }
                 };
 
-                self.retrive_bb(bb).terminator = Some(Terminator {
+                self.retrieve_bb(bb).terminator = Some(Terminator {
                     kind: TerminatorKind::Goto { bb: next_bb },
                     span,
                 });
 
+                // TODO: Currently a new basic block is created after each "goto" statement which
+                // may contain unreachable code. I might want to consider generating a warning for
+                // the non-empty variant of these basic blocks in the future or ignore them.
+                //
                 self.alloc_bb()
             }
             hir::StmtKind::If(cond_expr, body_stmt, else_stmt) => {
@@ -149,7 +158,7 @@ impl<'mir> MirCtx<'mir> {
                 let body_bb = self.alloc_bb();
                 let body_last_bb = self.lower_to_bb(body_stmt, body_bb);
 
-                self.retrive_bb(body_last_bb).terminator = Some(Terminator {
+                self.retrieve_bb(body_last_bb).terminator = Some(Terminator {
                     kind: TerminatorKind::Goto { bb: next_bb },
                     span,
                 });
@@ -158,7 +167,7 @@ impl<'mir> MirCtx<'mir> {
                     let else_bb = self.alloc_bb();
                     let else_last_bb = self.lower_to_bb(else_stmt, else_bb);
 
-                    self.retrive_bb(else_last_bb).terminator = Some(Terminator {
+                    self.retrieve_bb(else_last_bb).terminator = Some(Terminator {
                         kind: TerminatorKind::Goto { bb: next_bb },
                         span,
                     });
@@ -168,7 +177,7 @@ impl<'mir> MirCtx<'mir> {
                     next_bb
                 };
 
-                let bb_data = self.retrive_bb(bb);
+                let bb_data = self.retrieve_bb(bb);
 
                 bb_data.statements.push(Statement {
                     kind: StatementKind::Assign(cond_place.clone(), cond_rvalue),

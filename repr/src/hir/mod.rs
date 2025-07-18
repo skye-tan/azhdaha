@@ -27,9 +27,9 @@ pub use datatypes::*;
 impl<'hir> LoweringCtx<'hir> {
     pub fn lower_ast(ast_repr: &'hir AstRepr) -> Self {
         let mut lowering_ctx = Self {
-            items: vec![],
-            resolver: resolver::Resolver::new(),
+            symbol_resolver: resolver::Resolver::new(),
             label_resolver: resolver::Resolver::new(),
+            items: vec![],
             cursor: ast_repr.tree.walk(),
             source_code: &ast_repr.source_code,
         };

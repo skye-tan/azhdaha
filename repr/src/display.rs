@@ -4,9 +4,11 @@ use std::fmt::Display;
 
 use itertools::Itertools;
 
+use crate::hir::resolver::SymbolKind;
 use crate::hir::{BinOp, Lit, LitKind, PrimTyKind, Ty, TyKind, TyQual, UnOp};
 use crate::mir::{
-    Body, Local, Operand, Place, Rvalue, Statement, StatementKind, Terminator, TerminatorKind,
+    Body, Const, Local, Operand, Place, Rvalue, Statement, StatementKind, Terminator,
+    TerminatorKind,
 };
 
 trait MirDisplay {
@@ -113,7 +115,7 @@ impl MirDisplay for Ty {
 
 impl MirDisplay for Local {
     fn mir_display(&self, body: &Body) -> String {
-        if let Some(name) = &body.local_decls[*self].debug_ident {
+        if let Some(name) = &body.local_decls[*self].debug_name {
             format!("{name}_{}", self.into_raw())
         } else {
             format!("_{}", self.into_raw())
@@ -138,8 +140,11 @@ impl MirDisplay for Operand {
         match self {
             Operand::Place(place) => place.mir_display(body),
             Operand::Const(lit) => match lit {
-                crate::mir::Const::Lit(lit) => lit.mir_display(body),
-                crate::mir::Const::Fn(res) => body.resolver.get_item(res).ident.name.clone(),
+                Const::Lit(lit) => lit.mir_display(body),
+                Const::Symbol(symbol) => match body.symbol_resolver.get_data_by_res(symbol) {
+                    SymbolKind::Func(func_sig) => func_sig.ident.name.clone(),
+                    SymbolKind::Local(decl) => decl.ident.name.clone(),
+                },
             },
         }
     }

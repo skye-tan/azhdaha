@@ -42,22 +42,19 @@ impl<'mir> MirCtx<'mir> {
 
         match &expr.kind {
             hir::ExprKind::Lit(lit) => Operand::Const(Const::Lit(lit.clone())),
-            hir::ExprKind::Local(res) => {
-                let Some(local) = self.local_map.get(res) else {
-                    return Operand::Const(Const::Fn(*res));
-                };
-
-                Operand::Place(Place {
+            hir::ExprKind::Local(symbol) => match self.local_map.get(symbol) {
+                Some(local) => Operand::Place(Place {
                     local: *local,
                     projections: vec![],
-                })
-            }
+                }),
+                None => Operand::Const(Const::Symbol(*symbol)),
+            },
             hir::ExprKind::Assign(lhs_expr, rhs_expr) => {
                 let place = self.lower_to_place(lhs_expr);
 
                 let rvalue = self.lower_to_rvalue(rhs_expr, bb);
 
-                let bb_data = self.retrive_bb(bb);
+                let bb_data = self.retrieve_bb(bb);
 
                 bb_data.statements.push(Statement {
                     kind: StatementKind::Assign(place.clone(), rvalue),
@@ -84,7 +81,7 @@ impl<'mir> MirCtx<'mir> {
                     projections: vec![],
                 };
 
-                let bb_data = self.retrive_bb(bb);
+                let bb_data = self.retrieve_bb(bb);
 
                 bb_data.statements.push(Statement {
                     kind: StatementKind::Assign(place.clone(), Rvalue::UnaryOp(*un_op, operand)),
@@ -112,7 +109,7 @@ impl<'mir> MirCtx<'mir> {
                     projections: vec![],
                 };
 
-                let bb_data = self.retrive_bb(bb);
+                let bb_data = self.retrieve_bb(bb);
 
                 bb_data.statements.push(Statement {
                     kind: StatementKind::Assign(

@@ -2,7 +2,7 @@
 
 use tree_sitter::TreeCursor;
 
-use crate::hir::resolver::{LabelIdx, ResData, ResIdx, Resolver};
+use crate::hir::resolver::{Label, Resolver, Symbol, SymbolKind};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Span {
@@ -37,8 +37,8 @@ pub enum TyQual {
 
 #[derive(Debug, Clone)]
 pub struct Ty {
-    pub kind: TyKind,
     pub quals: Vec<TyQual>,
+    pub kind: TyKind,
     pub span: Span,
 }
 
@@ -50,22 +50,23 @@ pub struct Ident {
 
 #[derive(Debug, Clone)]
 pub struct Block {
+    pub symbol_resolver: Resolver<SymbolKind>,
+
     pub stmts: Vec<Stmt>,
-    pub resolver: Resolver<ResData>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
 pub struct Decl {
     pub ty: Ty,
-    pub res: ResIdx<ResData>,
+    pub ident: Ident,
     pub init: Option<Expr>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
 pub struct DeclStmt {
-    pub decls: Vec<Decl>,
+    pub decls: Vec<Symbol>,
     pub span: Span,
 }
 
@@ -75,8 +76,8 @@ pub enum StmtKind {
     Expr(Expr),
     Decl(DeclStmt),
     Ret(Option<Expr>),
-    Label(LabelIdx, Option<Box<Stmt>>),
-    Goto(LabelIdx),
+    Label(Label, Option<Box<Stmt>>),
+    Goto(Label),
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
 }
 
@@ -148,7 +149,7 @@ pub struct Sizeof {
 #[derive(Debug, Clone)]
 pub enum ExprKind {
     Lit(Lit),
-    Local(ResIdx<ResData>),
+    Local(Symbol),
     Call(Box<Expr>, Vec<Expr>),
     Binary(BinOp, Box<Expr>, Box<Expr>),
     Unary(UnOp, Box<Expr>),
@@ -171,33 +172,33 @@ pub struct Expr {
 
 #[derive(Debug, Clone)]
 pub struct Param {
-    pub res: Option<ResIdx<ResData>>,
     pub ty: Ty,
+    pub ident: Option<Ident>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub struct FnSig {
-    pub res: ResIdx<ResData>,
-    pub ty: Ty,
+pub struct FuncSig {
+    pub ret_ty: Ty,
+    pub ident: Ident,
     pub params: Vec<Param>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Fn {
-    pub sig: FnSig,
-    pub body: Stmt,
-
-    pub resolver: Resolver<ResData>,
+pub struct Func {
     pub label_resolver: Resolver<()>,
+
+    pub sig: Symbol,
+    pub body: Stmt,
 }
 
 #[derive(Debug, Clone)]
 pub enum ItemKind {
-    Fn(Box<Fn>),
-    Union,
+    Func(Func),
+    GlobalVar(DeclStmt),
+    ProtoType(Symbol),
     Struct,
-    GlobalVar,
+    Union,
 }
 
 #[derive(Debug, Clone)]
@@ -207,10 +208,10 @@ pub struct Item {
 }
 
 pub struct LoweringCtx<'hir> {
-    pub items: Vec<Item>,
-
-    pub resolver: Resolver<ResData>,
+    pub symbol_resolver: Resolver<SymbolKind>,
     pub label_resolver: Resolver<()>,
+
+    pub items: Vec<Item>,
 
     pub cursor: TreeCursor<'hir>,
     pub source_code: &'hir [u8],

@@ -5,11 +5,7 @@ use std::mem;
 use anyhow::bail;
 use log::trace;
 
-use crate::hir::{
-    constants,
-    datatypes::*,
-    resolver::{ResData, ResKind},
-};
+use crate::hir::{constants, datatypes::*, resolver::SymbolKind};
 
 impl LoweringCtx<'_> {
     fn lower_to_decl(&mut self, mut ty: Ty) -> anyhow::Result<Decl> {
@@ -55,22 +51,15 @@ impl LoweringCtx<'_> {
             _ => (ty, self.lower_to_ident()?),
         };
 
-        let ident_name = ident.name.clone();
-        let res_data = ResData {
-            ident,
-            kind: ResKind::Var(ty.clone()),
-        };
-        let res = self.resolver.insert(ident_name, res_data)?;
-
         Ok(Decl {
             ty,
-            res,
+            ident,
             init: None,
             span,
         })
     }
 
-    fn lower_to_decl_stmt(&mut self) -> anyhow::Result<DeclStmt> {
+    pub(crate) fn lower_to_decl_stmt(&mut self) -> anyhow::Result<DeclStmt> {
         let node = self.cursor.node();
         trace!("Construct [DeclStmt] from node: {}", node.kind());
 
@@ -110,7 +99,11 @@ impl LoweringCtx<'_> {
 
             self.cursor.goto_next_sibling();
 
-            decls.push(decl);
+            let symbol = self
+                .symbol_resolver
+                .insert_symbol(decl.ident.name.clone(), SymbolKind::Local(decl));
+
+            decls.push(symbol);
 
             if !self.cursor.goto_next_sibling() {
                 break;
@@ -134,7 +127,7 @@ impl LoweringCtx<'_> {
         self.cursor.goto_first_child();
         self.cursor.goto_next_sibling();
 
-        let pre_resolver = self.resolver.clone();
+        let saved_symbol_resolver = self.symbol_resolver.clone();
 
         let mut stmts = vec![];
 
@@ -146,11 +139,11 @@ impl LoweringCtx<'_> {
 
         self.cursor.goto_parent();
 
-        let resolver = mem::replace(&mut self.resolver, pre_resolver);
+        let symbol_resolver = mem::replace(&mut self.symbol_resolver, saved_symbol_resolver);
 
         Ok(Block {
+            symbol_resolver,
             stmts,
-            resolver,
             span,
         })
     }
@@ -204,12 +197,8 @@ impl LoweringCtx<'_> {
 
                 let label_res = self
                     .label_resolver
-                    .lookup_res(&ident.name)
-                    .unwrap_or_else(|| {
-                        self.label_resolver
-                            .insert(ident.name, ())
-                            .expect("Failed to insert label into resolver.")
-                    });
+                    .get_res_by_name(&ident.name)
+                    .unwrap_or_else(|| self.label_resolver.insert_symbol(ident.name, ()));
 
                 StmtKind::Label(label_res, Some(Box::new(stmt)))
             }
@@ -223,12 +212,8 @@ impl LoweringCtx<'_> {
 
                 let label_res = self
                     .label_resolver
-                    .lookup_res(&ident.name)
-                    .unwrap_or_else(|| {
-                        self.label_resolver
-                            .insert(ident.name, ())
-                            .expect("Failed to insert label into resolver.")
-                    });
+                    .get_res_by_name(&ident.name)
+                    .unwrap_or_else(|| self.label_resolver.insert_symbol(ident.name, ()));
 
                 StmtKind::Goto(label_res)
             }
@@ -269,10 +254,10 @@ impl LoweringCtx<'_> {
                 */
 
                 let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
-                let label_res_start = self.label_resolver.insert(loop_start.clone(), ())?;
+                let label_start = self.label_resolver.insert_symbol(loop_start.clone(), ());
 
                 let loop_end = format!("loop_end_{}_{}", span.lo, span.hi);
-                let label_res_end = self.label_resolver.insert(loop_end.clone(), ())?;
+                let label_end = self.label_resolver.insert_symbol(loop_end.clone(), ());
 
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
@@ -286,9 +271,10 @@ impl LoweringCtx<'_> {
                 self.cursor.goto_parent();
 
                 StmtKind::Block(Block {
+                    symbol_resolver: self.symbol_resolver.clone(),
                     stmts: vec![
                         Stmt {
-                            kind: StmtKind::Label(label_res_start, None),
+                            kind: StmtKind::Label(label_start, None),
                             span,
                         },
                         Stmt {
@@ -298,7 +284,7 @@ impl LoweringCtx<'_> {
                                     kind: ExprKind::Unary(UnOp::Not, Box::new(cond_expr)),
                                 },
                                 Box::new(Stmt {
-                                    kind: StmtKind::Goto(label_res_end),
+                                    kind: StmtKind::Goto(label_end),
                                     span,
                                 }),
                                 None,
@@ -307,15 +293,14 @@ impl LoweringCtx<'_> {
                         },
                         body_stmt,
                         Stmt {
-                            kind: StmtKind::Goto(label_res_start),
+                            kind: StmtKind::Goto(label_start),
                             span,
                         },
                         Stmt {
-                            kind: StmtKind::Label(label_res_end, None),
+                            kind: StmtKind::Label(label_end, None),
                             span,
                         },
                     ],
-                    resolver: self.resolver.clone(),
                     span,
                 })
             }
@@ -328,10 +313,10 @@ impl LoweringCtx<'_> {
                 */
 
                 let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
-                let label_res_start = self.label_resolver.insert(loop_start.clone(), ())?;
+                let label_start = self.label_resolver.insert_symbol(loop_start.clone(), ());
 
                 let loop_end = format!("loop_end_{}_{}", span.lo, span.hi);
-                let label_res_end = self.label_resolver.insert(loop_end.clone(), ())?;
+                let label_res_end = self.label_resolver.insert_symbol(loop_end.clone(), ());
 
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
@@ -346,9 +331,10 @@ impl LoweringCtx<'_> {
                 self.cursor.goto_parent();
 
                 StmtKind::Block(Block {
+                    symbol_resolver: self.symbol_resolver.clone(),
                     stmts: vec![
                         Stmt {
-                            kind: StmtKind::Label(label_res_start, None),
+                            kind: StmtKind::Label(label_start, None),
                             span,
                         },
                         body_stmt,
@@ -356,7 +342,7 @@ impl LoweringCtx<'_> {
                             kind: StmtKind::If(
                                 cond_expr,
                                 Box::new(Stmt {
-                                    kind: StmtKind::Goto(label_res_start),
+                                    kind: StmtKind::Goto(label_start),
                                     span,
                                 }),
                                 None,
@@ -368,7 +354,6 @@ impl LoweringCtx<'_> {
                             span,
                         },
                     ],
-                    resolver: self.resolver.clone(),
                     span,
                 })
             }
@@ -384,12 +369,12 @@ impl LoweringCtx<'_> {
                 */
 
                 let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
-                let label_res_start = self.label_resolver.insert(loop_start.clone(), ())?;
+                let label_start = self.label_resolver.insert_symbol(loop_start.clone(), ());
 
                 let loop_end = format!("loop_end_{}_{}", span.lo, span.hi);
-                let label_res_end = self.label_resolver.insert(loop_end.clone(), ())?;
+                let label_end = self.label_resolver.insert_symbol(loop_end.clone(), ());
 
-                let pre_resolver = self.resolver.clone();
+                let saved_symbol_resolver = self.symbol_resolver.clone();
 
                 self.cursor.goto_first_child();
                 self.cursor.goto_next_sibling();
@@ -413,13 +398,15 @@ impl LoweringCtx<'_> {
 
                 self.cursor.goto_parent();
 
-                let resolver = mem::replace(&mut self.resolver, pre_resolver);
+                let symbol_resolver =
+                    mem::replace(&mut self.symbol_resolver, saved_symbol_resolver);
 
                 StmtKind::Block(Block {
+                    symbol_resolver,
                     stmts: vec![
                         decl_stmt,
                         Stmt {
-                            kind: StmtKind::Label(label_res_start, None),
+                            kind: StmtKind::Label(label_start, None),
                             span,
                         },
                         Stmt {
@@ -429,7 +416,7 @@ impl LoweringCtx<'_> {
                                     kind: ExprKind::Unary(UnOp::Not, Box::new(cond_expr)),
                                 },
                                 Box::new(Stmt {
-                                    kind: StmtKind::Goto(label_res_end),
+                                    kind: StmtKind::Goto(label_end),
                                     span,
                                 }),
                                 None,
@@ -442,15 +429,14 @@ impl LoweringCtx<'_> {
                             span,
                         },
                         Stmt {
-                            kind: StmtKind::Goto(label_res_start),
+                            kind: StmtKind::Goto(label_start),
                             span,
                         },
                         Stmt {
-                            kind: StmtKind::Label(label_res_end, None),
+                            kind: StmtKind::Label(label_end, None),
                             span,
                         },
                     ],
-                    resolver,
                     span,
                 })
             }

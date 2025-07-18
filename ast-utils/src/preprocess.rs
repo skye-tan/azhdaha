@@ -8,6 +8,9 @@ const PREPROCESS_ONLY_FLAG: &str = "-E";
 /// Inhibits generation of linemarkers in the output from the preprocessor.
 const INHABIT_LINEMARKS_FLAG: &str = "-P";
 
+/// Prevents predefining any system-specific or GCC-specific macros.
+const UNDEF_FLAG: &str = "-undef";
+
 /// Includes headers in the given directory.
 #[allow(dead_code)]
 const INCLUDE_FLAG: &str = "-I";
@@ -22,8 +25,6 @@ const INCLUDE_FLAG: &str = "-I";
 ///
 /// The "LINEAR" macro used in the source code must be replaced by "_Linear" type qualifier which is
 /// accomplished by inserting [`INCLUDE_FLAG`] which defines the macro.
-///
-/// TODO: Might consider using "-undef" flag for further simplification.
 ///
 pub(crate) fn preprocess(compile_commands: &CompilationDatabase) -> anyhow::Result<Vec<Vec<u8>>> {
     let mut results = vec![];
@@ -56,6 +57,7 @@ pub(crate) fn preprocess(compile_commands: &CompilationDatabase) -> anyhow::Resu
             Command::new(command)
                 .arg(PREPROCESS_ONLY_FLAG)
                 .arg(INHABIT_LINEMARKS_FLAG)
+                .arg(UNDEF_FLAG)
                 .args(args)
                 .current_dir(directory)
                 .output()?

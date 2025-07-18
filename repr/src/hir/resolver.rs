@@ -4,27 +4,21 @@ use std::collections::HashMap;
 
 use la_arena::{Arena, Idx};
 
-use crate::hir::{Ident, Param, Ty};
-
-pub type ResIdx<T> = Idx<T>;
-pub type LabelIdx = Idx<()>;
+use crate::hir::{Decl, FuncSig};
 
 #[derive(Debug, Clone)]
-pub enum ResKind {
-    Fn(Ty, Vec<Param>),
-    Var(Ty),
+pub enum SymbolKind {
+    Func(FuncSig),
+    Local(Decl),
 }
 
-#[derive(Debug, Clone)]
-pub struct ResData {
-    pub ident: Ident,
-    pub kind: ResKind,
-}
+pub type Symbol = Idx<SymbolKind>;
+pub type Label = Idx<()>;
 
 #[derive(Debug, Clone)]
 pub struct Resolver<T> {
     pub arena: Arena<T>,
-    pub map: HashMap<String, ResIdx<T>>,
+    pub map: HashMap<String, Idx<T>>,
 }
 
 impl<T> Resolver<T> {
@@ -35,19 +29,19 @@ impl<T> Resolver<T> {
         }
     }
 
-    pub fn insert(&mut self, key: String, data: T) -> anyhow::Result<ResIdx<T>> {
+    pub fn insert_symbol(&mut self, name: String, data: T) -> Idx<T> {
         let res = self.arena.alloc(data);
 
-        self.map.insert(key, res);
+        self.map.insert(name, res);
 
-        Ok(res)
+        res
     }
 
-    pub fn lookup_res(&self, key: &str) -> Option<ResIdx<T>> {
-        self.map.get(key).cloned()
+    pub fn get_res_by_name(&self, name: &str) -> Option<Idx<T>> {
+        self.map.get(name).cloned()
     }
 
-    pub fn get_item(&self, res: &ResIdx<T>) -> &T {
+    pub fn get_data_by_res(&self, res: &Idx<T>) -> &T {
         &self.arena[*res]
     }
 }

@@ -29,22 +29,25 @@ fn main() -> anyhow::Result<()> {
     let lowering_ctx = LoweringCtx::lower_ast(&ast_reprs[0]);
     // println!(
     //     "\n{:#?}\n{:#?}\n",
-    //     lowering_ctx.items, lowering_ctx.resolver
+    //     lowering_ctx.items, lowering_ctx.symbol_resolver
     // );
 
     for item in lowering_ctx.items {
         match item.kind {
-            hir::ItemKind::Fn(func) => {
-                let ctx = MirCtx::new(&lowering_ctx.resolver, &func.label_resolver, func.body.span);
+            hir::ItemKind::Func(func) => {
+                let ctx = MirCtx::new(
+                    &lowering_ctx.symbol_resolver,
+                    &func.label_resolver,
+                    func.body.span,
+                );
+
                 let mir_body = ctx.lower_to_mir(&func);
 
                 if let Ok(mir_body) = mir_body {
                     println!("\n{mir_body}");
                 }
             }
-            hir::ItemKind::Union => todo!(),
-            hir::ItemKind::Struct => todo!(),
-            hir::ItemKind::GlobalVar => todo!(),
+            _ => continue,
         }
     }
 

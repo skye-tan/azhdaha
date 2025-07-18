@@ -101,12 +101,12 @@ impl LoweringCtx<'_> {
             constants::IDENTIFIER => {
                 let ident = self.lower_to_ident()?;
 
-                let res = self
-                    .resolver
-                    .lookup_res(&ident.name)
+                let symbol = self
+                    .symbol_resolver
+                    .get_res_by_name(&ident.name)
                     .context(format!("Use of undeclared identifier: {}", &ident.name))?;
 
-                ExprKind::Local(res)
+                ExprKind::Local(symbol)
             }
             constants::CALL_EXPRESSION => {
                 self.cursor.goto_first_child();

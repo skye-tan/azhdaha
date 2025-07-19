@@ -7,7 +7,7 @@ use log::trace;
 
 use crate::hir::{constants, datatypes::*, resolver::SymbolKind};
 
-impl LoweringCtx<'_> {
+impl HirCtx<'_> {
     fn lower_to_decl(&mut self, mut ty: Ty) -> anyhow::Result<Decl> {
         let node = self.cursor.node();
         trace!("Process declaration from node: {}", node.kind());

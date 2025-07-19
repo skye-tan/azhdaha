@@ -5,7 +5,7 @@ use log::trace;
 
 use crate::hir::{constants, datatypes::*};
 
-impl LoweringCtx<'_> {
+impl HirCtx<'_> {
     fn lower_to_bin_op(&mut self) -> anyhow::Result<BinOp> {
         let node = self.cursor.node();
         trace!("Construct [BinOp] from node: {}", node.kind());

@@ -2,12 +2,12 @@
 
 use std::mem;
 
-use anyhow::Context;
+use anyhow::{Context, bail};
 use log::trace;
 
 use crate::hir::{constants, datatypes::*, resolver::SymbolKind};
 
-impl LoweringCtx<'_> {
+impl HirCtx<'_> {
     pub(crate) fn lower_to_param(&mut self) -> anyhow::Result<Param> {
         let node = self.cursor.node();
         trace!("Construct [Param] from node: {}", node.kind());
@@ -50,9 +50,14 @@ impl LoweringCtx<'_> {
         self.cursor.goto_next_sibling();
 
         let mut params = vec![];
+        let mut variadic_param = false;
 
         while self.cursor.node().kind() != ")" {
-            params.push(self.lower_to_param()?);
+            if self.cursor.node().kind() == "variadic_parameter" {
+                variadic_param = true;
+            } else {
+                params.push(self.lower_to_param()?);
+            }
 
             self.cursor.goto_next_sibling();
             self.cursor.goto_next_sibling();
@@ -66,6 +71,7 @@ impl LoweringCtx<'_> {
             ret_ty,
             ident,
             params,
+            variadic_param,
         })
     }
 
@@ -102,22 +108,23 @@ impl LoweringCtx<'_> {
 
         self.cursor.goto_parent();
 
-        self.symbol_resolver = saved_symbol_resolver;
+        let symbol_resolver = mem::replace(&mut self.symbol_resolver, saved_symbol_resolver);
         let label_resolver = mem::take(&mut self.label_resolver);
 
         Ok(Func {
+            symbol_resolver,
             label_resolver,
             sig: symbol,
             body,
         })
     }
 
-    pub(crate) fn lower_to_item_kind(&mut self) -> anyhow::Result<Option<ItemKind>> {
+    pub(crate) fn lower_to_item_kind(&mut self) -> anyhow::Result<ItemKind> {
         let node = self.cursor.node();
         trace!("Construct [ItemKind] from node: {}", node.kind());
 
         Ok(match node.kind() {
-            constants::FUNCTION_DEFINITION => Some(ItemKind::Func(self.lower_to_func()?)),
+            constants::FUNCTION_DEFINITION => ItemKind::Func(Box::new(self.lower_to_func()?)),
             constants::DECLARATION => {
                 let child_node = node.child(1).context("Unknown declaration.")?;
 
@@ -129,19 +136,18 @@ impl LoweringCtx<'_> {
                             .symbol_resolver
                             .insert_symbol(func_sig.ident.name.clone(), SymbolKind::Func(func_sig));
 
-                        Some(ItemKind::ProtoType(symbol))
+                        ItemKind::ProtoType(symbol)
                     }
-                    _ => Some(ItemKind::GlobalVar(self.lower_to_decl_stmt()?)),
+                    _ => ItemKind::GlobalVar(self.lower_to_decl_stmt()?),
                 }
             }
             kind => {
-                trace!("Unsupported [ItemKind] node: {kind}");
-                None
+                bail!("Unsupported [ItemKind] node: {kind}");
             }
         })
     }
 
-    pub(crate) fn lower_to_item(&mut self) -> anyhow::Result<Option<Item>> {
+    pub(crate) fn lower_to_item(&mut self) -> anyhow::Result<Item> {
         let node = self.cursor.node();
         trace!("Construct [Item] from node: {}", node.kind());
 
@@ -150,9 +156,11 @@ impl LoweringCtx<'_> {
             hi: node.end_byte(),
         };
 
-        Ok(self.lower_to_item_kind()?.map(|item_kind| Item {
+        let item_kind = self.lower_to_item_kind()?;
+
+        Ok(Item {
             kind: item_kind,
             span,
-        }))
+        })
     }
 }

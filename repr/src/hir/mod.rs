@@ -24,35 +24,33 @@ pub(crate) mod resolver;
 
 pub use datatypes::*;
 
-impl<'hir> LoweringCtx<'hir> {
-    pub fn lower_ast(ast_repr: &'hir AstRepr) -> Self {
-        let mut lowering_ctx = Self {
+impl<'hir> HirCtx<'hir> {
+    pub fn new(ast_repr: &'hir AstRepr) -> Self {
+        Self {
             symbol_resolver: resolver::Resolver::new(),
             label_resolver: resolver::Resolver::new(),
             items: vec![],
             cursor: ast_repr.tree.walk(),
             source_code: &ast_repr.source_code,
-        };
+        }
+    }
 
-        lowering_ctx.cursor.goto_first_child();
+    pub fn lower_to_hir(mut self) -> Vec<Item> {
+        let mut root = self.cursor;
 
-        loop {
-            match lowering_ctx.lower_to_item() {
+        for child in root.node().children(&mut root) {
+            self.cursor = child.walk();
+
+            match self.lower_to_item() {
                 Ok(item) => {
-                    if let Some(item) = item {
-                        lowering_ctx.items.push(item);
-                    }
+                    self.items.push(item);
                 }
                 Err(error) => {
                     log::warn!("Failed to construct item - {error:?}");
                 }
             }
-
-            if !lowering_ctx.cursor.goto_next_sibling() {
-                break;
-            }
         }
 
-        lowering_ctx
+        self.items
     }
 }

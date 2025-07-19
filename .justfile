@@ -17,7 +17,7 @@ convert-dot-graphs:
 # custom test used for debugging the tool
 custom-test:
     RUST_LOG=trace cargo run --release -- ./temp/compile_commands.json --dot-graph
-    @ just convert-dot-graphs
+    just convert-dot-graphs
 
 # check clippy lints
 clippy:

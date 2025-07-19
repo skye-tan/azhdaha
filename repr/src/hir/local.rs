@@ -5,7 +5,7 @@ use log::trace;
 
 use crate::hir::{constants, datatypes::*};
 
-impl LoweringCtx<'_> {
+impl HirCtx<'_> {
     fn lower_to_prim_ty_kind(&mut self) -> anyhow::Result<PrimTyKind> {
         let node = self.cursor.node();
         trace!("Construct [PrimTyKind] from node: {}", node.kind());

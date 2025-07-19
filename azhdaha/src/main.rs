@@ -4,7 +4,7 @@
 use ast_utils::AstRepr;
 
 use repr::{
-    hir::{self, LoweringCtx},
+    hir::{self, HirCtx},
     mir::MirCtx,
 };
 
@@ -26,25 +26,25 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    let lowering_ctx = LoweringCtx::lower_ast(&ast_reprs[0]);
-    // println!(
-    //     "\n{:#?}\n{:#?}\n",
-    //     lowering_ctx.items, lowering_ctx.symbol_resolver
-    // );
+    let hir_ctx = HirCtx::new(&ast_reprs[0]);
 
-    for item in lowering_ctx.items {
+    let items = hir_ctx.lower_to_hir();
+
+    println!("{}", items.len());
+
+    // println!("\n{:#?}\n", items);
+
+    for item in items {
         match item.kind {
             hir::ItemKind::Func(func) => {
-                let ctx = MirCtx::new(
-                    &lowering_ctx.symbol_resolver,
-                    &func.label_resolver,
-                    func.body.span,
-                );
+                let mir_ctx =
+                    MirCtx::new(&func.symbol_resolver, &func.label_resolver, func.body.span);
 
-                let mir_body = ctx.lower_to_mir(&func);
+                let mir_body = mir_ctx.lower_to_mir(&func);
 
-                if let Ok(mir_body) = mir_body {
-                    println!("\n{mir_body}");
+                match mir_body {
+                    Ok(mir_body) => println!("\n{mir_body}"),
+                    Err(error) => println!("\nFailed to construct mir - {error:?}"),
                 }
             }
             _ => continue,

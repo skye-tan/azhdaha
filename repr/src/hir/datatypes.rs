@@ -182,10 +182,12 @@ pub struct FuncSig {
     pub ret_ty: Ty,
     pub ident: Ident,
     pub params: Vec<Param>,
+    pub variadic_param: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct Func {
+    pub symbol_resolver: Resolver<SymbolKind>,
     pub label_resolver: Resolver<()>,
 
     pub sig: Symbol,
@@ -194,7 +196,7 @@ pub struct Func {
 
 #[derive(Debug, Clone)]
 pub enum ItemKind {
-    Func(Func),
+    Func(Box<Func>),
     GlobalVar(DeclStmt),
     ProtoType(Symbol),
     Struct,
@@ -207,7 +209,7 @@ pub struct Item {
     pub span: Span,
 }
 
-pub struct LoweringCtx<'hir> {
+pub struct HirCtx<'hir> {
     pub symbol_resolver: Resolver<SymbolKind>,
     pub label_resolver: Resolver<()>,
 

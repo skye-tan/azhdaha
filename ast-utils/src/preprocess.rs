@@ -9,6 +9,7 @@ const PREPROCESS_ONLY_FLAG: &str = "-E";
 const INHABIT_LINEMARKS_FLAG: &str = "-P";
 
 /// Prevents predefining any system-specific or GCC-specific macros.
+#[allow(dead_code)]
 const UNDEF_FLAG: &str = "-undef";
 
 /// Includes headers in the given directory.
@@ -57,7 +58,6 @@ pub(crate) fn preprocess(compile_commands: &CompilationDatabase) -> anyhow::Resu
             Command::new(command)
                 .arg(PREPROCESS_ONLY_FLAG)
                 .arg(INHABIT_LINEMARKS_FLAG)
-                .arg(UNDEF_FLAG)
                 .args(args)
                 .current_dir(directory)
                 .output()?

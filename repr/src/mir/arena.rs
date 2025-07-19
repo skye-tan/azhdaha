@@ -2,7 +2,7 @@
 
 use crate::{
     hir::{Span, Ty},
-    mir::datatypes::*,
+    mir::{MirCtx, datatypes::*},
 };
 
 impl MirCtx<'_> {

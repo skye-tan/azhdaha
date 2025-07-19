@@ -3,12 +3,339 @@
 use anyhow::{Context, bail};
 use log::trace;
 
-use crate::hir::{constants, datatypes::*};
+use crate::hir::*;
+
+use super::{constants, resolver::Symbol};
+
+#[derive(Debug, Clone)]
+pub struct Expr {
+    pub kind: ExprKind,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub enum ExprKind {
+    Lit(Lit),
+    Local(Symbol),
+    Call(Box<Expr>, Vec<Expr>),
+    Binary(BinOp, Box<Expr>, Box<Expr>),
+    Unary(UnOp, Box<Expr>),
+    Assign(Box<Expr>, Box<Expr>),
+    Field(Box<Expr>, Ident),
+    Index(Box<Expr>, Box<Expr>, Span),
+    Cast(Box<Expr>, Ty),
+    Array(Vec<Expr>),
+    Comma(Vec<Expr>),
+    Sizeof(Sizeof),
+    Empty,
+}
+
+#[derive(Debug, Clone)]
+pub struct Sizeof {
+    pub kind: SizeofKind,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub enum SizeofKind {
+    Ty(Ty),
+    Expr(Box<Expr>),
+}
+
+#[derive(Debug, Clone)]
+pub struct Lit {
+    pub kind: LitKind,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub enum LitKind {
+    Str(String),
+    Char(char),
+    Int(i64),
+    Float(f64),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+    Or,
+    And,
+    BitOr,
+    BitXor,
+    BitAnd,
+    Eq,
+    Lt,
+    Le,
+    Ne,
+    Ge,
+    Gt,
+    Shl,
+    Shr,
+    Assign,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum UnOp {
+    Not,
+    Neg,
+    Com,
+    Pos,
+    AddrOf,
+    Deref,
+}
 
 impl HirCtx<'_> {
-    fn lower_to_bin_op(&mut self) -> anyhow::Result<BinOp> {
-        let node = self.cursor.node();
-        trace!("Construct [BinOp] from node: {}", node.kind());
+    pub(crate) fn lower_to_expr(&mut self, node: Node) -> anyhow::Result<Expr> {
+        trace!("[HIR/Expr] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
+        Ok(Expr {
+            kind: self.lower_to_expr_kind(node)?,
+            span,
+        })
+    }
+
+    fn lower_to_expr_kind(&mut self, node: Node) -> anyhow::Result<ExprKind> {
+        trace!("[HIR/ExprKind] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
+        Ok(match node.kind() {
+            kind if kind.contains("literal") => ExprKind::Lit(self.lower_to_lit(node)?),
+            constants::IDENTIFIER => {
+                let ident = self.lower_to_ident(node)?;
+
+                let symbol = self
+                    .symbol_resolver
+                    .get_res_by_name(&ident.name)
+                    .context(format!("Use of undeclared identifier: {}", &ident.name))?;
+
+                ExprKind::Local(symbol)
+            }
+            constants::CALL_EXPRESSION => {
+                let mut cursor = node.walk();
+                cursor.goto_first_child();
+
+                let path = self.lower_to_expr(cursor.node())?;
+
+                let mut arguments = vec![];
+
+                cursor.goto_next_sibling();
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                while cursor.node().kind() != ")" {
+                    arguments.push(self.lower_to_expr(cursor.node())?);
+
+                    cursor.goto_next_sibling();
+                    cursor.goto_next_sibling();
+                }
+
+                ExprKind::Call(Box::new(path), arguments)
+            }
+            constants::BINARY_EXPRESSION => {
+                let lhs = self.lower_to_expr(node.child(0).unwrap())?;
+
+                let bin_op = self.lower_to_bin_op(node.child(1).unwrap())?;
+
+                let rhs = self.lower_to_expr(node.child(2).unwrap())?;
+
+                ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs))
+            }
+            constants::UPDATE_EXPRESSION => {
+                let lhs = self.lower_to_expr(node.child(0).unwrap())?;
+
+                let bin_op = self.lower_to_bin_op(node.child(1).unwrap())?;
+
+                let rhs = Expr {
+                    kind: ExprKind::Lit(Lit {
+                        kind: LitKind::Int(1),
+                        span,
+                    }),
+                    span,
+                };
+
+                ExprKind::Assign(
+                    Box::new(lhs.clone()),
+                    Box::new(Expr {
+                        kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
+                        span,
+                    }),
+                )
+            }
+            constants::UNARY_EXPRESSION | constants::POINTER_EXPRESSION => {
+                let un_op = self.lower_to_un_op(node.child(0).unwrap())?;
+
+                let expr = self.lower_to_expr(node.child(1).unwrap())?;
+
+                // Ignore [`UnOp::Pos`] because it has no effects.
+                match un_op {
+                    UnOp::Pos => expr.kind,
+                    _ => ExprKind::Unary(un_op, Box::new(expr)),
+                }
+            }
+            constants::PARENTHESIZED_EXPRESSION => {
+                self.lower_to_expr_kind(node.child(1).unwrap())?
+            }
+            constants::ASSIGNMENT_EXPRESSION => {
+                let lhs = self.lower_to_expr(node.child(0).unwrap())?;
+
+                let bin_op = self.lower_to_bin_op(node.child(1).unwrap())?;
+
+                let rhs = self.lower_to_expr(node.child(2).unwrap())?;
+
+                match bin_op {
+                    BinOp::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
+                    _ => ExprKind::Assign(
+                        Box::new(lhs.clone()),
+                        Box::new(Expr {
+                            kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
+                            span,
+                        }),
+                    ),
+                }
+            }
+            constants::FIELD_EXPRESSION => {
+                let target = self.lower_to_expr(node.child(0).unwrap())?;
+
+                let field = self.lower_to_ident(node.child(2).unwrap())?;
+
+                ExprKind::Field(Box::new(target), field)
+            }
+            constants::SUBSCRIPT_EXPRESSION => {
+                let target = self.lower_to_expr(node.child(0).unwrap())?;
+
+                let index = self.lower_to_expr(node.child(2).unwrap())?;
+
+                ExprKind::Index(Box::new(target), Box::new(index), span)
+            }
+            constants::CAST_EXPRESSION => {
+                let ty = self.lower_to_ty(node.child(1).unwrap())?;
+
+                let target = self.lower_to_expr(node.child(3).unwrap())?;
+
+                ExprKind::Cast(Box::new(target), ty)
+            }
+            constants::INITIALIZER_LIST => {
+                let mut elements = vec![];
+
+                let mut cursor = node.walk();
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                loop {
+                    elements.push(self.lower_to_expr(cursor.node())?);
+
+                    cursor.goto_next_sibling();
+                    if !cursor.goto_next_sibling() {
+                        break;
+                    }
+                }
+
+                ExprKind::Array(elements)
+            }
+            constants::COMMA_EXPRESSION => {
+                let mut exprs = vec![];
+
+                let mut cursor = node.walk();
+                cursor.goto_first_child();
+
+                loop {
+                    exprs.push(self.lower_to_expr(cursor.node())?);
+
+                    cursor.goto_next_sibling();
+                    if !cursor.goto_next_sibling() {
+                        break;
+                    }
+                }
+
+                ExprKind::Comma(exprs)
+            }
+            constants::SIZEOF_EXPRESSION => ExprKind::Sizeof(self.lower_to_sizeof(node)?),
+            constants::SEMICOLON_EXPRESSION => ExprKind::Empty,
+            kind => bail!("Cannot lower '{kind}' to 'ExprKind'."),
+        })
+    }
+
+    fn lower_to_sizeof(&mut self, node: Node) -> anyhow::Result<Sizeof> {
+        trace!("[HIR/SizeOf] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
+        let kind = self.lower_to_sizeof_kind(node.child(1).unwrap())?;
+
+        Ok(Sizeof { kind, span })
+    }
+
+    fn lower_to_sizeof_kind(&mut self, node: Node) -> anyhow::Result<SizeofKind> {
+        trace!("[HIR/SizeofKind] Lowering '{}'", node.kind());
+
+        let sizeof_kind = match node.kind() {
+            constants::PARENTHESIZED_EXPRESSION => {
+                SizeofKind::Expr(Box::new(self.lower_to_expr(node)?))
+            }
+            _ => todo!(),
+        };
+
+        Ok(sizeof_kind)
+    }
+
+    pub(crate) fn lower_to_lit(&mut self, node: Node) -> anyhow::Result<Lit> {
+        trace!("[HIR/Lit] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
+        Ok(Lit {
+            kind: self.lower_to_lit_kind(node)?,
+            span,
+        })
+    }
+
+    fn lower_to_lit_kind(&mut self, node: Node) -> anyhow::Result<LitKind> {
+        trace!("[HIR/LitKind] Lowering '{}'", node.kind());
+
+        Ok(match node.kind() {
+            constants::STRING_LITERAL => LitKind::Str(
+                std::str::from_utf8(&self.source_code[node.start_byte() + 1..node.end_byte() - 1])?
+                    .to_owned(),
+            ),
+            constants::CHAR_LITERAL => {
+                LitKind::Char(self.source_code[node.start_byte() + 1] as char)
+            }
+            constants::NUMBER_LITERAL => {
+                let literal =
+                    std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])?;
+
+                if let Ok(value) = literal.parse() {
+                    LitKind::Int(value)
+                } else {
+                    LitKind::Float(literal.parse()?)
+                }
+            }
+            kind => bail!("cannot lower '{kind}' to 'Lit'."),
+        })
+    }
+
+    fn lower_to_bin_op(&mut self, node: Node) -> anyhow::Result<BinOp> {
+        trace!("[HIR/BinOp] Lowering '{}'", node.kind());
 
         Ok(match node.kind() {
             constants::ADD | constants::ASSIGN_ADD | constants::INC => BinOp::Add,
@@ -30,13 +357,12 @@ impl HirCtx<'_> {
             constants::GE => BinOp::Ge,
             constants::GT => BinOp::Gt,
             constants::ASSIGN => BinOp::Assign,
-            kind => bail!("Unsupported [BinOp] node: {kind}"),
+            kind => bail!("Cannot lower '{kind}' to 'BinOp'."),
         })
     }
 
-    fn lower_to_un_op(&mut self) -> anyhow::Result<UnOp> {
-        let node = self.cursor.node();
-        trace!("Construct [UnOp] from node: {}", node.kind());
+    fn lower_to_un_op(&mut self, node: Node) -> anyhow::Result<UnOp> {
+        trace!("[HIR/UnOp] Lowering '{}'", node.kind());
 
         Ok(match node.kind() {
             constants::NOT => UnOp::Not,
@@ -45,287 +371,7 @@ impl HirCtx<'_> {
             constants::POS => UnOp::Pos,
             constants::ADDR_OF => UnOp::AddrOf,
             constants::DEREF => UnOp::Deref,
-            kind => bail!("Unsupported [UnOp] node: {kind}"),
-        })
-    }
-
-    fn lower_to_sizeof_kind(&mut self) -> anyhow::Result<SizeofKind> {
-        let node = self.cursor.node();
-        trace!("Construct [SizeofKind] from node: {}", node.kind());
-
-        self.cursor.goto_first_child();
-        self.cursor.goto_next_sibling();
-
-        let sizeof_kind = match self.cursor.node().kind() {
-            constants::PARENTHESIZED_EXPRESSION => {
-                SizeofKind::Expr(Box::new(self.lower_to_expr()?))
-            }
-            _ => {
-                self.cursor.goto_next_sibling();
-
-                SizeofKind::Ty(self.lower_to_ty()?)
-            }
-        };
-
-        self.cursor.goto_parent();
-
-        Ok(sizeof_kind)
-    }
-
-    fn lower_to_sizeof(&mut self) -> anyhow::Result<Sizeof> {
-        let node = self.cursor.node();
-        trace!("Construct [SizeOf] from node: {}", node.kind());
-
-        let span = Span {
-            lo: node.start_byte(),
-            hi: node.end_byte(),
-        };
-
-        Ok(Sizeof {
-            kind: self.lower_to_sizeof_kind()?,
-            span,
-        })
-    }
-
-    fn lower_to_expr_kind(&mut self) -> anyhow::Result<ExprKind> {
-        let node = self.cursor.node();
-        trace!("Construct [ExprKind] from node: {}", node.kind());
-
-        let span = Span {
-            lo: node.start_byte(),
-            hi: node.end_byte(),
-        };
-
-        Ok(match node.kind() {
-            kind if kind.contains("literal") => ExprKind::Lit(self.lower_to_lit()?),
-            constants::IDENTIFIER => {
-                let ident = self.lower_to_ident()?;
-
-                let symbol = self
-                    .symbol_resolver
-                    .get_res_by_name(&ident.name)
-                    .context(format!("Use of undeclared identifier: {}", &ident.name))?;
-
-                ExprKind::Local(symbol)
-            }
-            constants::CALL_EXPRESSION => {
-                self.cursor.goto_first_child();
-
-                let path = self.lower_to_expr()?;
-
-                self.cursor.goto_next_sibling();
-                self.cursor.goto_first_child();
-                self.cursor.goto_next_sibling();
-
-                let mut arguments = vec![];
-
-                while self.cursor.node().kind() != ")" {
-                    arguments.push(self.lower_to_expr()?);
-
-                    self.cursor.goto_next_sibling();
-                    self.cursor.goto_next_sibling();
-                }
-
-                self.cursor.goto_parent();
-                self.cursor.goto_parent();
-
-                ExprKind::Call(Box::new(path), arguments)
-            }
-            constants::BINARY_EXPRESSION => {
-                self.cursor.goto_first_child();
-
-                let lhs = self.lower_to_expr()?;
-
-                self.cursor.goto_next_sibling();
-
-                let bin_op = self.lower_to_bin_op()?;
-
-                self.cursor.goto_next_sibling();
-
-                let rhs = self.lower_to_expr()?;
-
-                self.cursor.goto_parent();
-
-                ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs))
-            }
-            constants::UPDATE_EXPRESSION => {
-                self.cursor.goto_first_child();
-
-                let lhs = self.lower_to_expr()?;
-
-                self.cursor.goto_next_sibling();
-
-                let bin_op = self.lower_to_bin_op()?;
-
-                self.cursor.goto_parent();
-
-                let rhs = Expr {
-                    kind: ExprKind::Lit(Lit {
-                        kind: LitKind::Int(1),
-                        span,
-                    }),
-                    span,
-                };
-
-                ExprKind::Assign(
-                    Box::new(lhs.clone()),
-                    Box::new(Expr {
-                        kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
-                        span,
-                    }),
-                )
-            }
-            constants::UNARY_EXPRESSION | constants::POINTER_EXPRESSION => {
-                self.cursor.goto_first_child();
-
-                let un_op = self.lower_to_un_op()?;
-
-                self.cursor.goto_next_sibling();
-
-                let expr = self.lower_to_expr()?;
-
-                self.cursor.goto_parent();
-
-                // Ignore [`UnOp::Pos`] because it has no effects.
-                match un_op {
-                    UnOp::Pos => expr.kind,
-                    _ => ExprKind::Unary(un_op, Box::new(expr)),
-                }
-            }
-            constants::PARENTHESIZED_EXPRESSION => {
-                self.cursor.goto_first_child();
-                self.cursor.goto_next_sibling();
-
-                let expr_kind = self.lower_to_expr_kind()?;
-
-                self.cursor.goto_parent();
-
-                expr_kind
-            }
-            constants::ASSIGNMENT_EXPRESSION => {
-                self.cursor.goto_first_child();
-
-                let lhs = self.lower_to_expr()?;
-
-                self.cursor.goto_next_sibling();
-
-                let bin_op = self.lower_to_bin_op()?;
-
-                self.cursor.goto_next_sibling();
-
-                let rhs = self.lower_to_expr()?;
-
-                self.cursor.goto_parent();
-
-                match bin_op {
-                    BinOp::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
-                    _ => ExprKind::Assign(
-                        Box::new(lhs.clone()),
-                        Box::new(Expr {
-                            kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
-                            span,
-                        }),
-                    ),
-                }
-            }
-            constants::FIELD_EXPRESSION => {
-                self.cursor.goto_first_child();
-
-                let target = self.lower_to_expr()?;
-
-                self.cursor.goto_next_sibling();
-                self.cursor.goto_next_sibling();
-
-                let field = self.lower_to_ident()?;
-
-                self.cursor.goto_parent();
-
-                ExprKind::Field(Box::new(target), field)
-            }
-            constants::SUBSCRIPT_EXPRESSION => {
-                self.cursor.goto_first_child();
-
-                let target = self.lower_to_expr()?;
-
-                self.cursor.goto_next_sibling();
-                self.cursor.goto_next_sibling();
-
-                let index = self.lower_to_expr()?;
-
-                self.cursor.goto_parent();
-
-                ExprKind::Index(Box::new(target), Box::new(index), span)
-            }
-            constants::CAST_EXPRESSION => {
-                self.cursor.goto_first_child();
-                self.cursor.goto_next_sibling();
-
-                let ty = self.lower_to_ty()?;
-
-                self.cursor.goto_next_sibling();
-                self.cursor.goto_next_sibling();
-
-                let target = self.lower_to_expr()?;
-
-                self.cursor.goto_parent();
-
-                ExprKind::Cast(Box::new(target), ty)
-            }
-            constants::INITIALIZER_LIST => {
-                self.cursor.goto_first_child();
-                self.cursor.goto_next_sibling();
-
-                let mut elements = vec![];
-
-                loop {
-                    elements.push(self.lower_to_expr()?);
-
-                    self.cursor.goto_next_sibling();
-                    if !self.cursor.goto_next_sibling() {
-                        break;
-                    }
-                }
-
-                self.cursor.goto_parent();
-
-                ExprKind::Array(elements)
-            }
-            constants::COMMA_EXPRESSION => {
-                self.cursor.goto_first_child();
-
-                let mut exprs = vec![];
-
-                loop {
-                    exprs.push(self.lower_to_expr()?);
-
-                    self.cursor.goto_next_sibling();
-                    if !self.cursor.goto_next_sibling() {
-                        break;
-                    }
-                }
-
-                self.cursor.goto_parent();
-
-                ExprKind::Comma(exprs)
-            }
-            constants::SIZEOF_EXPRESSION => ExprKind::Sizeof(self.lower_to_sizeof()?),
-            constants::SEMICOLON_EXPRESSION => ExprKind::Empty,
-            kind => bail!("Unsupported [ExprKind] node: {kind}"),
-        })
-    }
-
-    pub(crate) fn lower_to_expr(&mut self) -> anyhow::Result<Expr> {
-        let node = self.cursor.node();
-        trace!("Construct [Expr] from node: {}", node.kind());
-
-        let span = Span {
-            lo: node.start_byte(),
-            hi: node.end_byte(),
-        };
-
-        Ok(Expr {
-            kind: self.lower_to_expr_kind()?,
-            span,
+            kind => bail!("cannot lower '{kind}' to 'UnOp'."),
         })
     }
 }

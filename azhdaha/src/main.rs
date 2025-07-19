@@ -1,16 +1,20 @@
 //! A compiler frontend tool for C programming language which analyzes the sources code
 //! in order to detect memory leakage by applying linear type system principles.
+//!
 
 use ast_utils::AstRepr;
 
+use env_logger::Env;
 use repr::{
-    hir::{self, HirCtx},
+    hir::{HirCtx, ItemKind},
     mir::MirCtx,
 };
 
 #[allow(clippy::print_stdout)]
 fn main() -> anyhow::Result<()> {
-    env_logger::builder().format_source_path(true).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("warn"))
+        .format_source_path(true)
+        .init();
 
     let args = cli_utils::parse_args();
 
@@ -30,21 +34,20 @@ fn main() -> anyhow::Result<()> {
 
     let items = hir_ctx.lower_to_hir();
 
-    println!("{}", items.len());
-
-    // println!("\n{:#?}\n", items);
-
     for item in items {
         match item.kind {
-            hir::ItemKind::Func(func) => {
-                let mir_ctx =
-                    MirCtx::new(&func.symbol_resolver, &func.label_resolver, func.body.span);
+            ItemKind::Func(func_def) => {
+                let mir_ctx = MirCtx::new(
+                    &func_def.symbol_resolver,
+                    &func_def.label_resolver,
+                    func_def.body.span,
+                );
 
-                let mir_body = mir_ctx.lower_to_mir(&func);
+                let mir_body = mir_ctx.lower_to_mir(&func_def);
 
                 match mir_body {
                     Ok(mir_body) => println!("\n{mir_body}"),
-                    Err(error) => println!("\nFailed to construct mir - {error:?}"),
+                    Err(error) => println!("\nFailed to construct MIR - {error:?}"),
                 }
             }
             _ => continue,

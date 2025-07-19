@@ -11,4 +11,4 @@ anyhow.workspace = true
 compile_commands.workspace = true
 log.workspace = true
 tree-sitter.workspace = true
-tree-sitter-c = { git = "https://github.com/skye-tan/tree-sitter-c.git", version = "0.23.5" }
+tree-sitter-c.workspace = true

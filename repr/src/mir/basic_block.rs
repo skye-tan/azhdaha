@@ -4,8 +4,8 @@ use la_arena::RawIdx;
 use smallvec::SmallVec;
 
 use crate::{
-    hir::{self, PrimTyKind, Ty, TyKind, resolver::SymbolKind},
-    mir::datatypes::*,
+    hir::{self, PrimTyKind, Ty, TyKind},
+    mir::{MirCtx, datatypes::*},
 };
 
 impl<'mir> MirCtx<'mir> {
@@ -30,39 +30,39 @@ impl<'mir> MirCtx<'mir> {
 
                 bb
             }
-            hir::StmtKind::Decl(decl_stmt) => {
-                for decl in &decl_stmt.decls {
-                    let hir::Decl {
-                        ty,
-                        ident,
-                        init,
-                        span,
-                    } = match self.body.symbol_resolver.get_data_by_res(decl) {
-                        SymbolKind::Local(decl) => decl,
-                        SymbolKind::Func(..) => unreachable!(),
-                    };
+            hir::StmtKind::Decl(_decl_stmt) => {
+                // for decl in &decl_stmt.decls {
+                //     let hir::Decl {
+                //         ty,
+                //         ident,
+                //         init,
+                //         span,
+                //     } = match self.body.symbol_resolver.get_data_by_res(decl) {
+                //         SymbolKind::Local(decl) => decl,
+                //         SymbolKind::Func(..) => unreachable!(),
+                //     };
 
-                    let init_rvalue = init
-                        .as_ref()
-                        .map(|init_expr| self.lower_to_rvalue(init_expr, bb));
+                //     let init_rvalue = init
+                //         .as_ref()
+                //         .map(|init_expr| self.lower_to_rvalue(init_expr, bb));
 
-                    let local = self.alloc_local(Some(ident.name.clone()), ty, decl_stmt.span);
+                //     let local = self.alloc_local(Some(ident.name.clone()), ty, decl_stmt.span);
 
-                    self.local_map.insert(*decl, local);
+                //     self.local_map.insert(*decl, local);
 
-                    if let Some(init_rvalue) = init_rvalue {
-                        self.retrieve_bb(bb).statements.push(Statement {
-                            kind: StatementKind::Assign(
-                                Place {
-                                    local,
-                                    projections: vec![],
-                                },
-                                init_rvalue,
-                            ),
-                            span: *span,
-                        });
-                    }
-                }
+                //     if let Some(init_rvalue) = init_rvalue {
+                //         self.retrieve_bb(bb).statements.push(Statement {
+                //             kind: StatementKind::Assign(
+                //                 Place {
+                //                     local,
+                //                     projections: vec![],
+                //                 },
+                //                 init_rvalue,
+                //             ),
+                //             span: *span,
+                //         });
+                //     }
+                // }
 
                 bb
             }
@@ -142,6 +142,7 @@ impl<'mir> MirCtx<'mir> {
                     None,
                     &Ty {
                         kind: TyKind::PrimTy(PrimTyKind::Int),
+                        is_linear: false,
                         quals: vec![],
                         span: cond_expr.span,
                     },
@@ -153,10 +154,10 @@ impl<'mir> MirCtx<'mir> {
                     projections: vec![],
                 };
 
-                let next_bb = self.alloc_bb();
-
                 let body_bb = self.alloc_bb();
                 let body_last_bb = self.lower_to_bb(body_stmt, body_bb);
+
+                let next_bb = self.alloc_bb();
 
                 self.retrieve_bb(body_last_bb).terminator = Some(Terminator {
                     kind: TerminatorKind::Goto { bb: next_bb },

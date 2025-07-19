@@ -4,16 +4,17 @@ use std::collections::HashMap;
 
 use la_arena::{Arena, Idx};
 
-use crate::hir::{Decl, FuncSig};
+use crate::hir::*;
+
+pub type Label = Idx<()>;
+pub type Symbol = Idx<SymbolKind>;
 
 #[derive(Debug, Clone)]
 pub enum SymbolKind {
-    Func(FuncSig),
-    Local(Decl),
+    Local(LocalDecl),
+    Func(FuncDecl),
+    Param(ParamDecl),
 }
-
-pub type Symbol = Idx<SymbolKind>;
-pub type Label = Idx<()>;
 
 #[derive(Debug, Clone)]
 pub struct Resolver<T> {

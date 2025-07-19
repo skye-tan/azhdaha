@@ -2,7 +2,7 @@
 
 use crate::{
     hir::{self, PrimTyKind, Ty, TyKind},
-    mir::datatypes::*,
+    mir::{MirCtx, datatypes::*},
 };
 
 impl<'mir> MirCtx<'mir> {
@@ -70,6 +70,7 @@ impl<'mir> MirCtx<'mir> {
                     None,
                     &Ty {
                         kind: TyKind::PrimTy(PrimTyKind::Int),
+                        is_linear: false,
                         quals: vec![],
                         span,
                     },
@@ -98,6 +99,7 @@ impl<'mir> MirCtx<'mir> {
                     None,
                     &Ty {
                         kind: TyKind::PrimTy(PrimTyKind::Int),
+                        is_linear: false,
                         quals: vec![],
                         span,
                     },

@@ -169,7 +169,7 @@ impl MirDisplay for Ty {
         let mut result = String::new();
 
         if self.is_linear {
-            result.push_str("linear");
+            result.push_str("linear ");
         }
 
         for qual in &self.quals {
@@ -230,7 +230,6 @@ impl MirDisplay for Storage {
             Storage::Register => "register".to_owned(),
             Storage::Inline => "inline".to_owned(),
             Storage::ThreadLocal => "thread_local".to_owned(),
-            Storage::Linear => "linear".to_owned(),
         }
     }
 }

@@ -22,12 +22,11 @@ mod stmt;
 /// Contains the methods needed to lower to type.
 mod ty;
 
+pub use decl::*;
+pub use expr::*;
 pub use item::*;
-
-pub(crate) use decl::*;
-pub(crate) use expr::*;
-pub(crate) use stmt::*;
-pub(crate) use ty::*;
+pub use stmt::*;
+pub use ty::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Span {
@@ -69,8 +68,6 @@ impl<'hir> HirCtx<'hir> {
                 }
             }
         }
-
-        println!("{:#?}\n{:#?}", self.items, self.symbol_resolver);
 
         self.items
     }

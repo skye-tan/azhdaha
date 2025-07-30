@@ -7,8 +7,8 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
-ast-utils = { version = "0.1.0", path = "../ast-utils" }
 anyhow.workspace = true
+ast-utils = { version = "0.1.0", path = "../ast-utils" }
 itertools.workspace = true
 la-arena.workspace = true
 log.workspace = true

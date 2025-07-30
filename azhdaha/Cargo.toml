@@ -8,9 +8,9 @@ workspace = true
 
 [dependencies]
 analyzer = { version = "0.1.0", path = "../analyzer" }
+anyhow.workspace = true
 ast-utils = { version = "0.1.0", path = "../ast-utils" }
 cli-utils = { version = "0.1.0", path = "../cli-utils" }
-repr = { version = "0.1.0", path = "../repr" }
-anyhow.workspace = true
 env_logger.workspace = true
 log.workspace = true
+repr = { version = "0.1.0", path = "../repr" }

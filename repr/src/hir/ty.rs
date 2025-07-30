@@ -59,7 +59,6 @@ pub enum Storage {
     Register,
     Inline,
     ThreadLocal,
-    Linear,
 }
 
 impl HirCtx<'_> {

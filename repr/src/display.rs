@@ -5,7 +5,7 @@ use std::fmt::Display;
 use itertools::Itertools;
 
 use crate::hir::resolver::SymbolKind;
-use crate::hir::{BinOp, Lit, LitKind, PrimTyKind, Ty, TyKind, TyQual, UnOp};
+use crate::hir::{BinOp, Lit, LitKind, PrimTyKind, Storage, Ty, TyKind, TyQual, UnOp};
 use crate::mir::{
     Body, Const, Local, Operand, Place, Rvalue, Statement, StatementKind, Terminator,
     TerminatorKind,
@@ -18,12 +18,22 @@ trait MirDisplay {
 impl Display for Body<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (local, local_decl) in self.local_decls.iter() {
-            writeln!(
-                f,
-                "let {}: {};",
-                local.mir_display(self),
-                local_decl.ty.mir_display(self)
-            )?;
+            if let Some(storage) = &local_decl.storage {
+                writeln!(
+                    f,
+                    "let {}: {} {};",
+                    local.mir_display(self),
+                    storage.mir_display(self),
+                    local_decl.ty.mir_display(self)
+                )?;
+            } else {
+                writeln!(
+                    f,
+                    "let {}: {};",
+                    local.mir_display(self),
+                    local_decl.ty.mir_display(self)
+                )?;
+            }
         }
 
         for (bb, bb_data) in self.basic_blocks.iter() {
@@ -177,13 +187,15 @@ impl MirDisplay for TyKind {
         match &self {
             TyKind::PrimTy(prim_ty_kind) => prim_ty_kind.mir_display(body),
             TyKind::Ptr { kind, quals } => {
-                let mut result = "* ".to_owned();
+                let mut result = String::new();
+
+                result.push_str(&kind.mir_display(body));
+
+                result.push_str(" *");
 
                 for qual in quals {
                     result.push_str(&format!("{} ", qual.mir_display(body)));
                 }
-
-                result.push_str(&kind.mir_display(body));
 
                 result
             }
@@ -205,6 +217,20 @@ impl MirDisplay for PrimTyKind {
             PrimTyKind::Double => "double".to_owned(),
             PrimTyKind::Char => "char".to_owned(),
             PrimTyKind::Void => "void".to_owned(),
+        }
+    }
+}
+
+impl MirDisplay for Storage {
+    fn mir_display(&self, _body: &Body) -> String {
+        match &self {
+            Storage::Extern => "extern".to_owned(),
+            Storage::Static => "static".to_owned(),
+            Storage::Auto => "auto".to_owned(),
+            Storage::Register => "register".to_owned(),
+            Storage::Inline => "inline".to_owned(),
+            Storage::ThreadLocal => "thread_local".to_owned(),
+            Storage::Linear => "linear".to_owned(),
         }
     }
 }

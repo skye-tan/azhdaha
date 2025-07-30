@@ -68,6 +68,7 @@ impl<'mir> MirCtx<'mir> {
 
                 let local = self.alloc_local(
                     None,
+                    None,
                     &Ty {
                         kind: TyKind::PrimTy(PrimTyKind::Int),
                         is_linear: false,
@@ -96,6 +97,7 @@ impl<'mir> MirCtx<'mir> {
                 let right_operand = self.lower_to_operand(right_expr, bb);
 
                 let local = self.alloc_local(
+                    None,
                     None,
                     &Ty {
                         kind: TyKind::PrimTy(PrimTyKind::Int),

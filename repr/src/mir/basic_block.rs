@@ -30,39 +30,38 @@ impl<'mir> MirCtx<'mir> {
 
                 bb
             }
-            hir::StmtKind::Decl(_decl_stmt) => {
-                // for decl in &decl_stmt.decls {
-                //     let hir::Decl {
-                //         ty,
-                //         ident,
-                //         init,
-                //         span,
-                //     } = match self.body.symbol_resolver.get_data_by_res(decl) {
-                //         SymbolKind::Local(decl) => decl,
-                //         SymbolKind::Func(..) => unreachable!(),
-                //     };
+            hir::StmtKind::Decl(symbol) => {
+                let hir::LocalDecl {
+                    storage,
+                    ident,
+                    ty,
+                    init,
+                    span,
+                } = match self.body.symbol_resolver.get_data_by_res(symbol) {
+                    hir::resolver::SymbolKind::Local(local_decl) => local_decl,
+                    _ => unreachable!(),
+                };
 
-                //     let init_rvalue = init
-                //         .as_ref()
-                //         .map(|init_expr| self.lower_to_rvalue(init_expr, bb));
+                let init_rvalue = init
+                    .as_ref()
+                    .map(|init_expr| self.lower_to_rvalue(init_expr, bb));
 
-                //     let local = self.alloc_local(Some(ident.name.clone()), ty, decl_stmt.span);
+                let local = self.alloc_local(Some(ident.name.clone()), storage.clone(), ty, *span);
 
-                //     self.local_map.insert(*decl, local);
+                self.local_map.insert(*symbol, local);
 
-                //     if let Some(init_rvalue) = init_rvalue {
-                //         self.retrieve_bb(bb).statements.push(Statement {
-                //             kind: StatementKind::Assign(
-                //                 Place {
-                //                     local,
-                //                     projections: vec![],
-                //                 },
-                //                 init_rvalue,
-                //             ),
-                //             span: *span,
-                //         });
-                //     }
-                // }
+                if let Some(init_rvalue) = init_rvalue {
+                    self.retrieve_bb(bb).statements.push(Statement {
+                        kind: StatementKind::Assign(
+                            Place {
+                                local,
+                                projections: vec![],
+                            },
+                            init_rvalue,
+                        ),
+                        span: *span,
+                    });
+                }
 
                 bb
             }
@@ -139,6 +138,7 @@ impl<'mir> MirCtx<'mir> {
                 let cond_rvalue = self.lower_to_rvalue(cond_expr, bb);
 
                 let cond_local = self.alloc_local(
+                    None,
                     None,
                     &Ty {
                         kind: TyKind::PrimTy(PrimTyKind::Int),

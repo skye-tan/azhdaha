@@ -59,7 +59,12 @@ impl<'mir> MirCtx<'mir> {
             _ => unreachable!(),
         };
 
-        self.alloc_local(None, &func_dec.sig.ret_ty, func_def.body.span);
+        self.alloc_local(
+            None,
+            func_dec.storage.clone(),
+            &func_dec.sig.ret_ty,
+            func_def.body.span,
+        );
 
         for param in &func_dec.sig.params {
             if let Some(ident) = &param.ident {
@@ -72,7 +77,12 @@ impl<'mir> MirCtx<'mir> {
                         ident.name
                     ))?;
 
-                let local = self.alloc_local(Some(ident.name.clone()), &param.ty, param.span);
+                let local = self.alloc_local(
+                    Some(ident.name.clone()),
+                    param.storage.clone(),
+                    &param.ty,
+                    param.span,
+                );
 
                 self.local_map.insert(symbol, local);
             }

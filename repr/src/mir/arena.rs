@@ -1,7 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use crate::{
-    hir::{Span, Ty},
+    hir::{Span, Storage, Ty},
     mir::{MirCtx, datatypes::*},
 };
 
@@ -14,9 +14,16 @@ impl MirCtx<'_> {
         &mut self.body.basic_blocks[bb]
     }
 
-    pub(crate) fn alloc_local(&mut self, debug_name: Option<String>, ty: &Ty, span: Span) -> Local {
+    pub(crate) fn alloc_local(
+        &mut self,
+        debug_name: Option<String>,
+        storage: Option<Storage>,
+        ty: &Ty,
+        span: Span,
+    ) -> Local {
         self.body.local_decls.alloc(LocalDecl {
             debug_name,
+            storage,
             ty: ty.clone(),
             span,
         })

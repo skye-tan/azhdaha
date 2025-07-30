@@ -70,6 +70,8 @@ impl<'hir> HirCtx<'hir> {
             }
         }
 
+        println!("{:#?}\n{:#?}", self.items, self.symbol_resolver);
+
         self.items
     }
 }

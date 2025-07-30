@@ -4,7 +4,7 @@ use la_arena::{Arena, Idx};
 use smallvec::SmallVec;
 
 use crate::hir::{
-    BinOp, Lit, Span, Ty, UnOp,
+    BinOp, Lit, Span, Storage, Ty, UnOp,
     resolver::{Resolver, Symbol, SymbolKind},
 };
 
@@ -23,6 +23,7 @@ pub type Local = Idx<LocalDecl>;
 #[derive(Debug, Clone)]
 pub struct LocalDecl {
     pub debug_name: Option<String>,
+    pub storage: Option<Storage>,
     pub ty: Ty,
     pub span: Span,
 }

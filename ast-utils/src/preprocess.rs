@@ -8,13 +8,15 @@ const PREPROCESS_ONLY_FLAG: &str = "-E";
 /// Inhibits generation of linemarkers in the output from the preprocessor.
 const INHABIT_LINEMARKS_FLAG: &str = "-P";
 
+/// Includes annotated headers.
+const INCLUDE_FLAG: &str = "-I";
+
+/// The directory which contains the annotated headers.
+const INCLUDE_PATH: &str = "/home/skye/.local/include/azhdaha/";
+
 /// Prevents predefining any system-specific or GCC-specific macros.
 #[allow(dead_code)]
 const UNDEF_FLAG: &str = "-undef";
-
-/// Includes headers in the given directory.
-#[allow(dead_code)]
-const INCLUDE_FLAG: &str = "-I";
 
 /// Replace headers with annotated versions and expand macros.
 ///
@@ -24,8 +26,8 @@ const INCLUDE_FLAG: &str = "-I";
 /// Headers used in the source code must be replaced with annotated versions which is accomplished by
 /// inserting [`INCLUDE_FLAG`] pointing to a directory containing the annotated headers.
 ///
-/// The "LINEAR" macro used in the source code must be replaced by "_Linear" type qualifier which is
-/// accomplished by inserting [`INCLUDE_FLAG`] which defines the macro.
+/// The "LINEAR_TYPE" macro used in the source code must be replaced by "linear_type" which is
+/// accomplished by inserting [`INCLUDE_FLAG`] and redefining the macro.
 ///
 pub(crate) fn preprocess(compile_commands: &CompilationDatabase) -> anyhow::Result<Vec<Vec<u8>>> {
     let mut results = vec![];
@@ -58,6 +60,8 @@ pub(crate) fn preprocess(compile_commands: &CompilationDatabase) -> anyhow::Resu
             Command::new(command)
                 .arg(PREPROCESS_ONLY_FLAG)
                 .arg(INHABIT_LINEMARKS_FLAG)
+                .arg(INCLUDE_FLAG)
+                .arg(INCLUDE_PATH)
                 .args(args)
                 .current_dir(directory)
                 .output()?

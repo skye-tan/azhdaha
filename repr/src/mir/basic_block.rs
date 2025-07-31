@@ -56,6 +56,7 @@ impl<'mir> MirCtx<'mir> {
                             Place {
                                 local,
                                 projections: vec![],
+                                span: ident.span,
                             },
                             init_rvalue,
                         ),
@@ -74,6 +75,7 @@ impl<'mir> MirCtx<'mir> {
                             Place {
                                 local: Local::from_raw(RawIdx::from_u32(0)),
                                 projections: vec![],
+                                span,
                             },
                             rvalue,
                         ),
@@ -128,10 +130,9 @@ impl<'mir> MirCtx<'mir> {
                     span,
                 });
 
-                // TODO: Currently a new basic block is created after each "goto" statement which
-                // may contain unreachable code. I might want to consider generating a warning for
+                // Currently a new basic block is created after each "goto" statement which may
+                // contain unreachable code. I might want to consider generating a warning for
                 // the non-empty variant of these basic blocks in the future or ignore them.
-                //
                 self.alloc_bb()
             }
             hir::StmtKind::If(cond_expr, body_stmt, else_stmt) => {
@@ -152,6 +153,7 @@ impl<'mir> MirCtx<'mir> {
                 let cond_place = Place {
                     local: cond_local,
                     projections: vec![],
+                    span: cond_expr.span,
                 };
 
                 let body_bb = self.alloc_bb();

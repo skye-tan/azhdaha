@@ -73,7 +73,7 @@ impl HirCtx<'_> {
                 ItemKind::Decl(symbol)
             }
             kind => {
-                bail!("Cannot lower to '{kind}' to 'ItemKind'.");
+                bail!("Cannot lower '{kind}' to 'ItemKind'.");
             }
         })
     }

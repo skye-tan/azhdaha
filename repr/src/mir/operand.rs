@@ -46,6 +46,7 @@ impl<'mir> MirCtx<'mir> {
                 Some(local) => Operand::Place(Place {
                     local: *local,
                     projections: vec![],
+                    span,
                 }),
                 None => Operand::Const(Const::Symbol(*symbol)),
             },
@@ -81,6 +82,7 @@ impl<'mir> MirCtx<'mir> {
                 let place = Place {
                     local,
                     projections: vec![],
+                    span,
                 };
 
                 let bb_data = self.retrieve_bb(bb);
@@ -111,6 +113,7 @@ impl<'mir> MirCtx<'mir> {
                 let place = Place {
                     local,
                     projections: vec![],
+                    span,
                 };
 
                 let bb_data = self.retrieve_bb(bb);
@@ -130,6 +133,8 @@ impl<'mir> MirCtx<'mir> {
     }
 
     pub(crate) fn lower_to_place(&mut self, expr: &'mir hir::Expr) -> Place {
+        let span = expr.span;
+
         match &expr.kind {
             hir::ExprKind::Local(res) => {
                 let local = self.local_map.get(res).unwrap();
@@ -137,6 +142,7 @@ impl<'mir> MirCtx<'mir> {
                 Place {
                     local: *local,
                     projections: vec![],
+                    span,
                 }
             }
             kind => panic!("Cannot construct [Place] from: {kind:#?}"),

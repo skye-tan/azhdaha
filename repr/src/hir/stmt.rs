@@ -285,7 +285,7 @@ impl HirCtx<'_> {
             constants::BREAK_STATEMENT => {
                 todo!()
             }
-            kind => bail!("Cannot lower to '{kind}' to 'StmtKind'."),
+            kind => bail!("Cannot lower '{kind}' to 'StmtKind'."),
         })
     }
 }

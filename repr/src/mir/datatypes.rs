@@ -90,6 +90,7 @@ pub enum Operand {
 pub struct Place {
     pub local: Local,
     pub projections: Vec<PlaceElem>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]

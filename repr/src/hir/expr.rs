@@ -330,7 +330,7 @@ impl HirCtx<'_> {
                     LitKind::Float(literal.parse()?)
                 }
             }
-            kind => bail!("cannot lower '{kind}' to 'Lit'."),
+            kind => bail!("Cannot lower '{kind}' to 'Lit'."),
         })
     }
 
@@ -371,7 +371,7 @@ impl HirCtx<'_> {
             constants::POS => UnOp::Pos,
             constants::ADDR_OF => UnOp::AddrOf,
             constants::DEREF => UnOp::Deref,
-            kind => bail!("cannot lower '{kind}' to 'UnOp'."),
+            kind => bail!("Cannot lower '{kind}' to 'UnOp'."),
         })
     }
 }

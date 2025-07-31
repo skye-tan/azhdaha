@@ -136,7 +136,7 @@ impl HirCtx<'_> {
             decl_node = node;
 
             match decl_node.kind() {
-                constants::POINTER_DECLARATOR => {
+                constants::POINTER_DECLARATOR | constants::ABSTRACT_POINTER_DECLARATOR => {
                     let mut quals = vec![];
 
                     let mut cursor = decl_node.walk();
@@ -152,7 +152,7 @@ impl HirCtx<'_> {
                         quals,
                     }
                 }
-                constants::ARRAY_DECLARATOR => {
+                constants::ARRAY_DECLARATOR | constants::ABSTRACT_ARRAY_DECLARATOR => {
                     let size = if decl_node.child_count() == 4 {
                         Some(Box::new(self.lower_to_expr(decl_node.child(2).unwrap())?))
                     } else {
@@ -190,7 +190,7 @@ impl HirCtx<'_> {
             constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_to_prim_ty_kind(ty_node)?),
             constants::TYPE_DESCRIPTOR => self.lower_to_ty_kind(ty_node.child(0).unwrap())?,
             constants::TYPE_IDENTIFIER => todo!(),
-            kind => bail!("Failed to lower '{kind}'"),
+            kind => bail!("Cannot lower '{kind}' to 'TyKind'."),
         };
 
         let mut decl_node = node;
@@ -199,7 +199,7 @@ impl HirCtx<'_> {
             decl_node = node;
 
             match decl_node.kind() {
-                constants::POINTER_DECLARATOR => {
+                constants::POINTER_DECLARATOR | constants::ABSTRACT_POINTER_DECLARATOR => {
                     let mut quals = vec![];
 
                     let mut cursor = decl_node.walk();
@@ -215,7 +215,7 @@ impl HirCtx<'_> {
                         quals,
                     }
                 }
-                constants::ARRAY_DECLARATOR => {
+                constants::ARRAY_DECLARATOR | constants::ABSTRACT_ARRAY_DECLARATOR => {
                     let size = if decl_node.child_count() == 4 {
                         Some(Box::new(self.lower_to_expr(decl_node.child(2).unwrap())?))
                     } else {
@@ -233,7 +233,7 @@ impl HirCtx<'_> {
                 | constants::IDENTIFIER => {
                     break;
                 }
-                kind => panic!("{kind}"),
+                kind => bail!("Cannot lower '{kind}' to 'TyKind'."),
             }
         }
 
@@ -251,7 +251,7 @@ impl HirCtx<'_> {
                 constants::FLOAT => PrimTyKind::Float,
                 constants::DOUBLE => PrimTyKind::Double,
                 constants::VOID => PrimTyKind::Void,
-                kind => bail!("Failed to lower '{kind}'"),
+                kind => bail!("Cannot lower '{kind}' to 'PrimTyKind'."),
             },
         )
     }
@@ -266,7 +266,7 @@ impl HirCtx<'_> {
             constants::REGISTER => Storage::Register,
             constants::INLINE => Storage::Inline,
             constants::THREAD_LOCAL => Storage::ThreadLocal,
-            kind => bail!("Failed to lower '{kind}'"),
+            kind => bail!("Cannot lower '{kind}' to 'Storage'."),
         })
     }
 
@@ -280,7 +280,7 @@ impl HirCtx<'_> {
             constants::RESTRICT => TyQual::Restrict,
             constants::ATOMIC => TyQual::Atomic,
             constants::NORETURN => TyQual::NoReturn,
-            kind => bail!("Failed to lower '{kind}'"),
+            kind => bail!("Cannot lower '{kind}' to 'TyQual'."),
         })
     }
 }

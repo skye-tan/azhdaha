@@ -36,8 +36,12 @@ pub(crate) const DECLARATION: &str = "declaration";
 pub(crate) const INIT_DECLARATOR: &str = "init_declarator";
 /// An identifiers representing a declaration which is an array.
 pub(crate) const ARRAY_DECLARATOR: &str = "array_declarator";
+/// An identifiers representing a declaration which is an array.
+pub(crate) const ABSTRACT_ARRAY_DECLARATOR: &str = "abstract_array_declarator";
 /// An identifiers representing a declaration which is a pointer.
 pub(crate) const POINTER_DECLARATOR: &str = "pointer_declarator";
+/// An identifiers representing a declaration which is a pointer.
+pub(crate) const ABSTRACT_POINTER_DECLARATOR: &str = "abstract_pointer_declarator";
 /// An identifiers representing a declaration which is a function.
 pub(crate) const FUNCTION_DECLARATOR: &str = "function_declarator";
 /// An identifiers determining whether a function has variadic parameter or not.

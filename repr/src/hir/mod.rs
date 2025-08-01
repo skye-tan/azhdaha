@@ -51,7 +51,7 @@ impl<'hir> HirCtx<'hir> {
             label_resolver: resolver::Resolver::new(),
             items: vec![],
             root: ast_repr.tree.root_node(),
-            source_code: &ast_repr.source_code,
+            source_code: &ast_repr.source_info.code,
         }
     }
 

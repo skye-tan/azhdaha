@@ -18,6 +18,14 @@ const INCLUDE_PATH: &str = "/home/skye/.local/include/azhdaha/";
 #[allow(dead_code)]
 const UNDEF_FLAG: &str = "-undef";
 
+/// Contains the source information about the code.
+pub struct SourceInfo {
+    /// Path to the target file.
+    pub path: String,
+    /// Preprocessed source code.
+    pub code: Vec<u8>,
+}
+
 /// Replace headers with annotated versions and expand macros.
 ///
 /// In order to only perform the preprocessing on the source code, [`PREPROCESS_ONLY_FLAG`]
@@ -29,44 +37,53 @@ const UNDEF_FLAG: &str = "-undef";
 /// The "LINEAR_TYPE" macro used in the source code must be replaced by "linear_type" which is
 /// accomplished by inserting [`INCLUDE_FLAG`] and redefining the macro.
 ///
-pub(crate) fn preprocess(compile_commands: &CompilationDatabase) -> anyhow::Result<Vec<Vec<u8>>> {
+pub(crate) fn preprocess(
+    compile_commands: &CompilationDatabase,
+) -> anyhow::Result<Vec<SourceInfo>> {
     let mut results = vec![];
 
     for compile_command in compile_commands {
-        let Some(directory) = compile_command.directory.to_str() else {
+        let Some(dir) = compile_command.directory.to_str() else {
             log::warn!("UTF-8 validity failed.");
             continue;
         };
 
         if !compile_command.directory.exists() {
-            log::warn!("Directory '{directory}' does not exist.");
+            log::warn!("Directory '{dir}' does not exist.");
             continue;
         }
 
-        let Some(arguments) = compile_command.arguments.as_ref() else {
+        let Some(args) = compile_command.arguments.as_ref() else {
             log::warn!("Arguments section was not found.");
             continue;
         };
 
-        let (command, args) = match arguments {
-            CompileArgs::Arguments(args) => (args[0].clone(), args[1..].to_vec()),
+        let (command, args, target) = match args {
+            CompileArgs::Arguments(args) => {
+                let (command, rest) = args.split_first().unwrap();
+                let (target, args) = rest.split_last().unwrap();
+
+                (command, args, target)
+            }
             CompileArgs::Flags(_) => {
                 // Arguments might be read from compile-flags which is not currently supported.
                 panic!("Compile-flags is not currently supported.")
             }
         };
 
-        results.push(
-            Command::new(command)
+        results.push(SourceInfo {
+            path: format!("{dir}/{target}"),
+            code: Command::new(command)
                 .arg(PREPROCESS_ONLY_FLAG)
                 .arg(INHABIT_LINEMARKS_FLAG)
                 .arg(INCLUDE_FLAG)
                 .arg(INCLUDE_PATH)
                 .args(args)
-                .current_dir(directory)
+                .arg(target)
+                .current_dir(dir)
                 .output()?
                 .stdout,
-        );
+        });
     }
 
     Ok(results)

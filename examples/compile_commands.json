@@ -1,0 +1,46 @@
+[
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "include/",
+            "main.c"
+        ],
+        "directory": "./examples/dangling-pointer/",
+        "file": "./examples/dangling-pointer/main.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "include/",
+            "main.c"
+        ],
+        "directory": "./examples/double-free/",
+        "file": "./examples/double-free/main.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "include/",
+            "main.c"
+        ],
+        "directory": "./examples/memory-leak/",
+        "file": "./examples/memory-leak/main.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "include/",
+            "main.c"
+        ],
+        "directory": "./examples/use-after-free/",
+        "file": "./examples/use-after-free/main.c"
+    }
+]

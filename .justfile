@@ -10,14 +10,18 @@ build-release:
 build-debug:
     cargo build --debug
 
-# convert each created dot-graph file into its associated svg image
-convert-dot-graphs:
-    @ for file in *.dot; do dot -Tsvg "$file" > "${file%.dot}.svg"; done
+# run with examples as input
+run-examples:
+    cargo run --release -- ./examples/compile_commands.json
 
-# custom test used for debugging the tool
+# custom test used for debugging
 custom-test:
-    RUST_LOG=trace cargo run --release -- ./temp/compile_commands.json --dot-graph
+    RUST_LOG=trace cargo run --debug -- ./temp/compile_commands.json --dot-graph
     @ just convert-dot-graphs
+
+# convert each created dot-graph file into its associated svg image
+convert-dot-graphs PATH=".":
+    @ for file in {{PATH}}/*.dot; do dot -Tsvg $file > {{PATH}}/${file%.dot}.svg; done
 
 # check clippy lints
 clippy:

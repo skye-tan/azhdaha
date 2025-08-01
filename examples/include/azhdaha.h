@@ -1,0 +1,2 @@
+
+#define LINEAR_TYPE

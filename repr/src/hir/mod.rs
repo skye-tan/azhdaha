@@ -40,6 +40,9 @@ pub struct HirCtx<'hir> {
 
     pub items: Vec<Item>,
 
+    pub loop_start_label: Option<resolver::Label>,
+    pub loop_end_label: Option<resolver::Label>,
+
     pub root: Node<'hir>,
     pub source_code: &'hir [u8],
 }
@@ -49,7 +52,12 @@ impl<'hir> HirCtx<'hir> {
         Self {
             symbol_resolver: resolver::Resolver::new(),
             label_resolver: resolver::Resolver::new(),
+
             items: vec![],
+
+            loop_start_label: None,
+            loop_end_label: None,
+
             root: ast_repr.tree.root_node(),
             source_code: &ast_repr.source_info.code,
         }

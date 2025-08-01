@@ -18,6 +18,9 @@ pub struct Ty {
 #[derive(Debug, Clone)]
 pub enum TyKind {
     PrimTy(PrimTyKind),
+    Struct(Ident),
+    Union(Ident),
+    Enum(Ident),
     Ptr {
         kind: Box<TyKind>,
         quals: Vec<TyQual>,
@@ -187,9 +190,18 @@ impl HirCtx<'_> {
         }
 
         let mut ty_kind = match ty_node.kind() {
-            constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_to_prim_ty_kind(ty_node)?),
             constants::TYPE_DESCRIPTOR => self.lower_to_ty_kind(ty_node.child(0).unwrap())?,
-            constants::TYPE_IDENTIFIER => todo!(),
+            constants::TYPE_IDENTIFIER => TyKind::Struct(self.lower_to_ident(ty_node)?),
+            constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_to_prim_ty_kind(ty_node)?),
+            constants::STRUCT_SPECIFIER => {
+                TyKind::Struct(self.lower_to_ident(ty_node.child(1).unwrap())?)
+            }
+            constants::UNION_SPECIFIER => {
+                TyKind::Union(self.lower_to_ident(ty_node.child(1).unwrap())?)
+            }
+            constants::ENUM_SPECIFIER => {
+                TyKind::Enum(self.lower_to_ident(ty_node.child(1).unwrap())?)
+            }
             kind => bail!("Cannot lower '{kind}' to 'TyKind'."),
         };
 

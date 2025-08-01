@@ -116,12 +116,18 @@ pub(crate) const THREAD_LOCAL: &str = "thread_local";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Local`].  
 pub(crate) const IDENTIFIER: &str = "identifier";
 
+/// An identifiers used for [`TyKind`]'s construction.
+pub(crate) const TYPE_DESCRIPTOR: &str = "type_descriptor";
+/// An identifiers used for [`TyKind`]'s construction.
+pub(crate) const TYPE_IDENTIFIER: &str = "type_identifier";
 /// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
 pub(crate) const PRIMITIVE_TYPE: &str = "primitive_type";
-/// An identifiers used for [`TyKind`]'s construction representing a [`TyKind`].
-pub(crate) const TYPE_DESCRIPTOR: &str = "type_descriptor";
-/// An identifiers used for [`TyKind`]'s construction..
-pub(crate) const TYPE_IDENTIFIER: &str = "type_identifier";
+/// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::Struct`].
+pub(crate) const STRUCT_SPECIFIER: &str = "struct_specifier";
+/// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::Union`].
+pub(crate) const UNION_SPECIFIER: &str = "union_specifier";
+/// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::Enum`].
+pub(crate) const ENUM_SPECIFIER: &str = "enum_specifier";
 
 /// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Int`].
 pub(crate) const INT: &str = "int";

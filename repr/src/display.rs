@@ -187,6 +187,9 @@ impl MirDisplay for TyKind {
     fn mir_display(&self, body: &Body) -> String {
         match &self {
             TyKind::PrimTy(prim_ty_kind) => prim_ty_kind.mir_display(body),
+            TyKind::Struct(ident) => format!("struct {}", ident.name),
+            TyKind::Union(ident) => format!("struct {}", ident.name),
+            TyKind::Enum(ident) => format!("struct {}", ident.name),
             TyKind::Ptr { kind, quals } => {
                 let mut result = String::new();
 
@@ -204,7 +207,7 @@ impl MirDisplay for TyKind {
                 Some(_) => format!("[{}; _]", kind.mir_display(body)),
                 None => format!("[{}]", kind.mir_display(body)),
             },
-            TyKind::Func { .. } => unimplemented!(),
+            TyKind::Func { .. } => "function pointer".to_owned(),
         }
     }
 }

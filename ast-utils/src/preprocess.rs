@@ -1,6 +1,6 @@
 use std::process::Command;
 
-use compile_commands::{CompilationDatabase, CompileArgs};
+use compile_commands::{CompilationDatabase, CompileArgs, SourceFile};
 
 /// Indicates that only preprocess phase should be done.
 const PREPROCESS_ONLY_FLAG: &str = "-E";
@@ -43,28 +43,38 @@ pub(crate) fn preprocess(
     let mut results = vec![];
 
     for compile_command in compile_commands {
-        let Some(dir) = compile_command.directory.to_str() else {
-            log::warn!("UTF-8 validity failed.");
+        let Some(directory) = compile_command.directory.to_str() else {
+            log::warn!("UTF-8 validity for directory section failed.");
             continue;
         };
 
         if !compile_command.directory.exists() {
-            log::warn!("Directory '{dir}' does not exist.");
+            log::warn!("Directory '{directory}' does not exist.");
             continue;
         }
+
+        let path = match &compile_command.file {
+            SourceFile::All => {
+                log::error!("File section was not found.");
+                continue;
+            }
+            SourceFile::File(path) => {
+                let Some(path) = path.to_str() else {
+                    log::warn!("UTF-8 validity for file section failed.");
+                    continue;
+                };
+
+                path.to_owned()
+            }
+        };
 
         let Some(args) = compile_command.arguments.as_ref() else {
             log::warn!("Arguments section was not found.");
             continue;
         };
 
-        let (command, args, target) = match args {
-            CompileArgs::Arguments(args) => {
-                let (command, rest) = args.split_first().unwrap();
-                let (target, args) = rest.split_last().unwrap();
-
-                (command, args, target)
-            }
+        let (command, args) = match args {
+            CompileArgs::Arguments(args) => args.split_first().unwrap(),
             CompileArgs::Flags(_) => {
                 // Arguments might be read from compile-flags which is not currently supported.
                 panic!("Compile-flags is not currently supported.")
@@ -72,15 +82,14 @@ pub(crate) fn preprocess(
         };
 
         results.push(SourceInfo {
-            path: format!("{dir}/{target}"),
+            path,
             code: Command::new(command)
                 .arg(PREPROCESS_ONLY_FLAG)
                 .arg(INHABIT_LINEMARKS_FLAG)
                 .arg(INCLUDE_FLAG)
                 .arg(INCLUDE_PATH)
                 .args(args)
-                .arg(target)
-                .current_dir(dir)
+                .current_dir(directory)
                 .output()?
                 .stdout,
         });

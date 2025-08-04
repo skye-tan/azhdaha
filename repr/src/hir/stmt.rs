@@ -115,7 +115,7 @@ impl HirCtx<'_> {
             constants::SWITCH_STATEMENT => {
                 let cond_expr = self.lower_to_expr(node.child(1).unwrap())?;
 
-                let saved_switch_cond = mem::replace(&mut self.switch_cond, Some(cond_expr));
+                let saved_switch_cond = self.switch_cond.replace(cond_expr);
 
                 let switch_end = format!("switch_end_{}_{}", span.lo, span.hi);
                 let switch_end_label = self.label_resolver.insert_symbol(switch_end.clone(), ());

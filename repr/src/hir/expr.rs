@@ -113,14 +113,13 @@ impl HirCtx<'_> {
         };
 
         Ok(match node.kind() {
-            kind if kind.contains("literal") => ExprKind::Lit(self.lower_to_lit(node)?),
             constants::IDENTIFIER => {
                 let ident = self.lower_to_ident(node)?;
 
                 let symbol = self
                     .symbol_resolver
                     .get_res_by_name(&ident.name)
-                    .context(format!("Use of undeclared identifier: {}", &ident.name))?;
+                    .context(format!("Use of undeclared identifier '{}'.", &ident.name))?;
 
                 ExprKind::Local(symbol)
             }
@@ -265,6 +264,7 @@ impl HirCtx<'_> {
             }
             constants::SIZEOF_EXPRESSION => ExprKind::Sizeof(self.lower_to_sizeof(node)?),
             constants::SEMICOLON_EXPRESSION => ExprKind::Empty,
+            kind if kind.contains(constants::LITERAL) => ExprKind::Lit(self.lower_to_lit(node)?),
             kind => bail!("Cannot lower '{kind}' to 'ExprKind'."),
         })
     }

@@ -1,9 +1,12 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use anyhow::bail;
+use anyhow::{Context, bail};
 use log::trace;
 
-use crate::hir::*;
+use crate::hir::{
+    resolver::{Symbol, SymbolKind},
+    *,
+};
 
 use super::constants;
 
@@ -18,6 +21,7 @@ pub struct Ty {
 #[derive(Debug, Clone)]
 pub enum TyKind {
     PrimTy(PrimTyKind),
+    TyDef(Symbol),
     Struct(Ident),
     Union(Ident),
     Enum(Ident),
@@ -191,7 +195,21 @@ impl HirCtx<'_> {
 
         let mut ty_kind = match ty_node.kind() {
             constants::TYPE_DESCRIPTOR => self.lower_to_ty_kind(ty_node.child(0).unwrap())?,
-            constants::TYPE_IDENTIFIER => TyKind::Struct(self.lower_to_ident(ty_node)?),
+            constants::TYPE_IDENTIFIER => {
+                let ident = self.lower_to_ident(ty_node)?;
+
+                let symbol = self
+                    .symbol_resolver
+                    .get_res_by_name(&ident.name)
+                    .context(format!("Use of undeclared identifier '{}'.", &ident.name))?;
+
+                let symbol_kind = self.symbol_resolver.get_data_by_res(&symbol);
+
+                match symbol_kind {
+                    SymbolKind::TyDef(..) => TyKind::TyDef(symbol),
+                    _ => bail!("Use of invalid type identifier '{}'.", &ident.name),
+                }
+            }
             constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_to_prim_ty_kind(ty_node)?),
             constants::STRUCT_SPECIFIER => {
                 TyKind::Struct(self.lower_to_ident(ty_node.child(1).unwrap())?)
@@ -242,6 +260,7 @@ impl HirCtx<'_> {
                 constants::INIT_DECLARATOR => continue,
                 constants::FUNCTION_DECLARATOR
                 | constants::PARAMETER_DECLARATION
+                | constants::TYPE_IDENTIFIER
                 | constants::IDENTIFIER => {
                     break;
                 }
@@ -257,9 +276,10 @@ impl HirCtx<'_> {
 
         Ok(
             match std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])? {
+                kind if kind.contains(constants::INT) => PrimTyKind::Int,
+                constants::SIZE => PrimTyKind::Int,
                 constants::BOOL => PrimTyKind::Bool,
                 constants::CHAR => PrimTyKind::Char,
-                constants::INT => PrimTyKind::Int,
                 constants::FLOAT => PrimTyKind::Float,
                 constants::DOUBLE => PrimTyKind::Double,
                 constants::VOID => PrimTyKind::Void,

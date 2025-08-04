@@ -22,6 +22,7 @@ pub struct Item {
 pub enum ItemKind {
     Func(Box<FuncDef>),
     Decl(Symbol),
+    TyDef(Symbol),
 }
 
 #[derive(Debug, Clone)]
@@ -71,6 +72,15 @@ impl HirCtx<'_> {
                     .insert_symbol(local_decl.ident.name.clone(), SymbolKind::Local(local_decl));
 
                 ItemKind::Decl(symbol)
+            }
+            constants::TYPE_DEFINITION => {
+                let local_decl: LocalDecl = self.lower_to_local_decl(node)?;
+
+                let symbol = self
+                    .symbol_resolver
+                    .insert_symbol(local_decl.ident.name, SymbolKind::TyDef(local_decl.ty));
+
+                ItemKind::TyDef(symbol)
             }
             kind => {
                 bail!("Cannot lower '{kind}' to 'ItemKind'.");

@@ -14,6 +14,7 @@ pub enum SymbolKind {
     Local(LocalDecl),
     Func(FuncDecl),
     Param(ParamDecl),
+    TyDef(Ty),
 }
 
 #[derive(Debug, Clone)]

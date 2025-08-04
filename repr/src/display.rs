@@ -130,14 +130,19 @@ impl MirDisplay for Operand {
             Operand::Place(place) => place.mir_display(body),
             Operand::Const(lit) => match lit {
                 Const::Lit(lit) => lit.mir_display(body),
-                Const::Symbol(symbol) => match body.symbol_resolver.get_data_by_res(symbol) {
-                    SymbolKind::Func(func) => func.ident.name.clone(),
-                    SymbolKind::Local(local) => local.ident.name.clone(),
-                    SymbolKind::Param(param) => match &param.ident {
-                        Some(ident) => ident.name.clone(),
-                        None => "unknown".to_owned(),
-                    },
-                },
+                Const::Symbol(symbol) => {
+                    let symbol_kind = body.symbol_resolver.get_data_by_res(symbol);
+
+                    match symbol_kind {
+                        SymbolKind::Func(func) => func.ident.name.clone(),
+                        SymbolKind::Local(local) => local.ident.name.clone(),
+                        SymbolKind::Param(param) => match &param.ident {
+                            Some(ident) => ident.name.clone(),
+                            None => "unknown".to_owned(),
+                        },
+                        SymbolKind::TyDef(ty) => ty.mir_display(body),
+                    }
+                }
             },
         }
     }
@@ -195,9 +200,17 @@ impl MirDisplay for TyKind {
     fn mir_display(&self, body: &Body) -> String {
         match &self {
             TyKind::PrimTy(prim_ty_kind) => prim_ty_kind.mir_display(body),
+            TyKind::TyDef(symbol) => {
+                let symbol_kind = body.symbol_resolver.get_data_by_res(symbol);
+
+                match symbol_kind {
+                    SymbolKind::TyDef(ty) => ty.kind.mir_display(body),
+                    _ => unreachable!(),
+                }
+            }
             TyKind::Struct(ident) => format!("struct {}", ident.name),
-            TyKind::Union(ident) => format!("struct {}", ident.name),
-            TyKind::Enum(ident) => format!("struct {}", ident.name),
+            TyKind::Union(ident) => format!("union {}", ident.name),
+            TyKind::Enum(ident) => format!("enum {}", ident.name),
             TyKind::Ptr { kind, quals } => {
                 let mut result = String::new();
 

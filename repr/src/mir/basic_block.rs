@@ -38,13 +38,15 @@ impl<'mir> MirCtx<'mir> {
                 bb
             }
             hir::StmtKind::Decl(symbol) => {
+                let symbol_kind = self.body.symbol_resolver.get_data_by_res(symbol);
+
                 let hir::LocalDecl {
                     storage,
                     ident,
                     ty,
                     init,
                     span,
-                } = match self.body.symbol_resolver.get_data_by_res(symbol) {
+                } = match symbol_kind {
                     hir::resolver::SymbolKind::Local(local_decl) => local_decl,
                     _ => unreachable!(),
                 };

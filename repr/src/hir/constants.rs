@@ -1,7 +1,9 @@
 //! Identifiers used by tree-sitter-c library to represent nodes.
 //!
 
-/// An identifiers used for [`ItemKind`]'s construction representing an [`ItemKind::Func`].  
+/// An identifiers used for [`ItemKind`]'s construction representing an [`ItemKind::TyDef`].
+pub(crate) const TYPE_DEFINITION: &str = "type_definition";
+/// An identifiers used for [`ItemKind`]'s construction representing an [`ItemKind::Func`].
 pub(crate) const FUNCTION_DEFINITION: &str = "function_definition";
 
 /// An identifiers used for [`StmtKind`]'s construction representing a [`StmtKind::Block`].
@@ -61,6 +63,8 @@ pub(crate) const PARAMETER_DECLARATION: &str = "parameter_declaration";
 /// An identifiers representing a declaration which is a inside parenthesizes.
 pub(crate) const PARENTHESIZED_DECLARATOR: &str = "parenthesized_declarator";
 
+/// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Lit`].  
+pub(crate) const LITERAL: &str = "literal";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Call`].  
 pub(crate) const CALL_EXPRESSION: &str = "call_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Binary`].  
@@ -141,6 +145,8 @@ pub(crate) const ENUM_SPECIFIER: &str = "enum_specifier";
 
 /// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Int`].
 pub(crate) const INT: &str = "int";
+/// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Int`].
+pub(crate) const SIZE: &str = "size_t";
 /// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::BOOL`].
 pub(crate) const BOOL: &str = "_Bool";
 /// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Float`].

@@ -54,7 +54,9 @@ impl<'mir> MirCtx<'mir> {
     }
 
     pub fn lower_to_mir(mut self, func_def: &'mir hir::FuncDef) -> anyhow::Result<Body<'mir>> {
-        let func_dec = match self.body.symbol_resolver.get_data_by_res(&func_def.symbol) {
+        let symbol_kind = self.body.symbol_resolver.get_data_by_res(&func_def.symbol);
+
+        let func_dec = match symbol_kind {
             SymbolKind::Func(func_sig) => func_sig,
             _ => unreachable!(),
         };

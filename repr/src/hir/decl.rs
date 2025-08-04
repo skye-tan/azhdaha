@@ -76,10 +76,11 @@ impl HirCtx<'_> {
         };
 
         let ident = loop {
-            if decl_node.kind() == constants::IDENTIFIER {
-                break self.lower_to_ident(decl_node)?;
-            } else {
-                decl_node = decl_node.child_by_field_name("declarator").unwrap();
+            match decl_node.kind() {
+                constants::IDENTIFIER | constants::TYPE_IDENTIFIER => {
+                    break self.lower_to_ident(decl_node)?;
+                }
+                _ => decl_node = decl_node.child_by_field_name("declarator").unwrap(),
             }
         };
 

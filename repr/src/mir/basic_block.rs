@@ -28,10 +28,12 @@ impl<'mir> MirCtx<'mir> {
             hir::StmtKind::Expr(expr) => {
                 let rvalue = self.lower_to_rvalue(expr, bb);
 
-                self.retrieve_bb(bb).statements.push(Statement {
-                    kind: StatementKind::Rvalue(rvalue),
-                    span,
-                });
+                if let Rvalue::Call(..) = rvalue {
+                    self.retrieve_bb(bb).statements.push(Statement {
+                        kind: StatementKind::Rvalue(rvalue),
+                        span,
+                    })
+                }
 
                 bb
             }

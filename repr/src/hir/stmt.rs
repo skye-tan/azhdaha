@@ -122,20 +122,27 @@ impl HirCtx<'_> {
                 */
 
                 let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
-                let label_start = self.label_resolver.insert_symbol(loop_start.clone(), ());
+                let loop_start_label = self.label_resolver.insert_symbol(loop_start.clone(), ());
+                let saved_loop_start_label = self.loop_start_label;
+                self.loop_start_label = Some(loop_start_label);
 
                 let loop_end = format!("loop_end_{}_{}", span.lo, span.hi);
-                let label_end = self.label_resolver.insert_symbol(loop_end.clone(), ());
+                let loop_end_label = self.label_resolver.insert_symbol(loop_end.clone(), ());
+                let saved_loop_end_label = self.loop_end_label;
+                self.loop_end_label = Some(loop_end_label);
 
                 let cond_expr = self.lower_to_expr(node.child(1).unwrap())?;
 
                 let body_stmt = self.lower_to_stmt(node.child(2).unwrap())?;
 
+                self.loop_start_label = saved_loop_start_label;
+                self.loop_end_label = saved_loop_end_label;
+
                 StmtKind::Block(Block {
                     symbol_resolver: self.symbol_resolver.clone(),
                     stmts: vec![
                         Stmt {
-                            kind: StmtKind::Label(label_start, None),
+                            kind: StmtKind::Label(loop_start_label, None),
                             span,
                         },
                         Stmt {
@@ -145,7 +152,7 @@ impl HirCtx<'_> {
                                     kind: ExprKind::Unary(UnOp::Not, Box::new(cond_expr)),
                                 },
                                 Box::new(Stmt {
-                                    kind: StmtKind::Goto(label_end),
+                                    kind: StmtKind::Goto(loop_end_label),
                                     span,
                                 }),
                                 None,
@@ -154,11 +161,11 @@ impl HirCtx<'_> {
                         },
                         body_stmt,
                         Stmt {
-                            kind: StmtKind::Goto(label_start),
+                            kind: StmtKind::Goto(loop_start_label),
                             span,
                         },
                         Stmt {
-                            kind: StmtKind::Label(label_end, None),
+                            kind: StmtKind::Label(loop_end_label, None),
                             span,
                         },
                     ],
@@ -174,20 +181,27 @@ impl HirCtx<'_> {
                 */
 
                 let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
-                let label_start = self.label_resolver.insert_symbol(loop_start.clone(), ());
+                let loop_start_label = self.label_resolver.insert_symbol(loop_start.clone(), ());
+                let saved_loop_start_label = self.loop_start_label;
+                self.loop_start_label = Some(loop_start_label);
 
                 let loop_end = format!("loop_end_{}_{}", span.lo, span.hi);
-                let label_res_end = self.label_resolver.insert_symbol(loop_end.clone(), ());
+                let loop_end_label = self.label_resolver.insert_symbol(loop_end.clone(), ());
+                let saved_loop_end_label = self.loop_end_label;
+                self.loop_end_label = Some(loop_end_label);
 
                 let body_stmt = self.lower_to_stmt(node.child(1).unwrap())?;
 
                 let cond_expr = self.lower_to_expr(node.child(3).unwrap())?;
 
+                self.loop_start_label = saved_loop_start_label;
+                self.loop_end_label = saved_loop_end_label;
+
                 StmtKind::Block(Block {
                     symbol_resolver: self.symbol_resolver.clone(),
                     stmts: vec![
                         Stmt {
-                            kind: StmtKind::Label(label_start, None),
+                            kind: StmtKind::Label(loop_start_label, None),
                             span,
                         },
                         body_stmt,
@@ -195,7 +209,7 @@ impl HirCtx<'_> {
                             kind: StmtKind::If(
                                 cond_expr,
                                 Box::new(Stmt {
-                                    kind: StmtKind::Goto(label_start),
+                                    kind: StmtKind::Goto(loop_start_label),
                                     span,
                                 }),
                                 None,
@@ -203,7 +217,7 @@ impl HirCtx<'_> {
                             span,
                         },
                         Stmt {
-                            kind: StmtKind::Label(label_res_end, None),
+                            kind: StmtKind::Label(loop_end_label, None),
                             span,
                         },
                     ],
@@ -222,10 +236,14 @@ impl HirCtx<'_> {
                 */
 
                 let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
-                let label_start = self.label_resolver.insert_symbol(loop_start.clone(), ());
+                let loop_start_label = self.label_resolver.insert_symbol(loop_start.clone(), ());
+                let saved_loop_start_label = self.loop_start_label;
+                self.loop_start_label = Some(loop_start_label);
 
                 let loop_end = format!("loop_end_{}_{}", span.lo, span.hi);
-                let label_end = self.label_resolver.insert_symbol(loop_end.clone(), ());
+                let loop_end_label = self.label_resolver.insert_symbol(loop_end.clone(), ());
+                let saved_loop_end_label = self.loop_end_label;
+                self.loop_end_label = Some(loop_end_label);
 
                 let saved_symbol_resolver = self.symbol_resolver.clone();
 
@@ -237,6 +255,9 @@ impl HirCtx<'_> {
 
                 let body_stmt = self.lower_to_stmt(node.child(7).unwrap())?;
 
+                self.loop_start_label = saved_loop_start_label;
+                self.loop_end_label = saved_loop_end_label;
+
                 let symbol_resolver =
                     mem::replace(&mut self.symbol_resolver, saved_symbol_resolver);
 
@@ -245,7 +266,7 @@ impl HirCtx<'_> {
                     stmts: vec![
                         decl_stmt,
                         Stmt {
-                            kind: StmtKind::Label(label_start, None),
+                            kind: StmtKind::Label(loop_start_label, None),
                             span,
                         },
                         Stmt {
@@ -255,7 +276,7 @@ impl HirCtx<'_> {
                                     kind: ExprKind::Unary(UnOp::Not, Box::new(cond_expr)),
                                 },
                                 Box::new(Stmt {
-                                    kind: StmtKind::Goto(label_end),
+                                    kind: StmtKind::Goto(loop_end_label),
                                     span,
                                 }),
                                 None,
@@ -268,23 +289,25 @@ impl HirCtx<'_> {
                             span,
                         },
                         Stmt {
-                            kind: StmtKind::Goto(label_start),
+                            kind: StmtKind::Goto(loop_start_label),
                             span,
                         },
                         Stmt {
-                            kind: StmtKind::Label(label_end, None),
+                            kind: StmtKind::Label(loop_end_label, None),
                             span,
                         },
                     ],
                     span,
                 })
             }
-            constants::CONTINUE_STATEMENT => {
-                todo!()
-            }
-            constants::BREAK_STATEMENT => {
-                todo!()
-            }
+            constants::CONTINUE_STATEMENT => match self.loop_start_label {
+                Some(loop_start_label) => StmtKind::Goto(loop_start_label),
+                None => bail!("Continue statement outside of of loop body."),
+            },
+            constants::BREAK_STATEMENT => match self.loop_end_label {
+                Some(loop_end_label) => StmtKind::Goto(loop_end_label),
+                None => bail!("Break statement outside of of loop body."),
+            },
             kind => bail!("Cannot lower '{kind}' to 'StmtKind'."),
         })
     }

@@ -96,8 +96,7 @@ pub struct Place {
 
 #[derive(Debug, Clone)]
 pub enum PlaceElem {
-    Deref,
-    Index(Local),
+    Field(String),
 }
 
 #[derive(Debug, Clone)]

@@ -7,7 +7,7 @@ use itertools::Itertools;
 use crate::hir::resolver::SymbolKind;
 use crate::hir::{BinOp, Lit, LitKind, PrimTyKind, Storage, Ty, TyKind, TyQual, UnOp};
 use crate::mir::{
-    Body, Const, Local, Operand, Place, Rvalue, Statement, StatementKind, Terminator,
+    Body, Const, Local, Operand, Place, PlaceElem, Rvalue, Statement, StatementKind, Terminator,
     TerminatorKind,
 };
 
@@ -145,13 +145,21 @@ impl MirDisplay for Operand {
 
 impl MirDisplay for Place {
     fn mir_display(&self, body: &Body) -> String {
-        let result = self.local.mir_display(body);
+        let mut result = self.local.mir_display(body);
 
-        for _projection in &self.projections {
-            todo!()
+        for projection in &self.projections {
+            result.push_str(&projection.mir_display(body));
         }
 
         result
+    }
+}
+
+impl MirDisplay for PlaceElem {
+    fn mir_display(&self, _body: &Body) -> String {
+        match self {
+            PlaceElem::Field(field) => format!(".{field}"),
+        }
     }
 }
 

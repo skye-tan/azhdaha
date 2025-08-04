@@ -74,7 +74,7 @@ impl<'hir> HirCtx<'hir> {
                     self.items.push(item);
                 }
                 Err(error) => {
-                    log::warn!("Failed to construct 'HIR' - {error:?}");
+                    log::trace!("Failed to construct 'HIR' - {error:?}");
                 }
             }
         }

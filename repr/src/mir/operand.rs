@@ -8,9 +8,6 @@ use crate::{
 impl<'mir> MirCtx<'mir> {
     pub(crate) fn lower_to_rvalue(&mut self, expr: &'mir hir::Expr, bb: BasicBlock) -> Rvalue {
         match &expr.kind {
-            hir::ExprKind::Lit(..) | hir::ExprKind::Local(..) | hir::ExprKind::Assign(..) => {
-                Rvalue::Use(self.lower_to_operand(expr, bb))
-            }
             hir::ExprKind::Unary(un_op, expr) => {
                 let operand = self.lower_to_operand(expr, bb);
 
@@ -33,6 +30,10 @@ impl<'mir> MirCtx<'mir> {
                 Rvalue::Call(operand, arguments)
             }
             hir::ExprKind::Empty => Rvalue::Empty,
+            hir::ExprKind::Lit(..)
+            | hir::ExprKind::Local(..)
+            | hir::ExprKind::Assign(..)
+            | hir::ExprKind::Field(..) => Rvalue::Use(self.lower_to_operand(expr, bb)),
             kind => panic!("Cannot construct [Rvalue] from: {kind:#?}"),
         }
     }
@@ -128,6 +129,7 @@ impl<'mir> MirCtx<'mir> {
 
                 Operand::Place(place)
             }
+            hir::ExprKind::Field(..) => Operand::Place(self.lower_to_place(expr)),
             kind => panic!("Cannot construct [Operand] from: {kind:#?}"),
         }
     }
@@ -144,6 +146,13 @@ impl<'mir> MirCtx<'mir> {
                     projections: vec![],
                     span,
                 }
+            }
+            hir::ExprKind::Field(expr, ident) => {
+                let mut place = self.lower_to_place(expr);
+
+                place.projections.push(PlaceElem::Field(ident.name.clone()));
+
+                place
             }
             kind => panic!("Cannot construct [Place] from: {kind:#?}"),
         }

@@ -18,6 +18,16 @@ pub(crate) const GOTO_STATEMENT: &str = "goto_statement";
 pub(crate) const IF_STATEMENT: &str = "if_statement";
 /// An identifiers used for [`StmtKind`]'s construction which will be represented by [`StmtKind::Block`],
 /// [`StmtKind::If`], [`StmtKind::Label`], and [`StmtKind::Goto`].
+pub(crate) const SWITCH_STATEMENT: &str = "switch_statement";
+/// An identifiers used for [`StmtKind`]'s construction which will be represented by [`StmtKind::Block`]
+/// and [`StmtKind::If`].
+pub(crate) const CASE_STATEMENT: &str = "case_statement";
+/// An identifiers used for [`StmtKind`]'s construction.
+pub(crate) const CASE: &str = "case";
+/// An identifiers used for [`StmtKind`]'s construction.
+pub(crate) const DEFAULT: &str = "default";
+/// An identifiers used for [`StmtKind`]'s construction which will be represented by [`StmtKind::Block`],
+/// [`StmtKind::If`], [`StmtKind::Label`], and [`StmtKind::Goto`].
 pub(crate) const WHILE_STATEMENT: &str = "while_statement";
 /// An identifiers used for [`StmtKind`]'s construction which will be represented by [`StmtKind::Block`],
 /// [`StmtKind::If`], [`StmtKind::Label`], and [`StmtKind::Goto`].

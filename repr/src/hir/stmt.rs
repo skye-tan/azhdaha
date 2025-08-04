@@ -112,6 +112,88 @@ impl HirCtx<'_> {
 
                 StmtKind::If(cond_expr, Box::new(body_stmt), else_stmt.map(Box::new))
             }
+            constants::SWITCH_STATEMENT => {
+                let cond_expr = self.lower_to_expr(node.child(1).unwrap())?;
+
+                let saved_switch_cond = mem::replace(&mut self.switch_cond, Some(cond_expr));
+
+                let switch_end = format!("switch_end_{}_{}", span.lo, span.hi);
+                let switch_end_label = self.label_resolver.insert_symbol(switch_end.clone(), ());
+                let saved_end_label = self.end_label;
+                self.end_label = Some(switch_end_label);
+
+                let body_stmt = self.lower_to_stmt(node.child(2).unwrap())?;
+
+                self.switch_cond = saved_switch_cond;
+                self.end_label = saved_end_label;
+
+                StmtKind::Block(Block {
+                    symbol_resolver: self.symbol_resolver.clone(),
+                    stmts: vec![
+                        body_stmt,
+                        Stmt {
+                            kind: StmtKind::Label(switch_end_label, None),
+                            span,
+                        },
+                    ],
+                    span,
+                })
+            }
+            constants::CASE_STATEMENT => {
+                let Some(switch_cond) = self.switch_cond.clone() else {
+                    bail!("Case statement outside of switch body.")
+                };
+
+                match node.child(0).unwrap().kind() {
+                    constants::CASE => {
+                        let case_expr = self.lower_to_expr(node.child(1).unwrap())?;
+
+                        let mut stmts = vec![];
+
+                        let mut cursor = node.walk();
+
+                        for child in node.children(&mut cursor).skip(3) {
+                            stmts.push(self.lower_to_stmt(child)?);
+                        }
+
+                        StmtKind::If(
+                            Expr {
+                                span: case_expr.span,
+                                kind: ExprKind::Binary(
+                                    BinOp::Eq,
+                                    Box::new(switch_cond),
+                                    Box::new(case_expr),
+                                ),
+                            },
+                            Box::new(Stmt {
+                                kind: StmtKind::Block(Block {
+                                    symbol_resolver: self.symbol_resolver.clone(),
+                                    stmts,
+                                    span,
+                                }),
+                                span,
+                            }),
+                            None,
+                        )
+                    }
+                    constants::DEFAULT => {
+                        let mut stmts = vec![];
+
+                        let mut cursor = node.walk();
+
+                        for child in node.children(&mut cursor).skip(2) {
+                            stmts.push(self.lower_to_stmt(child)?);
+                        }
+
+                        StmtKind::Block(Block {
+                            symbol_resolver: self.symbol_resolver.clone(),
+                            stmts,
+                            span,
+                        })
+                    }
+                    kind => bail!("Unknown keyword '{kind}' in switch statement."),
+                }
+            }
             constants::WHILE_STATEMENT => {
                 /*
                     loop_start:
@@ -121,22 +203,22 @@ impl HirCtx<'_> {
                     loop_end:
                 */
 
+                let cond_expr = self.lower_to_expr(node.child(1).unwrap())?;
+
                 let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
                 let loop_start_label = self.label_resolver.insert_symbol(loop_start.clone(), ());
-                let saved_loop_start_label = self.loop_start_label;
-                self.loop_start_label = Some(loop_start_label);
+                let saved_start_label = self.start_label;
+                self.start_label = Some(loop_start_label);
 
                 let loop_end = format!("loop_end_{}_{}", span.lo, span.hi);
                 let loop_end_label = self.label_resolver.insert_symbol(loop_end.clone(), ());
-                let saved_loop_end_label = self.loop_end_label;
-                self.loop_end_label = Some(loop_end_label);
-
-                let cond_expr = self.lower_to_expr(node.child(1).unwrap())?;
+                let saved_end_label = self.end_label;
+                self.end_label = Some(loop_end_label);
 
                 let body_stmt = self.lower_to_stmt(node.child(2).unwrap())?;
 
-                self.loop_start_label = saved_loop_start_label;
-                self.loop_end_label = saved_loop_end_label;
+                self.start_label = saved_start_label;
+                self.end_label = saved_end_label;
 
                 StmtKind::Block(Block {
                     symbol_resolver: self.symbol_resolver.clone(),
@@ -180,22 +262,22 @@ impl HirCtx<'_> {
                     loop_end:
                 */
 
+                let body_stmt = self.lower_to_stmt(node.child(1).unwrap())?;
+
                 let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
                 let loop_start_label = self.label_resolver.insert_symbol(loop_start.clone(), ());
-                let saved_loop_start_label = self.loop_start_label;
-                self.loop_start_label = Some(loop_start_label);
+                let saved_start_label = self.start_label;
+                self.start_label = Some(loop_start_label);
 
                 let loop_end = format!("loop_end_{}_{}", span.lo, span.hi);
                 let loop_end_label = self.label_resolver.insert_symbol(loop_end.clone(), ());
-                let saved_loop_end_label = self.loop_end_label;
-                self.loop_end_label = Some(loop_end_label);
-
-                let body_stmt = self.lower_to_stmt(node.child(1).unwrap())?;
+                let saved_end_label = self.end_label;
+                self.end_label = Some(loop_end_label);
 
                 let cond_expr = self.lower_to_expr(node.child(3).unwrap())?;
 
-                self.loop_start_label = saved_loop_start_label;
-                self.loop_end_label = saved_loop_end_label;
+                self.start_label = saved_start_label;
+                self.end_label = saved_end_label;
 
                 StmtKind::Block(Block {
                     symbol_resolver: self.symbol_resolver.clone(),
@@ -235,28 +317,28 @@ impl HirCtx<'_> {
                     loop_end:
                 */
 
-                let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
-                let loop_start_label = self.label_resolver.insert_symbol(loop_start.clone(), ());
-                let saved_loop_start_label = self.loop_start_label;
-                self.loop_start_label = Some(loop_start_label);
-
-                let loop_end = format!("loop_end_{}_{}", span.lo, span.hi);
-                let loop_end_label = self.label_resolver.insert_symbol(loop_end.clone(), ());
-                let saved_loop_end_label = self.loop_end_label;
-                self.loop_end_label = Some(loop_end_label);
-
-                let saved_symbol_resolver = self.symbol_resolver.clone();
-
                 let decl_stmt = self.lower_to_stmt(node.child(2).unwrap())?;
 
                 let cond_expr = self.lower_to_expr(node.child(3).unwrap())?;
 
                 let update_expr = self.lower_to_expr(node.child(5).unwrap())?;
 
+                let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
+                let loop_start_label = self.label_resolver.insert_symbol(loop_start.clone(), ());
+                let saved_start_label = self.start_label;
+                self.start_label = Some(loop_start_label);
+
+                let loop_end = format!("loop_end_{}_{}", span.lo, span.hi);
+                let loop_end_label = self.label_resolver.insert_symbol(loop_end.clone(), ());
+                let saved_end_label = self.end_label;
+                self.end_label = Some(loop_end_label);
+
+                let saved_symbol_resolver = self.symbol_resolver.clone();
+
                 let body_stmt = self.lower_to_stmt(node.child(7).unwrap())?;
 
-                self.loop_start_label = saved_loop_start_label;
-                self.loop_end_label = saved_loop_end_label;
+                self.start_label = saved_start_label;
+                self.end_label = saved_end_label;
 
                 let symbol_resolver =
                     mem::replace(&mut self.symbol_resolver, saved_symbol_resolver);
@@ -300,13 +382,13 @@ impl HirCtx<'_> {
                     span,
                 })
             }
-            constants::CONTINUE_STATEMENT => match self.loop_start_label {
+            constants::CONTINUE_STATEMENT => match self.start_label {
                 Some(loop_start_label) => StmtKind::Goto(loop_start_label),
                 None => bail!("Continue statement outside of of loop body."),
             },
-            constants::BREAK_STATEMENT => match self.loop_end_label {
+            constants::BREAK_STATEMENT => match self.end_label {
                 Some(loop_end_label) => StmtKind::Goto(loop_end_label),
-                None => bail!("Break statement outside of of loop body."),
+                None => bail!("Break statement outside of loop or switch body."),
             },
             kind => bail!("Cannot lower '{kind}' to 'StmtKind'."),
         })

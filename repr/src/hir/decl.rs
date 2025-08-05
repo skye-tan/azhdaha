@@ -1,5 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
+use anyhow::Context;
 use log::trace;
 
 use crate::hir::*;
@@ -80,7 +81,11 @@ impl HirCtx<'_> {
                 constants::IDENTIFIER | constants::TYPE_IDENTIFIER => {
                     break self.lower_to_ident(decl_node)?;
                 }
-                _ => decl_node = decl_node.child_by_field_name("declarator").unwrap(),
+                _ => {
+                    decl_node = decl_node
+                        .child_by_field_name("declarator")
+                        .context("Cannot find declarator.")?;
+                }
             }
         };
 

@@ -384,7 +384,7 @@ impl HirCtx<'_> {
             }
             constants::CONTINUE_STATEMENT => match self.start_label {
                 Some(loop_start_label) => StmtKind::Goto(loop_start_label),
-                None => bail!("Continue statement outside of of loop body."),
+                None => bail!("Continue statement outside of loop body."),
             },
             constants::BREAK_STATEMENT => match self.end_label {
                 Some(loop_end_label) => StmtKind::Goto(loop_end_label),

@@ -201,7 +201,7 @@ impl HirCtx<'_> {
                 let symbol = self
                     .symbol_resolver
                     .get_res_by_name(&ident.name)
-                    .context(format!("Use of undeclared identifier '{}'.", &ident.name))?;
+                    .context(format!("Use of undefined identifier '{}'.", &ident.name))?;
 
                 let symbol_kind = self.symbol_resolver.get_data_by_res(&symbol);
 

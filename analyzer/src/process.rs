@@ -19,7 +19,9 @@ impl LinearAnalyzer<'_> {
         bb_data: &mir::BasicBlockData,
     ) -> anyhow::Result<bool> {
         for statement in &bb_data.statements {
-            self.process_statement(body, linear_local, statement)?;
+            if self.process_statement(body, linear_local, statement)? {
+                return Ok(true);
+            }
         }
 
         let Some(terminator) = &bb_data.terminator else {

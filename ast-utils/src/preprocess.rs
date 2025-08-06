@@ -34,7 +34,7 @@ pub struct SourceInfo {
 /// Headers used in the source code must be replaced with annotated versions which is accomplished by
 /// inserting [`INCLUDE_FLAG`] pointing to a directory containing the annotated headers.
 ///
-/// The "LINEAR_TYPE" macro used in the source code must be replaced by "linear_type" which is
+/// The `LINEAR_TYPE` macro used in the source code must be replaced by `linear_type` which is
 /// accomplished by inserting [`INCLUDE_FLAG`] and redefining the macro.
 ///
 pub(crate) fn preprocess(

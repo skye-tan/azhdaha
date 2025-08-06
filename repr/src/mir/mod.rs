@@ -12,11 +12,11 @@ use crate::hir::{
     resolver::{Label, Resolver, Symbol, SymbolKind},
 };
 
-/// Contains the methods needed to manage arenas and resolvers.
+/// Contains methods needed to manage arenas and resolvers.
 mod arena;
-/// Contains the methods needed to lower HIR to MIR's [`BasicBlock`].
+/// Contains methods needed to lower HIR to MIR's [`BasicBlock`].
 mod basic_block;
-/// Contains the methods needed to lower HIR to MIR's [`Rvalue`], [`Operand`], and [`Place`].
+/// Contains methods needed to lower HIR to MIR's [`Rvalue`], [`Operand`], and [`Place`].
 mod operand;
 
 /// Contains datatypes used to represent the MIR.

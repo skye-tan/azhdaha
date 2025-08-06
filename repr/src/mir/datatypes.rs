@@ -69,7 +69,7 @@ pub struct Statement {
 #[derive(Debug, Clone)]
 pub enum StatementKind {
     Assign(Place, Rvalue),
-    Rvalue(Rvalue),
+    Call(Operand, Vec<Operand>),
 }
 
 #[derive(Debug, Clone)]

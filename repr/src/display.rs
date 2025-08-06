@@ -89,7 +89,14 @@ impl MirDisplay for Statement {
             StatementKind::Assign(place, rvalue) => {
                 format!("{} = {}", place.mir_display(body), rvalue.mir_display(body))
             }
-            StatementKind::Rvalue(rvalue) => rvalue.mir_display(body),
+            StatementKind::Call(operand, operands) => format!(
+                "{}({})",
+                operand.mir_display(body),
+                operands
+                    .iter()
+                    .map(|operand| operand.mir_display(body))
+                    .join(", ")
+            ),
         }
     }
 }

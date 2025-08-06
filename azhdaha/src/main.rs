@@ -2,6 +2,7 @@
 //! in order to detect memory leakage by applying linear type system principles.
 //!
 
+use analyzer::LinearCtx;
 use ast_utils::AstRepr;
 
 use env_logger::Env;
@@ -30,27 +31,35 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    let hir_ctx = HirCtx::new(&ast_reprs[0]);
+    for ast_repr in ast_reprs {
+        let hir_ctx = HirCtx::new(&ast_repr);
 
-    let items = hir_ctx.lower_to_hir();
+        let items = hir_ctx.lower_to_hir();
 
-    for item in items {
-        match item.kind {
-            ItemKind::Func(func_def) => {
-                let mir_ctx = MirCtx::new(
-                    &func_def.symbol_resolver,
-                    &func_def.label_resolver,
-                    func_def.body.span,
-                );
+        let linear_ctx = LinearCtx::new(&ast_repr.source_info.path, &ast_repr.source_info.code)?;
 
-                let mir_body = mir_ctx.lower_to_mir(&func_def);
+        for item in items {
+            match item.kind {
+                ItemKind::Func(func_def) => {
+                    let mir_ctx = MirCtx::new(
+                        &func_def.symbol_resolver,
+                        &func_def.label_resolver,
+                        func_def.body.span,
+                    );
 
-                match mir_body {
-                    Ok(mir_body) => println!("\n{mir_body}"),
-                    Err(error) => println!("\nFailed to construct MIR - {error:?}"),
+                    let mir_body = mir_ctx.lower_to_mir(&func_def);
+
+                    match mir_body {
+                        Ok(mir_body) => {
+                            println!("{mir_body}");
+
+                            linear_ctx.analyze(&mir_body)
+                        }
+                        Err(error) => println!("\nFailed to construct MIR - {error:?}"),
+                    }
                 }
+                _ => continue,
             }
-            _ => continue,
         }
     }
 

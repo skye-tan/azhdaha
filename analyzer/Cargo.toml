@@ -7,4 +7,7 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
+anyhow.workspace = true
+ariadne.workspace = true
+log.workspace = true
 repr = { version = "0.1.0", path = "../repr" }

@@ -11,15 +11,15 @@ pub(crate) mod constants;
 /// Contains symbol resolver's implementation.
 pub(crate) mod resolver;
 
-/// Contains the methods needed to lower to declaration
+/// Contains methods needed to lower to declaration
 mod decl;
-/// Contains the methods needed to lower to expression.
+/// Contains methods needed to lower to expression.
 mod expr;
-/// Contains the methods needed to lower to item.
+/// Contains methods needed to lower to item.
 mod item;
-/// Contains the methods needed to lower to statement.
+/// Contains methods needed to lower to statement.
 mod stmt;
-/// Contains the methods needed to lower to type.
+/// Contains methods needed to lower to type.
 mod ty;
 
 pub use decl::*;

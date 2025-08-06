@@ -1,6 +1,7 @@
 use std::process::Command;
 
 use compile_commands::{CompilationDatabase, CompileArgs, SourceFile};
+use log::warn;
 
 /// Indicates that only preprocess phase should be done.
 const PREPROCESS_ONLY_FLAG: &str = "-E";
@@ -44,23 +45,23 @@ pub(crate) fn preprocess(
 
     for compile_command in compile_commands {
         let Some(directory) = compile_command.directory.to_str() else {
-            log::warn!("UTF-8 validity for directory section failed.");
+            warn!("UTF-8 validity for directory section failed.");
             continue;
         };
 
         if !compile_command.directory.exists() {
-            log::warn!("Directory '{directory}' does not exist.");
+            warn!("Directory '{directory}' does not exist.");
             continue;
         }
 
         let path = match &compile_command.file {
             SourceFile::All => {
-                log::error!("File section was not found.");
+                warn!("File section was not found.");
                 continue;
             }
             SourceFile::File(path) => {
                 let Some(path) = path.to_str() else {
-                    log::warn!("UTF-8 validity for file section failed.");
+                    warn!("UTF-8 validity for file section failed.");
                     continue;
                 };
 
@@ -69,7 +70,7 @@ pub(crate) fn preprocess(
         };
 
         let Some(args) = compile_command.arguments.as_ref() else {
-            log::warn!("Arguments section was not found.");
+            warn!("Arguments section was not found.");
             continue;
         };
 

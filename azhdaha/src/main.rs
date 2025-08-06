@@ -4,6 +4,7 @@
 
 use analyzer::LinearCtx;
 use ast_utils::AstRepr;
+use log::error;
 
 use env_logger::Env;
 use repr::{
@@ -26,7 +27,7 @@ fn main() -> anyhow::Result<()> {
             let path = format!("{}.dot", index + 1);
 
             if let Err(error) = ast_repr.create_dot_graph(&path) {
-                log::error!("Failed to create dot-graph for '{path}' - {error:?}");
+                error!("Failed to create dot-graph for '{path}' - {error:?}");
             }
         }
     }
@@ -53,7 +54,7 @@ fn main() -> anyhow::Result<()> {
                         Ok(mir_body) => {
                             println!("{mir_body}");
 
-                            linear_ctx.analyze(&mir_body)
+                            linear_ctx.analyze(&mir_body);
                         }
                         Err(error) => println!("\nFailed to construct MIR - {error:?}"),
                     }

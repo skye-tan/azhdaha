@@ -289,7 +289,7 @@ impl HirCtx<'_> {
             constants::PARENTHESIZED_EXPRESSION => {
                 SizeofKind::Expr(Box::new(self.lower_to_expr(node)?))
             }
-            _ => todo!(),
+            kind => bail!("Cannot lower '{kind}' to 'SizeofKind'."),
         };
 
         Ok(sizeof_kind)

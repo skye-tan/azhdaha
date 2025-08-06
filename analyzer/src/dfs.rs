@@ -1,7 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use log::trace;
-
+use log::error;
 use repr::mir;
 
 use crate::linear::{LinearAnalyzer, LinearLocal};
@@ -12,7 +11,7 @@ impl LinearAnalyzer<'_> {
         body: &mir::Body,
         mut linear_local: LinearLocal,
         bb: mir::BasicBlock,
-    ) {
+    ) -> bool {
         let mut visited = vec![false; body.basic_blocks.len()];
         let mut bb_stack = vec![bb];
 
@@ -27,9 +26,13 @@ impl LinearAnalyzer<'_> {
 
             let bb_data = &body.basic_blocks[bb];
 
-            if let Err(error) = self.process_bb(body, &mut linear_local, bb_data) {
-                trace!("{error:?}");
-                return;
+            match self.process_bb(body, &mut linear_local, bb_data) {
+                Ok(should_be_reported) => {
+                    if should_be_reported {
+                        return true;
+                    }
+                }
+                Err(error) => error!("Failed to finish linear analyzing - {error:?}"),
             }
 
             let Some(terminator) = &bb_data.terminator else {
@@ -46,5 +49,7 @@ impl LinearAnalyzer<'_> {
                 mir::TerminatorKind::Return => continue,
             }
         }
+
+        false
     }
 }

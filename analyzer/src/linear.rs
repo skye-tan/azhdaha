@@ -19,7 +19,7 @@ pub(crate) struct LinearLocal {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum LinearStatus {
-    _Owner,
+    Owner,
     Free,
 }
 
@@ -81,19 +81,19 @@ impl<'linear> LinearCtx<'linear> {
                 linear_analyzer.report.add_label(
                     Label::new(ReportSpan::new(linear_local_decl.span))
                         .with_message(format!(
-                            "Variable {} is defined here as linear",
+                            "Variable {} is defined in here as linear",
                             format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
                         ))
                         .with_color(DIAGNOSIS_REPORT_COLOR),
                 );
 
-                linear_analyzer.dfs_with_stack(body, linear_local.clone(), bb);
-
-                if let Err(error) = linear_analyzer.report.finish().print(ReportCache::new(
-                    self.source_path.clone(),
-                    &self.report_source,
-                )) {
-                    error!("Failed to print the analyzer's report - {error:?}");
+                if linear_analyzer.dfs_with_stack(body, linear_local.clone(), bb) {
+                    if let Err(error) = linear_analyzer.report.finish().print(ReportCache::new(
+                        self.source_path.clone(),
+                        &self.report_source,
+                    )) {
+                        error!("Failed to print the linear analyzer's report - {error:?}");
+                    }
                 }
             }
         }

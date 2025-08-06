@@ -2,6 +2,7 @@ use std::{fs::File, os::fd::AsRawFd};
 
 use anyhow::Context;
 use compile_commands::CompilationDatabase;
+use log::error;
 use tree_sitter::{Parser, Tree};
 
 use crate::preprocess::{SourceInfo, preprocess};
@@ -32,7 +33,7 @@ impl AstRepr {
 
         for source_info in preprocess(compile_commands)? {
             let Some(tree) = parser.parse(&source_info.code, None) else {
-                log::warn!("Failed to parse using tree-sitter.");
+                error!("Failed to parse using tree-sitter.");
                 continue;
             };
 

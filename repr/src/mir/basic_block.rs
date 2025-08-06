@@ -140,7 +140,7 @@ impl<'mir> MirCtx<'mir> {
 
                 // Currently a new basic block is created after each "goto" statement which may
                 // contain unreachable code. I might want to consider generating a warning for
-                // the non-empty variant of these basic blocks in the future or ignore them.
+                // the non-empty variant of these basic-blocks in the future or ignore them.
                 self.alloc_bb()
             }
             hir::StmtKind::If(cond_expr, body_stmt, else_stmt) => {

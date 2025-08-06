@@ -30,6 +30,9 @@ jobs:
     - name: Install just
       run: cargo install just
 
+    - name: Build release
+      run: just build-release
+
     - name: Check code style
       run: just check-format
 

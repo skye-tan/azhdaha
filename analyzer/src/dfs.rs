@@ -4,11 +4,11 @@ use log::trace;
 
 use repr::mir;
 
-use crate::{LinearCtx, LinearLocal};
+use crate::linear::{LinearAnalyzer, LinearLocal};
 
-impl LinearCtx<'_> {
+impl LinearAnalyzer<'_> {
     pub(crate) fn dfs_with_stack(
-        &self,
+        &mut self,
         body: &mir::Body,
         mut linear_local: LinearLocal,
         bb: mir::BasicBlock,
@@ -27,16 +27,9 @@ impl LinearCtx<'_> {
 
             let bb_data = &body.basic_blocks[bb];
 
-            match self.process_bb(body, &mut linear_local, bb_data) {
-                Ok(altered_linear_state) => {
-                    if altered_linear_state {
-                        continue;
-                    }
-                }
-                Err(error) => {
-                    trace!("{error:?}");
-                    return;
-                }
+            if let Err(error) = self.process_bb(body, &mut linear_local, bb_data) {
+                trace!("{error:?}");
+                return;
             }
 
             let Some(terminator) = &bb_data.terminator else {

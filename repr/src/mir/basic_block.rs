@@ -1,11 +1,10 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use la_arena::RawIdx;
 use smallvec::SmallVec;
 
 use crate::{
     hir::{self, PrimTyKind, Ty, TyKind},
-    mir::{MirCtx, datatypes::*},
+    mir::{MirCtx, RETURN_LOCAL, datatypes::*},
 };
 
 impl<'mir> MirCtx<'mir> {
@@ -77,16 +76,16 @@ impl<'mir> MirCtx<'mir> {
             }
             hir::StmtKind::Ret(ret_expr) => {
                 if let Some(ret_expr) = ret_expr {
-                    let rvalue = self.lower_to_rvalue(ret_expr, bb);
+                    let ret_rvalue = self.lower_to_rvalue(ret_expr, bb);
 
                     self.retrieve_bb(bb).statements.push(Statement {
                         kind: StatementKind::Assign(
                             Place {
-                                local: Local::from_raw(RawIdx::from_u32(0)),
+                                local: RETURN_LOCAL,
                                 projections: vec![],
                                 span,
                             },
-                            rvalue,
+                            ret_rvalue,
                         ),
                         span,
                     });

@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use anyhow::Context;
-use la_arena::Arena;
+use la_arena::{Arena, RawIdx};
 
 use crate::hir::{
     self, Span,
@@ -23,6 +23,8 @@ mod operand;
 mod datatypes;
 
 pub use datatypes::*;
+
+pub const RETURN_LOCAL: Local = Local::from_raw(RawIdx::from_u32(0));
 
 #[derive(Debug, Clone)]
 pub struct MirCtx<'mir> {

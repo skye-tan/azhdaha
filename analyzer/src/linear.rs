@@ -87,13 +87,13 @@ impl<'linear> LinearCtx<'linear> {
                         .with_color(DIAGNOSIS_REPORT_COLOR),
                 );
 
-                if linear_analyzer.dfs_with_stack(body, linear_local.clone(), bb) {
-                    if let Err(error) = linear_analyzer.report.finish().print(ReportCache::new(
+                if linear_analyzer.dfs_with_stack(body, linear_local.clone(), bb)
+                    && let Err(error) = linear_analyzer.report.finish().print(ReportCache::new(
                         self.source_path.clone(),
                         &self.report_source,
-                    )) {
-                        error!("Failed to print the linear analyzer's report - {error:?}");
-                    }
+                    ))
+                {
+                    error!("Failed to print the linear analyzer's report - {error:?}");
                 }
             }
         }

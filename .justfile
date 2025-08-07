@@ -8,7 +8,7 @@ build-release:
 
 # build debug version
 build-debug:
-    cargo build --debug
+    cargo build
 
 # run with examples as input
 run-examples:
@@ -16,7 +16,7 @@ run-examples:
 
 # custom test used for debugging
 custom-test:
-    RUST_LOG=trace cargo run --release -- ./temp/compile_commands.json --dot-graph
+    RUST_LOG=trace cargo run -- ./temp/compile_commands.json --dot-graph
     @ just convert-dot-graphs
 
 # convert each created dot-graph file into its associated svg image

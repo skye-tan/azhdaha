@@ -31,6 +31,7 @@ pub struct MirCtx<'mir> {
     pub label_resolver: &'mir Resolver<()>,
 
     pub body: Body<'mir>,
+    pub has_inner_symbol_resolver: bool,
 
     pub bb_map: HashMap<Label, BasicBlock>,
     pub local_map: HashMap<Symbol, Local>,
@@ -44,12 +45,15 @@ impl<'mir> MirCtx<'mir> {
     ) -> Self {
         Self {
             label_resolver,
+
             body: Body {
                 symbol_resolver,
                 local_decls: Arena::new(),
                 basic_blocks: Arena::new(),
                 span,
             },
+            has_inner_symbol_resolver: false,
+
             local_map: HashMap::new(),
             bb_map: HashMap::new(),
         }

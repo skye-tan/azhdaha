@@ -27,6 +27,7 @@ pub enum StmtKind {
     Label(Label, Option<Box<Stmt>>),
     Goto(Label),
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
+    TyDef(Symbol),
 }
 
 impl HirCtx<'_> {
@@ -390,6 +391,15 @@ impl HirCtx<'_> {
                 Some(loop_end_label) => StmtKind::Goto(loop_end_label),
                 None => bail!("Break statement outside of loop or switch body."),
             },
+            constants::TYPE_DEFINITION => {
+                let local_decl: LocalDecl = self.lower_to_local_decl(node)?;
+
+                let symbol = self
+                    .symbol_resolver
+                    .insert_symbol(local_decl.ident.name, SymbolKind::TyDef(local_decl.ty));
+
+                StmtKind::TyDef(symbol)
+            }
             kind => bail!("Cannot lower '{kind}' to 'StmtKind'."),
         })
     }

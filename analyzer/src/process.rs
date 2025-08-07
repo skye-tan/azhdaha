@@ -24,11 +24,7 @@ impl LinearAnalyzer<'_> {
             }
         }
 
-        let Some(terminator) = &bb_data.terminator else {
-            return Ok(false);
-        };
-
-        self.process_terminator(body, linear_local, terminator)
+        self.process_terminator(body, linear_local, &bb_data.terminator)
     }
 
     pub(crate) fn process_statement(
@@ -135,16 +131,7 @@ impl LinearAnalyzer<'_> {
 
                             return Ok(true);
                         }
-                        (false, LinearStatus::Owner) => {
-                            self.report.add_label(
-                                Label::new(ReportSpan::new(statement.span))
-                                    .with_message(format!(
-                                        "{}'s value is burrowed in here  ",
-                                        format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR),
-                                    ))
-                                    .with_color(DIAGNOSIS_REPORT_COLOR),
-                            );
-                        }
+                        (false, LinearStatus::Owner) => (),
                         (false, LinearStatus::Free) => {
                             self.report.set_message("Use of moved value");
 
@@ -212,37 +199,60 @@ impl LinearAnalyzer<'_> {
         &mut self,
         body: &mir::Body,
         linear_local: &mut LinearLocal,
-        terminator: &mir::Terminator,
+        terminator: &Option<mir::Terminator>,
     ) -> anyhow::Result<bool> {
-        if !matches!(&terminator.kind, mir::TerminatorKind::Return) {
-            return Ok(false);
-        }
-
         if linear_local.status == LinearStatus::Free {
             return Ok(false);
         }
 
-        let linear_local_decl = &body.local_decls[linear_local.local];
-        let linear_local_name = linear_local_decl
-            .debug_name
-            .as_ref()
-            .context("Cannot retrieve name of the local.")?;
+        match terminator {
+            Some(terminator) => {
+                if !matches!(&terminator.kind, mir::TerminatorKind::Return) {
+                    return Ok(false);
+                }
 
-        self.report.set_message("Memory leakage after return");
+                let linear_local_decl = &body.local_decls[linear_local.local];
+                let linear_local_name = linear_local_decl
+                    .debug_name
+                    .as_ref()
+                    .context("Cannot retrieve name of the local.")?;
 
-        self.report.add_label(
-            Label::new(ReportSpan::new(terminator.span))
-                .with_message(format!(
-                    "Function returns in here while {} might not have moved its value",
+                self.report.set_message("Memory leakage after return");
+
+                self.report.add_label(
+                    Label::new(ReportSpan::new(terminator.span))
+                        .with_message(format!(
+                            "Function returns in here without {} moving its value",
+                            format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
+                        ))
+                        .with_color(DIAGNOSIS_REPORT_COLOR),
+                );
+
+                self.report.add_help(format!(
+                    "Try to move {}'s value before reaching the return",
                     format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
-                ))
-                .with_color(DIAGNOSIS_REPORT_COLOR),
-        );
+                ));
+            }
+            None => {
+                let linear_local_decl = &body.local_decls[linear_local.local];
+                let linear_local_name = linear_local_decl
+                    .debug_name
+                    .as_ref()
+                    .context("Cannot retrieve name of the local.")?;
 
-        self.report.add_help(format!(
-            "Try to move {}'s value before reaching the return",
-            format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
-        ));
+                self.report.set_message("Memory leakage after return");
+
+                self.report.add_note(format!(
+                    "Function returns without {} moving its value",
+                    format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
+                ));
+
+                self.report.add_help(format!(
+                    "Try to move {}'s value before reaching the return",
+                    format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
+                ));
+            }
+        }
 
         Ok(true)
     }

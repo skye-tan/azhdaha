@@ -10,4 +10,5 @@ workspace = true
 anyhow.workspace = true
 ariadne.workspace = true
 log.workspace = true
+la-arena.workspace = true
 repr = { version = "0.1.0", path = "../repr" }

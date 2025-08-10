@@ -11,7 +11,7 @@ use crate::{
     report::{ReportCache, ReportSpan},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct LinearLocal {
     pub(crate) local: mir::Local,
     pub(crate) status: LinearStatus,
@@ -52,8 +52,8 @@ impl<'linear> LinearCtx<'linear> {
         })
     }
 
-    pub fn analyze(&self, body: &mir::Body) {
-        let linear_locals: Vec<LinearLocal> = body
+    pub fn analyze(&self, body: &mut mir::Body) {
+        let mut linear_locals: Vec<LinearLocal> = body
             .local_decls
             .iter()
             .filter_map(|(local, local_decl)| {
@@ -67,6 +67,26 @@ impl<'linear> LinearCtx<'linear> {
                 None
             })
             .collect();
+
+        // TODO: Must be removed in the future.
+        if linear_locals.is_empty() {
+            let local = body.local_decls.alloc(mir::LocalDecl {
+                debug_name: Some("dummy".to_owned()),
+                storage: None,
+                ty: repr::hir::Ty {
+                    kind: repr::hir::TyKind::PrimTy(repr::hir::PrimTyKind::Void),
+                    is_linear: true,
+                    quals: vec![],
+                    span: repr::hir::Span { lo: 0, hi: 0 },
+                },
+                span: repr::hir::Span { lo: 0, hi: 0 },
+            });
+
+            linear_locals.push(LinearLocal {
+                local,
+                status: LinearStatus::Free,
+            });
+        }
 
         for linear_local in linear_locals {
             let linear_local_decl = &body.local_decls[linear_local.local];

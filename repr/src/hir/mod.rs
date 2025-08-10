@@ -10,7 +10,7 @@ use ast_utils::AstRepr;
 /// Contains constant identifiers used to generate the HIR.
 pub(crate) mod constants;
 /// Contains symbol resolver's implementation.
-pub(crate) mod resolver;
+pub mod resolver;
 
 /// Contains methods needed to lower to declaration
 mod decl;

@@ -51,10 +51,10 @@ fn main() -> anyhow::Result<()> {
                     let mir_body = mir_ctx.lower_to_mir(&func_def);
 
                     match mir_body {
-                        Ok(mir_body) => {
+                        Ok(mut mir_body) => {
                             println!("{mir_body}");
 
-                            linear_ctx.analyze(&mir_body);
+                            linear_ctx.analyze(&mut mir_body);
                         }
                         Err(error) => println!("\nFailed to construct MIR - {error:?}"),
                     }

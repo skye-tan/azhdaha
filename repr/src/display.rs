@@ -150,6 +150,7 @@ impl MirDisplay for Operand {
                         SymbolKind::TyDef(ty) => ty.mir_display(body),
                     }
                 }
+                Const::Sizeof => "sizeof".to_owned(),
             },
         }
     }

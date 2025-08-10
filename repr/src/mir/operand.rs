@@ -33,6 +33,7 @@ impl<'mir> MirCtx<'mir> {
             hir::ExprKind::Lit(..)
             | hir::ExprKind::Local(..)
             | hir::ExprKind::Assign(..)
+            | hir::ExprKind::Sizeof(..)
             | hir::ExprKind::Field(..) => Rvalue::Use(self.lower_to_operand(expr, bb)),
             kind => panic!("Cannot construct [Rvalue] from: {kind:#?}"),
         }
@@ -129,6 +130,8 @@ impl<'mir> MirCtx<'mir> {
 
                 Operand::Place(place)
             }
+            // TODO: Inner value must be evaluated and then saved.
+            hir::ExprKind::Sizeof(_) => Operand::Const(Const::Sizeof),
             hir::ExprKind::Field(..) => Operand::Place(self.lower_to_place(expr)),
             kind => panic!("Cannot construct [Operand] from: {kind:#?}"),
         }

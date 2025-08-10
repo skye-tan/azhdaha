@@ -277,7 +277,7 @@ impl HirCtx<'_> {
             hi: node.end_byte(),
         };
 
-        let kind = self.lower_to_sizeof_kind(node.child(1).unwrap())?;
+        let kind = self.lower_to_sizeof_kind(node)?;
 
         Ok(Sizeof { kind, span })
     }
@@ -285,11 +285,18 @@ impl HirCtx<'_> {
     fn lower_to_sizeof_kind(&mut self, node: Node) -> anyhow::Result<SizeofKind> {
         trace!("[HIR/SizeofKind] Lowering '{}'", node.kind());
 
-        let sizeof_kind = match node.kind() {
-            constants::PARENTHESIZED_EXPRESSION => {
-                SizeofKind::Expr(Box::new(self.lower_to_expr(node)?))
+        let sizeof_kind = 'size_of: {
+            let child = node.child(1).unwrap();
+            if child.kind() == constants::PARENTHESIZED_EXPRESSION {
+                break 'size_of SizeofKind::Expr(Box::new(self.lower_to_expr(child)?));
             }
-            kind => bail!("Cannot lower '{kind}' to 'SizeofKind'."),
+
+            let child = node.child(2).unwrap();
+            if child.kind() == constants::TYPE_DESCRIPTOR {
+                break 'size_of SizeofKind::Ty(self.lower_to_ty(child)?);
+            }
+
+            bail!("Cannot lower '{}' to 'SizeofKind'.", node.kind());
         };
 
         Ok(sizeof_kind)

@@ -103,4 +103,5 @@ pub enum PlaceElem {
 pub enum Const {
     Lit(Lit),
     Symbol(Symbol),
+    Sizeof,
 }

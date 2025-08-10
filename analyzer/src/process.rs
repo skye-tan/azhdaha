@@ -4,7 +4,7 @@ use anyhow::{Context, bail};
 use ariadne::{Fmt as _, Label};
 
 use repr::{
-    hir::{self, resolver},
+    hir::{self, Span, resolver},
     mir,
 };
 
@@ -118,6 +118,7 @@ impl LinearAnalyzer<'_> {
                             func_name,
                             func_sig,
                             func_params,
+                            decl_span,
                         )? {
                             return Ok(true);
                         };
@@ -329,7 +330,7 @@ impl LinearAnalyzer<'_> {
                 }
             }
             mir::StatementKind::Call(func, func_params) => {
-                let (func_name, func_sig) = match func {
+                let (func_name, func_sig, decl_span) = match func {
                     mir::Operand::Place(_) => unreachable!(),
                     mir::Operand::Const(_const) => match _const {
                         mir::Const::Symbol(symbol) => {
@@ -337,7 +338,7 @@ impl LinearAnalyzer<'_> {
 
                             match symbol_kind {
                                 resolver::SymbolKind::Func(func_decl) => {
-                                    (&func_decl.ident.name, &func_decl.sig)
+                                    (&func_decl.ident.name, &func_decl.sig, func_decl.span)
                                 }
                                 resolver::SymbolKind::Local(local_decl) => {
                                     let mut ty_kind = &local_decl.ty.kind;
@@ -351,7 +352,11 @@ impl LinearAnalyzer<'_> {
                                                 ty_kind = kind.as_ref();
                                             }
                                             hir::TyKind::Func { sig } => {
-                                                break (&local_decl.ident.name, sig.as_ref());
+                                                break (
+                                                    &local_decl.ident.name,
+                                                    sig.as_ref(),
+                                                    local_decl.span,
+                                                );
                                             }
                                             _ => unreachable!(),
                                         };
@@ -364,7 +369,14 @@ impl LinearAnalyzer<'_> {
                     },
                 };
 
-                if self.process_func_call(body, linear_local, func_name, func_sig, func_params)? {
+                if self.process_func_call(
+                    body,
+                    linear_local,
+                    func_name,
+                    func_sig,
+                    func_params,
+                    decl_span,
+                )? {
                     return Ok(true);
                 };
 
@@ -446,6 +458,7 @@ impl LinearAnalyzer<'_> {
         func_name: &str,
         func_sig: &hir::FuncSig,
         func_params: &[mir::Operand],
+        decl_span: Span,
     ) -> anyhow::Result<bool> {
         let linear_local_decl = &body.local_decls[linear_local.local];
         let linear_local_name = linear_local_decl
@@ -500,7 +513,7 @@ impl LinearAnalyzer<'_> {
             self.report.set_message("Use of moved value");
 
             self.report.add_label(
-                Label::new(ReportSpan::new(func_sig.span))
+                Label::new(ReportSpan::new(decl_span))
                     .with_message(format!(
                         "Function {} is defined in here which captures parameter {} as linear",
                         format!("`{func_name}`").fg(DIAGNOSIS_REPORT_COLOR),

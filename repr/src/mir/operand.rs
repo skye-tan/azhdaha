@@ -1,30 +1,35 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use crate::{
-    hir::{self, PrimTyKind, Ty, TyKind},
+    hir::{self, PrimTyKind, Span, Ty, TyKind},
     mir::{MirCtx, datatypes::*},
 };
 
 impl<'mir> MirCtx<'mir> {
-    pub(crate) fn lower_to_rvalue(&mut self, expr: &'mir hir::Expr, bb: BasicBlock) -> Rvalue {
+    pub(crate) fn lower_to_rvalue(
+        &mut self,
+        expr: &'mir hir::Expr,
+        bb: BasicBlock,
+        stmt_span: Span,
+    ) -> Rvalue {
         match &expr.kind {
             hir::ExprKind::Unary(un_op, expr) => {
-                let operand = self.lower_to_operand(expr, bb);
+                let operand = self.lower_to_operand(expr, bb, stmt_span);
 
                 Rvalue::UnaryOp(*un_op, operand)
             }
             hir::ExprKind::Binary(bin_op, left_expr, right_expr) => {
-                let left_operand = self.lower_to_operand(left_expr, bb);
-                let right_operand = self.lower_to_operand(right_expr, bb);
+                let left_operand = self.lower_to_operand(left_expr, bb, stmt_span);
+                let right_operand = self.lower_to_operand(right_expr, bb, stmt_span);
 
                 Rvalue::BinaryOp(*bin_op, left_operand, right_operand)
             }
             hir::ExprKind::Call(expr, exprs) => {
-                let operand = self.lower_to_operand(expr, bb);
+                let operand = self.lower_to_operand(expr, bb, stmt_span);
 
                 let arguments = exprs
                     .iter()
-                    .map(|expr| self.lower_to_operand(expr, bb))
+                    .map(|expr| self.lower_to_operand(expr, bb, stmt_span))
                     .collect();
 
                 Rvalue::Call(operand, arguments)
@@ -34,12 +39,17 @@ impl<'mir> MirCtx<'mir> {
             | hir::ExprKind::Local(..)
             | hir::ExprKind::Assign(..)
             | hir::ExprKind::Sizeof(..)
-            | hir::ExprKind::Field(..) => Rvalue::Use(self.lower_to_operand(expr, bb)),
+            | hir::ExprKind::Field(..) => Rvalue::Use(self.lower_to_operand(expr, bb, stmt_span)),
             kind => panic!("Cannot construct [Rvalue] from: {kind:#?}"),
         }
     }
 
-    pub(crate) fn lower_to_operand(&mut self, expr: &'mir hir::Expr, bb: BasicBlock) -> Operand {
+    pub(crate) fn lower_to_operand(
+        &mut self,
+        expr: &'mir hir::Expr,
+        bb: BasicBlock,
+        stmt_span: Span,
+    ) -> Operand {
         let span = expr.span;
 
         match &expr.kind {
@@ -55,19 +65,19 @@ impl<'mir> MirCtx<'mir> {
             hir::ExprKind::Assign(lhs_expr, rhs_expr) => {
                 let place = self.lower_to_place(lhs_expr);
 
-                let rvalue = self.lower_to_rvalue(rhs_expr, bb);
+                let rvalue = self.lower_to_rvalue(rhs_expr, bb, stmt_span);
 
                 let bb_data = self.retrieve_bb(bb);
 
                 bb_data.statements.push(Statement {
                     kind: StatementKind::Assign(place.clone(), rvalue),
-                    span,
+                    span: stmt_span,
                 });
 
                 Operand::Place(place)
             }
             hir::ExprKind::Unary(un_op, expr) => {
-                let operand = self.lower_to_operand(expr, bb);
+                let operand = self.lower_to_operand(expr, bb, stmt_span);
 
                 let local = self.alloc_local(
                     None,
@@ -91,14 +101,14 @@ impl<'mir> MirCtx<'mir> {
 
                 bb_data.statements.push(Statement {
                     kind: StatementKind::Assign(place.clone(), Rvalue::UnaryOp(*un_op, operand)),
-                    span,
+                    span: stmt_span,
                 });
 
                 Operand::Place(place)
             }
             hir::ExprKind::Binary(bin_op, left_expr, right_expr) => {
-                let left_operand = self.lower_to_operand(left_expr, bb);
-                let right_operand = self.lower_to_operand(right_expr, bb);
+                let left_operand = self.lower_to_operand(left_expr, bb, stmt_span);
+                let right_operand = self.lower_to_operand(right_expr, bb, stmt_span);
 
                 let local = self.alloc_local(
                     None,
@@ -125,7 +135,7 @@ impl<'mir> MirCtx<'mir> {
                         place.clone(),
                         Rvalue::BinaryOp(*bin_op, left_operand, right_operand),
                     ),
-                    span,
+                    span: stmt_span,
                 });
 
                 Operand::Place(place)

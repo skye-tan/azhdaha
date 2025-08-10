@@ -30,7 +30,7 @@ impl<'mir> MirCtx<'mir> {
                 bb
             }
             hir::StmtKind::Expr(expr) => {
-                let rvalue = self.lower_to_rvalue(expr, bb);
+                let rvalue = self.lower_to_rvalue(expr, bb, span);
 
                 if let Rvalue::Call(operand, operands) = rvalue {
                     self.retrieve_bb(bb).statements.push(Statement {
@@ -49,7 +49,7 @@ impl<'mir> MirCtx<'mir> {
                     ident,
                     ty,
                     init,
-                    span,
+                    span: _,
                 } = match symbol_kind {
                     hir::resolver::SymbolKind::Local(local_decl) => local_decl,
                     _ => unreachable!(),
@@ -57,9 +57,9 @@ impl<'mir> MirCtx<'mir> {
 
                 let init_rvalue = init
                     .as_ref()
-                    .map(|init_expr| self.lower_to_rvalue(init_expr, bb));
+                    .map(|init_expr| self.lower_to_rvalue(init_expr, bb, span));
 
-                let local = self.alloc_local(Some(ident.name.clone()), storage.clone(), ty, *span);
+                let local = self.alloc_local(Some(ident.name.clone()), storage.clone(), ty, span);
 
                 self.local_map.insert(*symbol, local);
 
@@ -73,7 +73,7 @@ impl<'mir> MirCtx<'mir> {
                             },
                             init_rvalue,
                         ),
-                        span: *span,
+                        span,
                     });
                 }
 
@@ -81,7 +81,7 @@ impl<'mir> MirCtx<'mir> {
             }
             hir::StmtKind::Ret(ret_expr) => {
                 if let Some(ret_expr) = ret_expr {
-                    let ret_rvalue = self.lower_to_rvalue(ret_expr, bb);
+                    let ret_rvalue = self.lower_to_rvalue(ret_expr, bb, span);
 
                     self.retrieve_bb(bb).statements.push(Statement {
                         kind: StatementKind::Assign(
@@ -149,7 +149,7 @@ impl<'mir> MirCtx<'mir> {
                 self.alloc_bb()
             }
             hir::StmtKind::If(cond_expr, body_stmt, else_stmt) => {
-                let cond_rvalue = self.lower_to_rvalue(cond_expr, bb);
+                let cond_rvalue = self.lower_to_rvalue(cond_expr, bb, span);
 
                 let cond_local = self.alloc_local(
                     None,

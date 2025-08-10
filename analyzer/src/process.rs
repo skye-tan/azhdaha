@@ -45,31 +45,44 @@ impl LinearAnalyzer<'_> {
         match &statement.kind {
             mir::StatementKind::Assign(lhs, rhs) => {
                 let mut is_accessed = false;
+                let mut rhs_is_linear = false;
 
                 match rhs {
                     mir::Rvalue::Use(operand) => {
-                        if let mir::Operand::Place(place) = operand
-                            && linear_local.local == place.local
-                        {
-                            is_accessed = true;
+                        if let mir::Operand::Place(place) = operand {
+                            if linear_local.local == place.local {
+                                is_accessed = true;
+                            }
+
+                            let decl = &body.local_decls[place.local];
+                            rhs_is_linear = decl.ty.is_linear;
                         }
                     }
                     mir::Rvalue::BinaryOp(_, left_operand, right_operand) => {
-                        if let mir::Operand::Place(place) = left_operand
-                            && linear_local.local == place.local
-                        {
-                            is_accessed = true;
-                        } else if let mir::Operand::Place(place) = right_operand
-                            && linear_local.local == place.local
-                        {
-                            is_accessed = true;
+                        if let mir::Operand::Place(place) = left_operand {
+                            if linear_local.local == place.local {
+                                is_accessed = true;
+                            }
+
+                            let decl = &body.local_decls[place.local];
+                            rhs_is_linear = decl.ty.is_linear;
+                        } else if let mir::Operand::Place(place) = right_operand {
+                            if linear_local.local == place.local {
+                                is_accessed = true;
+                            }
+
+                            let decl = &body.local_decls[place.local];
+                            rhs_is_linear = decl.ty.is_linear;
                         }
                     }
                     mir::Rvalue::UnaryOp(_, operand) => {
-                        if let mir::Operand::Place(place) = operand
-                            && linear_local.local == place.local
-                        {
-                            is_accessed = true;
+                        if let mir::Operand::Place(place) = operand {
+                            if linear_local.local == place.local {
+                                is_accessed = true;
+                            }
+
+                            let decl = &body.local_decls[place.local];
+                            rhs_is_linear = decl.ty.is_linear;
                         }
                     }
                     mir::Rvalue::Call(func, func_params) => {
@@ -164,7 +177,8 @@ impl LinearAnalyzer<'_> {
                                     }
                                 }
                             } else {
-                                self.report.set_message("Storage of non-linear value");
+                                self.report
+                                    .set_message("Assignment of non-linear to linear");
 
                                 self.report.add_label(
                                     Label::new(ReportSpan::new(decl_span))
@@ -292,8 +306,28 @@ impl LinearAnalyzer<'_> {
                     }
                 }
 
-                // TODO: Handle the case where a non-linear is stored in a linear.
+                // TODO: Better reports when a non-linear is assigned to a linear.
                 if lhs.local == linear_local.local {
+                    if !rhs_is_linear {
+                        self.report
+                            .set_message("Assignment of non-linear to linear");
+
+                        self.report.add_label(
+                            Label::new(ReportSpan::new(statement.span))
+                                .with_message(format!(
+                                    "Cannot store a non-linear value in {} which is defined as linear",
+                                    format!("`{linear_local_name}`")
+                                        .fg(DIAGNOSIS_REPORT_COLOR),
+                                ))
+                                .with_color(DIAGNOSIS_REPORT_COLOR),
+                        );
+
+                        self.report
+                            .add_help("Try to store the value in a non-linear variable");
+
+                        return Ok(true);
+                    }
+
                     match linear_local.status {
                         LinearStatus::Owner => {
                             self.report.set_message("Overwriting owned value");

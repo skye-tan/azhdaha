@@ -16,8 +16,9 @@ impl LinearAnalyzer<'_> {
         linear_local: &mut LinearLocal,
         terminator: &Option<mir::Terminator>,
     ) -> anyhow::Result<bool> {
-        if linear_local.status == LinearStatus::Free {
-            return Ok(false);
+        match linear_local.status {
+            LinearStatus::Free | LinearStatus::Unknown => return Ok(false),
+            LinearStatus::Owner => (),
         }
 
         match terminator {

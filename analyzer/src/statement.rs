@@ -145,7 +145,7 @@ impl LinearAnalyzer<'_> {
 
                                         return Ok(true);
                                     }
-                                    LinearStatus::Free => {
+                                    LinearStatus::Free | LinearStatus::Unknown => {
                                         linear_local.status = LinearStatus::Owner;
 
                                         self.report.add_label(
@@ -216,7 +216,7 @@ impl LinearAnalyzer<'_> {
                     };
 
                     match (lhs_decl.is_linear(), &linear_local.status) {
-                        (true, LinearStatus::Owner) => {
+                        (true, LinearStatus::Owner | LinearStatus::Unknown) => {
                             linear_local.status = LinearStatus::Free;
 
                             self.report.add_label(
@@ -259,7 +259,7 @@ impl LinearAnalyzer<'_> {
 
                             return Ok(true);
                         }
-                        (false, LinearStatus::Owner) => (),
+                        (false, LinearStatus::Owner | LinearStatus::Unknown) => (),
                         (false, LinearStatus::Free) => {
                             self.report.set_message("Use of moved value");
 
@@ -336,7 +336,7 @@ impl LinearAnalyzer<'_> {
 
                             return Ok(true);
                         }
-                        LinearStatus::Free => {
+                        LinearStatus::Free | LinearStatus::Unknown => {
                             linear_local.status = LinearStatus::Owner;
 
                             self.report.add_label(
@@ -442,19 +442,22 @@ impl LinearAnalyzer<'_> {
                 continue;
             }
 
-            if linear_local.status == LinearStatus::Owner {
-                linear_local.status = LinearStatus::Free;
+            match linear_local.status {
+                LinearStatus::Owner | LinearStatus::Unknown => {
+                    linear_local.status = LinearStatus::Free;
 
-                self.report.add_label(
-                    Label::new(ReportSpan::new(param_place.span))
-                        .with_message(format!(
-                            "{}'s value is moved in here",
-                            format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR),
-                        ))
-                        .with_color(DIAGNOSIS_REPORT_COLOR),
-                );
+                    self.report.add_label(
+                        Label::new(ReportSpan::new(param_place.span))
+                            .with_message(format!(
+                                "{}'s value is moved in here",
+                                format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR),
+                            ))
+                            .with_color(DIAGNOSIS_REPORT_COLOR),
+                    );
 
-                continue;
+                    continue;
+                }
+                LinearStatus::Free => (),
             }
 
             let func_param_name = func_param_decl

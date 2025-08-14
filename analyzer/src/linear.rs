@@ -12,7 +12,7 @@ use crate::{
     report::{ReportCache, ReportSpan},
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub(crate) struct LinearLocal {
     pub(crate) name: String,
     pub(crate) local: mir::Local,
@@ -20,10 +20,11 @@ pub(crate) struct LinearLocal {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub(crate) enum LinearStatus {
     Owner,
     Free,
+    Unknown,
 }
 
 pub(crate) struct LinearAnalyzer<'linear> {
@@ -65,7 +66,7 @@ impl<'linear> LinearCtx<'linear> {
                         Some(LinearLocal {
                             name: ident.name.clone(),
                             local,
-                            status: LinearStatus::Free,
+                            status: LinearStatus::Unknown,
                             span: local_decl.span,
                         })
                     } else {

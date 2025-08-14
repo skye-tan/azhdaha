@@ -29,7 +29,7 @@ pub use item::*;
 pub use stmt::*;
 pub use ty::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub struct Span {
     pub lo: usize,
     pub hi: usize,

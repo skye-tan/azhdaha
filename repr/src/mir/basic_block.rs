@@ -38,14 +38,14 @@ impl<'mir> MirCtx<'mir> {
             hir::StmtKind::Decl(symbol) => {
                 let symbol_kind = self.body.symbol_resolver.get_data_by_res(symbol);
 
-                let hir::LocalDecl {
+                let hir::VarDecl {
                     storage,
                     ident,
                     ty,
                     init,
                     span: _,
                 } = match symbol_kind {
-                    hir::resolver::SymbolKind::Local(local_decl) => local_decl,
+                    hir::resolver::SymbolKind::Var(var_decl) => var_decl,
                     _ => unreachable!(),
                 };
 
@@ -53,7 +53,7 @@ impl<'mir> MirCtx<'mir> {
                     .as_ref()
                     .map(|init_expr| self.lower_to_rvalue(init_expr, bb, span));
 
-                let local = self.alloc_local(Some(ident.name.clone()), storage.clone(), ty, span);
+                let local = self.alloc_real_local(storage.clone(), ty.clone(), ident.clone(), span);
 
                 self.local_map.insert(*symbol, local);
 

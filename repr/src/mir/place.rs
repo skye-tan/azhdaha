@@ -1,7 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use crate::{
-    hir::{self, PrimTyKind, Span, Ty, TyKind},
+    hir::{self, Span},
     mir::{MirCtx, datatypes::*},
 };
 
@@ -64,17 +64,7 @@ impl<'mir> MirCtx<'mir> {
     }
 
     pub(crate) fn alloc_temp_place(&mut self, stmt_span: Span) -> Place {
-        let local = self.alloc_local(
-            None,
-            None,
-            &Ty {
-                kind: TyKind::PrimTy(PrimTyKind::Int),
-                is_linear: false,
-                quals: vec![],
-                span: stmt_span,
-            },
-            stmt_span,
-        );
+        let local = self.alloc_temp_local(stmt_span);
 
         Place {
             local,

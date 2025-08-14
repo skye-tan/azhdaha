@@ -8,10 +8,12 @@ use ariadne::Color;
 mod dfs;
 /// Contains linear datatypes' definitions.
 mod linear;
-/// Contains methods needed to process MIR's components.
-mod process;
 /// Contains custom implementation of [`ariadne::Cache`] and [`ariadne::Span`].
 mod report;
+/// Contains methods needed to process MIR's [`repr::mir::Statement`].
+mod statement;
+/// Contains methods needed to process MIR's [`repr::mir::Terminator`].
+mod terminator;
 
 pub use linear::LinearCtx;
 

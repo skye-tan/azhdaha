@@ -13,7 +13,7 @@ use crate::hir::{
 };
 
 /// Contains methods needed to manage arenas and resolvers.
-mod arena;
+mod allocation;
 /// Contains methods needed to lower HIR to MIR's [`BasicBlock`].
 mod basic_block;
 /// Contains methods needed to lower HIR to MIR's [`Operand`].
@@ -71,10 +71,10 @@ impl<'mir> MirCtx<'mir> {
             _ => unreachable!(),
         };
 
-        self.alloc_local(
-            None,
+        self.alloc_real_local(
             func_dec.storage.clone(),
-            &func_dec.sig.ret_ty,
+            func_dec.sig.ret_ty.clone(),
+            func_dec.ident.clone(),
             func_def.body.span,
         );
 
@@ -89,10 +89,10 @@ impl<'mir> MirCtx<'mir> {
                         ident.name
                     ))?;
 
-                let local = self.alloc_local(
-                    Some(ident.name.clone()),
+                let local = self.alloc_real_local(
                     param.storage.clone(),
-                    &param.ty,
+                    param.ty.clone(),
+                    ident.clone(),
                     param.span,
                 );
 

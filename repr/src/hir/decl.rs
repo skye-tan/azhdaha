@@ -6,7 +6,7 @@ use log::trace;
 use crate::hir::*;
 
 #[derive(Debug, Clone)]
-pub struct LocalDecl {
+pub struct VarDecl {
     pub storage: Option<Storage>,
     pub ident: Ident,
     pub ty: Ty,
@@ -45,7 +45,7 @@ pub struct Ident {
 }
 
 impl HirCtx<'_> {
-    pub(crate) fn lower_to_local_decl(&mut self, node: Node) -> anyhow::Result<LocalDecl> {
+    pub(crate) fn lower_to_var_decl(&mut self, node: Node) -> anyhow::Result<VarDecl> {
         trace!("[HIR/LocalDecl] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -89,7 +89,7 @@ impl HirCtx<'_> {
             }
         };
 
-        Ok(LocalDecl {
+        Ok(VarDecl {
             storage,
             ident,
             ty,

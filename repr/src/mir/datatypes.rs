@@ -3,7 +3,7 @@
 use la_arena::{Arena, Idx};
 
 use crate::hir::{
-    BinOp, Lit, Span, Storage, Ty, UnOp,
+    BinOp, Ident, Lit, Span, Storage, Ty, UnOp,
     resolver::{Resolver, Symbol, SymbolKind},
 };
 
@@ -21,10 +21,27 @@ pub type Local = Idx<LocalDecl>;
 
 #[derive(Debug, Clone)]
 pub struct LocalDecl {
-    pub debug_name: Option<String>,
-    pub storage: Option<Storage>,
-    pub ty: Ty,
+    pub kind: LocalKind,
     pub span: Span,
+}
+
+impl LocalDecl {
+    pub fn is_linear(&self) -> bool {
+        match &self.kind {
+            LocalKind::Real { ty, .. } => ty.is_linear,
+            LocalKind::Temp => false,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum LocalKind {
+    Real {
+        storage: Option<Storage>,
+        ty: Ty,
+        ident: Ident,
+    },
+    Temp,
 }
 
 #[derive(Debug, Clone, Copy)]

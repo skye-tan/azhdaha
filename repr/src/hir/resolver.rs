@@ -11,7 +11,7 @@ pub type Symbol = Idx<SymbolKind>;
 
 #[derive(Debug, Clone)]
 pub enum SymbolKind {
-    Local(LocalDecl),
+    Var(VarDecl),
     Func(FuncDecl),
     Param(ParamDecl),
     TyDef(Ty),

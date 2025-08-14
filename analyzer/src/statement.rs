@@ -1,6 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use anyhow::{Context, bail};
+use anyhow::bail;
 use ariadne::{Fmt as _, Label};
 
 use repr::{
@@ -15,33 +15,12 @@ use crate::{
 };
 
 impl LinearAnalyzer<'_> {
-    pub(crate) fn process_bb(
-        &mut self,
-        body: &mir::Body,
-        linear_local: &mut LinearLocal,
-        bb_data: &mir::BasicBlockData,
-    ) -> anyhow::Result<bool> {
-        for statement in &bb_data.statements {
-            if self.process_statement(body, linear_local, statement)? {
-                return Ok(true);
-            }
-        }
-
-        self.process_terminator(body, linear_local, &bb_data.terminator)
-    }
-
-    fn process_statement(
+    pub(crate) fn process_statement(
         &mut self,
         body: &mir::Body,
         linear_local: &mut LinearLocal,
         statement: &mir::Statement,
     ) -> anyhow::Result<bool> {
-        let linear_local_decl = &body.local_decls[linear_local.local];
-        let linear_local_name = linear_local_decl
-            .debug_name
-            .as_ref()
-            .context("Cannot retrieve name of the local.")?;
-
         match &statement.kind {
             mir::StatementKind::Assign(lhs, rhs) => {
                 let mut is_accessed = false;
@@ -54,8 +33,9 @@ impl LinearAnalyzer<'_> {
                                 is_accessed = true;
                             }
 
-                            let decl = &body.local_decls[place.local];
-                            rhs_is_linear = decl.ty.is_linear;
+                            if body.local_decls[place.local].is_linear() {
+                                rhs_is_linear = true;
+                            }
                         }
                     }
                     mir::Rvalue::BinaryOp(_, left_operand, right_operand) => {
@@ -64,15 +44,17 @@ impl LinearAnalyzer<'_> {
                                 is_accessed = true;
                             }
 
-                            let decl = &body.local_decls[place.local];
-                            rhs_is_linear = decl.ty.is_linear;
+                            if body.local_decls[place.local].is_linear() {
+                                rhs_is_linear = true;
+                            }
                         } else if let mir::Operand::Place(place) = right_operand {
                             if linear_local.local == place.local {
                                 is_accessed = true;
                             }
 
-                            let decl = &body.local_decls[place.local];
-                            rhs_is_linear = decl.ty.is_linear;
+                            if body.local_decls[place.local].is_linear() {
+                                rhs_is_linear = true;
+                            }
                         }
                     }
                     mir::Rvalue::UnaryOp(_, operand) => {
@@ -81,8 +63,9 @@ impl LinearAnalyzer<'_> {
                                 is_accessed = true;
                             }
 
-                            let decl = &body.local_decls[place.local];
-                            rhs_is_linear = decl.ty.is_linear;
+                            if body.local_decls[place.local].is_linear() {
+                                rhs_is_linear = true;
+                            }
                         }
                     }
                     mir::Rvalue::Call(func, func_params) => {
@@ -96,7 +79,7 @@ impl LinearAnalyzer<'_> {
                                         resolver::SymbolKind::Func(func_decl) => {
                                             (&func_decl.ident.name, &func_decl.sig, func_decl.span)
                                         }
-                                        resolver::SymbolKind::Local(local_decl) => {
+                                        resolver::SymbolKind::Var(local_decl) => {
                                             let mut ty_kind = &local_decl.ty.kind;
 
                                             loop {
@@ -148,7 +131,7 @@ impl LinearAnalyzer<'_> {
                                         Label::new(ReportSpan::new(statement.span))
                                             .with_message(format!(
                                                 "Current owned value of {} is overwritten in here",
-                                                format!("`{linear_local_name}`")
+                                                format!("`{}`", linear_local.name)
                                                     .fg(DIAGNOSIS_REPORT_COLOR)
                                             ))
                                             .with_color(DIAGNOSIS_REPORT_COLOR),
@@ -156,7 +139,7 @@ impl LinearAnalyzer<'_> {
 
                                         self.report.add_help(format!(
                                             "Try to move {}'s value before reaching this statement",
-                                            format!("`{linear_local_name}`")
+                                            format!("`{}`", linear_local.name)
                                                 .fg(DIAGNOSIS_REPORT_COLOR)
                                         ));
 
@@ -169,7 +152,7 @@ impl LinearAnalyzer<'_> {
                                             Label::new(ReportSpan::new(statement.span))
                                                 .with_message(format!(
                                                     "A new value is moved to {} in here",
-                                                    format!("`{linear_local_name}`")
+                                                    format!("`{}`", linear_local.name)
                                                         .fg(DIAGNOSIS_REPORT_COLOR),
                                                 ))
                                                 .with_color(DIAGNOSIS_REPORT_COLOR),
@@ -193,7 +176,7 @@ impl LinearAnalyzer<'_> {
                                     Label::new(ReportSpan::new(statement.span))
                                         .with_message(format!(
                                             "Cannot store a non-linear value in {} which is defined as linear",
-                                            format!("`{linear_local_name}`")
+                                            format!("`{}`", linear_local.name)
                                                 .fg(DIAGNOSIS_REPORT_COLOR),
                                         ))
                                         .with_color(DIAGNOSIS_REPORT_COLOR),
@@ -209,11 +192,11 @@ impl LinearAnalyzer<'_> {
                             return Ok(false);
                         }
 
-                        if lhs_decl.ty.is_linear && !func_sig.ret_ty.is_linear {
+                        if lhs_decl.is_linear() && !func_sig.ret_ty.is_linear {
                             bail!(
                                 "Not supported yet - Stored non-linear in linear after function call."
                             );
-                        } else if !lhs_decl.ty.is_linear && func_sig.ret_ty.is_linear {
+                        } else if !lhs_decl.is_linear() && func_sig.ret_ty.is_linear {
                             bail!(
                                 "Not supported yet - Stored linear in non-linear after function call."
                             );
@@ -226,12 +209,13 @@ impl LinearAnalyzer<'_> {
 
                 if is_accessed {
                     let lhs_decl = &body.local_decls[lhs.local];
-                    let lhs_name = lhs_decl
-                        .debug_name
-                        .as_ref()
-                        .context("Cannot retrieve name of the local.")?;
 
-                    match (lhs_decl.ty.is_linear, &linear_local.status) {
+                    let lhs_name = match &lhs_decl.kind {
+                        mir::LocalKind::Real { ident, .. } => ident.name.clone(),
+                        mir::LocalKind::Temp => bail!("Cannot retrieve name of the local."),
+                    };
+
+                    match (lhs_decl.is_linear(), &linear_local.status) {
                         (true, LinearStatus::Owner) => {
                             linear_local.status = LinearStatus::Free;
 
@@ -239,7 +223,8 @@ impl LinearAnalyzer<'_> {
                                 Label::new(ReportSpan::new(statement.span))
                                     .with_message(format!(
                                         "{}'s value is moved in here",
-                                        format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR),
+                                        format!("`{}`", linear_local.name)
+                                            .fg(DIAGNOSIS_REPORT_COLOR),
                                     ))
                                     .with_color(DIAGNOSIS_REPORT_COLOR),
                             );
@@ -260,7 +245,8 @@ impl LinearAnalyzer<'_> {
                                 Label::new(ReportSpan::new(statement.span))
                                     .with_message(format!(
                                         "Cannot move {}'s invalid value to {}",
-                                        format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR),
+                                        format!("`{}`", linear_local.name)
+                                            .fg(DIAGNOSIS_REPORT_COLOR),
                                         format!("`{lhs_name}`").fg(DIAGNOSIS_REPORT_COLOR)
                                     ))
                                     .with_color(DIAGNOSIS_REPORT_COLOR),
@@ -268,7 +254,7 @@ impl LinearAnalyzer<'_> {
 
                             self.report.add_help(format!(
                                 "Try to move a value to {} before reaching this statement",
-                                format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
+                                format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
                             ));
 
                             return Ok(true);
@@ -290,7 +276,8 @@ impl LinearAnalyzer<'_> {
                                 Label::new(ReportSpan::new(statement.span))
                                     .with_message(format!(
                                         "Cannot lend {}'s invalid value to {}",
-                                        format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR),
+                                        format!("`{}`", linear_local.name)
+                                            .fg(DIAGNOSIS_REPORT_COLOR),
                                         format!("`{lhs_name}`").fg(DIAGNOSIS_REPORT_COLOR)
                                     ))
                                     .with_color(DIAGNOSIS_REPORT_COLOR),
@@ -298,7 +285,7 @@ impl LinearAnalyzer<'_> {
 
                             self.report.add_help(format!(
                                 "Try to move a value to {} before reaching this statement",
-                                format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
+                                format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
                             ));
 
                             return Ok(true);
@@ -316,7 +303,7 @@ impl LinearAnalyzer<'_> {
                             Label::new(ReportSpan::new(statement.span))
                                 .with_message(format!(
                                     "Cannot store a non-linear value in {} which is defined as linear",
-                                    format!("`{linear_local_name}`")
+                                    format!("`{}`",linear_local.name)
                                         .fg(DIAGNOSIS_REPORT_COLOR),
                                 ))
                                 .with_color(DIAGNOSIS_REPORT_COLOR),
@@ -336,14 +323,15 @@ impl LinearAnalyzer<'_> {
                                 Label::new(ReportSpan::new(statement.span))
                                     .with_message(format!(
                                         "Current owned value of {} is overwritten in here",
-                                        format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
+                                        format!("`{}`", linear_local.name)
+                                            .fg(DIAGNOSIS_REPORT_COLOR)
                                     ))
                                     .with_color(DIAGNOSIS_REPORT_COLOR),
                             );
 
                             self.report.add_help(format!(
                                 "Try to move {}'s value before reaching this statement",
-                                format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
+                                format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
                             ));
 
                             return Ok(true);
@@ -355,7 +343,8 @@ impl LinearAnalyzer<'_> {
                                 Label::new(ReportSpan::new(statement.span))
                                     .with_message(format!(
                                         "A new value is moved to {} in here",
-                                        format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR),
+                                        format!("`{}`", linear_local.name)
+                                            .fg(DIAGNOSIS_REPORT_COLOR),
                                     ))
                                     .with_color(DIAGNOSIS_REPORT_COLOR),
                             );
@@ -374,7 +363,7 @@ impl LinearAnalyzer<'_> {
                                 resolver::SymbolKind::Func(func_decl) => {
                                     (&func_decl.ident.name, &func_decl.sig, func_decl.span)
                                 }
-                                resolver::SymbolKind::Local(local_decl) => {
+                                resolver::SymbolKind::Var(local_decl) => {
                                     let mut ty_kind = &local_decl.ty.kind;
 
                                     loop {
@@ -423,68 +412,6 @@ impl LinearAnalyzer<'_> {
         Ok(false)
     }
 
-    fn process_terminator(
-        &mut self,
-        body: &mir::Body,
-        linear_local: &mut LinearLocal,
-        terminator: &Option<mir::Terminator>,
-    ) -> anyhow::Result<bool> {
-        if linear_local.status == LinearStatus::Free {
-            return Ok(false);
-        }
-
-        match terminator {
-            Some(terminator) => {
-                if !matches!(&terminator.kind, mir::TerminatorKind::Return) {
-                    return Ok(false);
-                }
-
-                let linear_local_decl = &body.local_decls[linear_local.local];
-                let linear_local_name = linear_local_decl
-                    .debug_name
-                    .as_ref()
-                    .context("Cannot retrieve name of the local.")?;
-
-                self.report.set_message("Memory leakage after return");
-
-                self.report.add_label(
-                    Label::new(ReportSpan::new(terminator.span))
-                        .with_message(format!(
-                            "Function returns in here without {} moving its value",
-                            format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
-                        ))
-                        .with_color(DIAGNOSIS_REPORT_COLOR),
-                );
-
-                self.report.add_help(format!(
-                    "Try to move {}'s value before reaching the return",
-                    format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
-                ));
-            }
-            None => {
-                let linear_local_decl = &body.local_decls[linear_local.local];
-                let linear_local_name = linear_local_decl
-                    .debug_name
-                    .as_ref()
-                    .context("Cannot retrieve name of the local.")?;
-
-                self.report.set_message("Memory leakage after return");
-
-                self.report.add_note(format!(
-                    "Function returns without {} moving its value",
-                    format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
-                ));
-
-                self.report.add_help(format!(
-                    "Try to move {}'s value before reaching the return",
-                    format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
-                ));
-            }
-        }
-
-        Ok(true)
-    }
-
     fn process_func_call(
         &mut self,
         body: &mir::Body,
@@ -494,12 +421,6 @@ impl LinearAnalyzer<'_> {
         func_params: &[mir::Operand],
         decl_span: Span,
     ) -> anyhow::Result<bool> {
-        let linear_local_decl = &body.local_decls[linear_local.local];
-        let linear_local_name = linear_local_decl
-            .debug_name
-            .as_ref()
-            .context("Cannot retrieve name of the local.")?;
-
         if func_params.len() != func_sig.params.len() {
             bail!("Invalid number of arguments for the function call.");
         }
@@ -514,9 +435,7 @@ impl LinearAnalyzer<'_> {
             }
 
             if linear_local.local != param_place.local {
-                let param_decl = &body.local_decls[param_place.local];
-
-                if !param_decl.ty.is_linear {
+                if !body.local_decls[param_place.local].is_linear() {
                     bail!("Not supported yet - Passed non-linear as linear to function.");
                 }
 
@@ -530,7 +449,7 @@ impl LinearAnalyzer<'_> {
                     Label::new(ReportSpan::new(param_place.span))
                         .with_message(format!(
                             "{}'s value is moved in here",
-                            format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR),
+                            format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR),
                         ))
                         .with_color(DIAGNOSIS_REPORT_COLOR),
                 );
@@ -542,7 +461,7 @@ impl LinearAnalyzer<'_> {
                 .ident
                 .clone()
                 .map(|ident| ident.name)
-                .unwrap_or("unknown".to_string());
+                .unwrap_or_default();
 
             self.report.set_message("Use of moved value");
 
@@ -560,14 +479,14 @@ impl LinearAnalyzer<'_> {
                 Label::new(ReportSpan::new(param_place.span))
                     .with_message(format!(
                         "Cannot move and pass {}'s invalid value",
-                        format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR),
+                        format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR),
                     ))
                     .with_color(DIAGNOSIS_REPORT_COLOR),
             );
 
             self.report.add_help(format!(
                 "Try to move a value to {} before reaching this statement",
-                format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
+                format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
             ));
 
             return Ok(true);

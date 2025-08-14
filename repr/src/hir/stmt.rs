@@ -61,11 +61,11 @@ impl HirCtx<'_> {
                 StmtKind::Expr(self.lower_to_expr(node.child(0).unwrap())?)
             }
             constants::DECLARATION => {
-                let local_decl = self.lower_to_local_decl(node)?;
+                let var_decl = self.lower_to_var_decl(node)?;
 
                 let symbol = self
                     .symbol_resolver
-                    .insert_symbol(local_decl.ident.name.clone(), SymbolKind::Local(local_decl));
+                    .insert_symbol(var_decl.ident.name.clone(), SymbolKind::Var(var_decl));
 
                 StmtKind::Decl(symbol)
             }
@@ -392,11 +392,11 @@ impl HirCtx<'_> {
                 None => bail!("Break statement outside of loop or switch body."),
             },
             constants::TYPE_DEFINITION => {
-                let local_decl: LocalDecl = self.lower_to_local_decl(node)?;
+                let var_decl = self.lower_to_var_decl(node)?;
 
                 let symbol = self
                     .symbol_resolver
-                    .insert_symbol(local_decl.ident.name, SymbolKind::TyDef(local_decl.ty));
+                    .insert_symbol(var_decl.ident.name, SymbolKind::TyDef(var_decl.ty));
 
                 StmtKind::TyDef(symbol)
             }

@@ -2,9 +2,10 @@
 
 use anyhow::Context;
 use ariadne::{Fmt as _, Label, Report, ReportBuilder, ReportKind, Source};
+use la_arena::{Idx, RawIdx};
 use log::error;
 
-use repr::mir;
+use repr::{hir::Span, mir};
 
 use crate::{
     DIAGNOSIS_REPORT_COLOR,
@@ -13,8 +14,10 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct LinearLocal {
+    pub(crate) name: String,
     pub(crate) local: mir::Local,
     pub(crate) status: LinearStatus,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,57 +55,44 @@ impl<'linear> LinearCtx<'linear> {
         })
     }
 
-    pub fn analyze(&self, body: &mut mir::Body) {
+    pub fn analyze(&self, body: &mir::Body) {
         let mut linear_locals: Vec<LinearLocal> = body
             .local_decls
             .iter()
-            .filter_map(|(local, local_decl)| {
-                if local_decl.ty.is_linear {
-                    return Some(LinearLocal {
-                        local,
-                        status: LinearStatus::Free,
-                    });
+            .filter_map(|(local, local_decl)| match &local_decl.kind {
+                mir::LocalKind::Real { ty, ident, .. } => {
+                    if ty.is_linear {
+                        Some(LinearLocal {
+                            name: ident.name.clone(),
+                            local,
+                            status: LinearStatus::Free,
+                            span: local_decl.span,
+                        })
+                    } else {
+                        None
+                    }
                 }
-
-                None
+                mir::LocalKind::Temp => None,
             })
             .collect();
 
         // TODO: Must be removed in the future.
-        if linear_locals.is_empty() {
-            let local = body.local_decls.alloc(mir::LocalDecl {
-                debug_name: Some("dummy".to_owned()),
-                storage: None,
-                ty: repr::hir::Ty {
-                    kind: repr::hir::TyKind::PrimTy(repr::hir::PrimTyKind::Void),
-                    is_linear: true,
-                    quals: vec![],
-                    span: repr::hir::Span { lo: 0, hi: 0 },
-                },
-                span: repr::hir::Span { lo: 0, hi: 0 },
-            });
-
-            linear_locals.push(LinearLocal {
-                local,
-                status: LinearStatus::Free,
-            });
-        }
+        linear_locals.push(LinearLocal {
+            name: "dummy".to_owned(),
+            local: Idx::from_raw(RawIdx::from_u32(u32::MAX)),
+            status: LinearStatus::Free,
+            span: repr::hir::Span { lo: 0, hi: 0 },
+        });
 
         for linear_local in linear_locals {
-            let linear_local_decl = &body.local_decls[linear_local.local];
-
-            let Some(linear_local_name) = &linear_local_decl.debug_name else {
-                continue;
-            };
-
             for (bb, _) in body.basic_blocks.iter() {
                 let mut linear_analyzer = LinearAnalyzer::new(ReportSpan::new(body.span));
 
                 linear_analyzer.report.add_label(
-                    Label::new(ReportSpan::new(linear_local_decl.span))
+                    Label::new(ReportSpan::new(linear_local.span))
                         .with_message(format!(
                             "Variable {} is defined in here as linear",
-                            format!("`{linear_local_name}`").fg(DIAGNOSIS_REPORT_COLOR)
+                            format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
                         ))
                         .with_color(DIAGNOSIS_REPORT_COLOR),
                 );

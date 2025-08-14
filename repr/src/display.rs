@@ -7,8 +7,8 @@ use itertools::Itertools;
 use crate::hir::resolver::SymbolKind;
 use crate::hir::{BinOp, Lit, LitKind, PrimTyKind, Storage, Ty, TyKind, TyQual, UnOp};
 use crate::mir::{
-    Body, Const, Local, Operand, Place, PlaceElem, Rvalue, Statement, StatementKind, Terminator,
-    TerminatorKind,
+    Body, Const, Local, LocalKind, Operand, Place, PlaceElem, Rvalue, Statement, StatementKind,
+    Terminator, TerminatorKind,
 };
 
 trait MirDisplay {
@@ -18,21 +18,19 @@ trait MirDisplay {
 impl Display for Body<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (local, local_decl) in self.local_decls.iter() {
-            if let Some(storage) = &local_decl.storage {
-                writeln!(
-                    f,
-                    "let {}: {} {};",
-                    local.mir_display(self),
-                    storage.mir_display(self),
-                    local_decl.ty.mir_display(self)
-                )?;
-            } else {
-                writeln!(
-                    f,
-                    "let {}: {};",
-                    local.mir_display(self),
-                    local_decl.ty.mir_display(self)
-                )?;
+            match &local_decl.kind {
+                LocalKind::Real { storage, ty, ident } => {
+                    write!(f, "let {}_{}:", ident.name, local.into_raw())?;
+
+                    if let Some(storage) = storage {
+                        write!(f, " {}", storage.mir_display(self))?;
+                    }
+
+                    writeln!(f, " {};", ty.mir_display(self))?;
+                }
+                LocalKind::Temp => {
+                    writeln!(f, "let {}: temp;", local.mir_display(self),)?;
+                }
             }
         }
 
@@ -133,7 +131,7 @@ impl MirDisplay for Operand {
 
                     match symbol_kind {
                         SymbolKind::Func(func) => func.ident.name.clone(),
-                        SymbolKind::Local(local) => local.ident.name.clone(),
+                        SymbolKind::Var(local) => local.ident.name.clone(),
                         SymbolKind::Param(param) => match &param.ident {
                             Some(ident) => ident.name.clone(),
                             None => "unknown".to_owned(),
@@ -170,10 +168,9 @@ impl MirDisplay for PlaceElem {
 
 impl MirDisplay for Local {
     fn mir_display(&self, body: &Body) -> String {
-        if let Some(name) = &body.local_decls[*self].debug_name {
-            format!("{name}_{}", self.into_raw())
-        } else {
-            format!("_{}", self.into_raw())
+        match &body.local_decls[*self].kind {
+            LocalKind::Real { ident, .. } => format!("{}_{}", ident.name, self.into_raw()),
+            LocalKind::Temp => format!("_{}", self.into_raw()),
         }
     }
 }

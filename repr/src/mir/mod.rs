@@ -96,8 +96,8 @@ impl<'mir> MirCtx<'mir> {
             }
         }
 
-        let bb = self.alloc_bb();
-        self.lower_to_bb(&func_def.body, bb);
+        let mut bb = self.alloc_bb();
+        self.lower_to_bb(&func_def.body, &mut bb);
 
         Ok(self.body)
     }

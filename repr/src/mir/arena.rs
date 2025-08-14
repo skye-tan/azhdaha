@@ -7,11 +7,14 @@ use crate::{
 
 impl MirCtx<'_> {
     pub(crate) fn alloc_bb(&mut self) -> BasicBlock {
-        self.body.basic_blocks.alloc(BasicBlockData::default())
+        self.body
+            .basic_blocks
+            .alloc(BasicBlockData::default())
+            .into()
     }
 
     pub(crate) fn retrieve_bb(&mut self, bb: BasicBlock) -> &mut BasicBlockData {
-        &mut self.body.basic_blocks[bb]
+        &mut self.body.basic_blocks[bb.into_inner()]
     }
 
     pub(crate) fn alloc_local(

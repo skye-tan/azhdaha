@@ -1,6 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use log::error;
+
 use repr::mir;
 
 use crate::linear::{LinearAnalyzer, LinearLocal};
@@ -16,7 +17,7 @@ impl LinearAnalyzer<'_> {
         let mut bb_stack = vec![bb];
 
         while let Some(bb) = bb_stack.pop() {
-            let index = bb.into_raw().into_u32() as usize;
+            let index = bb.get_id();
 
             if visited[index] {
                 continue;
@@ -24,7 +25,7 @@ impl LinearAnalyzer<'_> {
 
             visited[index] = true;
 
-            let bb_data = &body.basic_blocks[bb];
+            let bb_data = &body.basic_blocks[bb.into_inner()];
 
             match self.process_bb(body, &mut linear_local, bb_data) {
                 Ok(should_be_reported) => {

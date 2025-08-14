@@ -58,7 +58,7 @@ impl MirDisplay for Terminator {
     fn mir_display(&self, body: &Body) -> String {
         match &self.kind {
             TerminatorKind::Goto { bb } => {
-                format!("goto 'bb_{};", bb.into_raw())
+                format!("goto 'bb_{};", bb.get_id())
             }
             TerminatorKind::SwitchInt { discr, targets } => {
                 let mut result = format!("switch {} {{\n", discr.mir_display(body));
@@ -67,13 +67,13 @@ impl MirDisplay for Terminator {
                     result.push_str(&format!(
                         "\t\t{} => 'bb_{};\n",
                         val,
-                        targets.bbs.get(idx).unwrap().into_raw()
+                        targets.bbs.get(idx).unwrap().get_id()
                     ));
                 }
 
                 result.push_str(&format!(
                     "\t\t_ => 'bb_{};\n\t}}",
-                    targets.bbs.last().unwrap().into_raw()
+                    targets.bbs.last().unwrap().get_id()
                 ));
 
                 result

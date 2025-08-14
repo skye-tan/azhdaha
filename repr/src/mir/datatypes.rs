@@ -28,7 +28,28 @@ pub struct LocalDecl {
     pub span: Span,
 }
 
-pub type BasicBlock = Idx<BasicBlockData>;
+#[derive(Debug, Clone, Copy)]
+pub struct BasicBlock(Idx<BasicBlockData>);
+
+impl BasicBlock {
+    pub fn set(&mut self, bb: BasicBlock) {
+        self.0 = bb.0;
+    }
+
+    pub fn get_id(&self) -> usize {
+        self.0.into_raw().into_u32() as usize
+    }
+
+    pub fn into_inner(self) -> Idx<BasicBlockData> {
+        self.0
+    }
+}
+
+impl From<Idx<BasicBlockData>> for BasicBlock {
+    fn from(value: Idx<BasicBlockData>) -> Self {
+        Self(value)
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct BasicBlockData {

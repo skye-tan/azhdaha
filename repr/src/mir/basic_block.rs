@@ -8,7 +8,7 @@ use crate::{
 };
 
 impl<'mir> MirCtx<'mir> {
-    pub(crate) fn lower_to_bb(&mut self, stmt: &'mir hir::Stmt, mut bb: BasicBlock) -> BasicBlock {
+    pub(crate) fn lower_to_bb(&mut self, stmt: &'mir hir::Stmt, bb: &mut BasicBlock) {
         let span = stmt.span;
 
         match &stmt.kind {
@@ -18,7 +18,7 @@ impl<'mir> MirCtx<'mir> {
                 self.body.symbol_resolver = &block.symbol_resolver;
 
                 for stmt in &block.stmts {
-                    bb = self.lower_to_bb(stmt, bb);
+                    self.lower_to_bb(stmt, bb);
                 }
 
                 if self.has_inner_symbol_resolver {
@@ -26,20 +26,16 @@ impl<'mir> MirCtx<'mir> {
                 } else {
                     self.has_inner_symbol_resolver = true;
                 }
-
-                bb
             }
             hir::StmtKind::Expr(expr) => {
                 let rvalue = self.lower_to_rvalue(expr, bb, span);
 
                 if let Rvalue::Call(operand, operands) = rvalue {
-                    self.retrieve_bb(bb).statements.push(Statement {
+                    self.retrieve_bb(*bb).statements.push(Statement {
                         kind: StatementKind::Call(operand, operands),
                         span,
                     })
                 }
-
-                bb
             }
             hir::StmtKind::Decl(symbol) => {
                 let symbol_kind = self.body.symbol_resolver.get_data_by_res(symbol);
@@ -64,7 +60,7 @@ impl<'mir> MirCtx<'mir> {
                 self.local_map.insert(*symbol, local);
 
                 if let Some(init_rvalue) = init_rvalue {
-                    self.retrieve_bb(bb).statements.push(Statement {
+                    self.retrieve_bb(*bb).statements.push(Statement {
                         kind: StatementKind::Assign(
                             Place {
                                 local,
@@ -76,14 +72,12 @@ impl<'mir> MirCtx<'mir> {
                         span,
                     });
                 }
-
-                bb
             }
             hir::StmtKind::Ret(ret_expr) => {
                 if let Some(ret_expr) = ret_expr {
                     let ret_rvalue = self.lower_to_rvalue(ret_expr, bb, span);
 
-                    self.retrieve_bb(bb).statements.push(Statement {
+                    self.retrieve_bb(*bb).statements.push(Statement {
                         kind: StatementKind::Assign(
                             Place {
                                 local: RETURN_LOCAL,
@@ -96,12 +90,10 @@ impl<'mir> MirCtx<'mir> {
                     });
                 }
 
-                self.retrieve_bb(bb).terminator = Some(Terminator {
+                self.retrieve_bb(*bb).terminator = Some(Terminator {
                     kind: TerminatorKind::Return,
                     span,
                 });
-
-                bb
             }
             hir::StmtKind::Label(label_idx, stmt) => {
                 let mut next_bb = match self.bb_map.get(label_idx) {
@@ -115,16 +107,16 @@ impl<'mir> MirCtx<'mir> {
                     }
                 };
 
-                self.retrieve_bb(bb).terminator = Some(Terminator {
+                self.retrieve_bb(*bb).terminator = Some(Terminator {
                     kind: TerminatorKind::Goto { bb: next_bb },
                     span,
                 });
 
                 if let Some(stmt) = stmt {
-                    next_bb = self.lower_to_bb(stmt, next_bb);
+                    self.lower_to_bb(stmt, &mut next_bb);
                 }
 
-                next_bb
+                bb.set(next_bb);
             }
             hir::StmtKind::Goto(label_idx) => {
                 let next_bb = match self.bb_map.get(label_idx) {
@@ -138,7 +130,7 @@ impl<'mir> MirCtx<'mir> {
                     }
                 };
 
-                self.retrieve_bb(bb).terminator = Some(Terminator {
+                self.retrieve_bb(*bb).terminator = Some(Terminator {
                     kind: TerminatorKind::Goto { bb: next_bb },
                     span,
                 });
@@ -146,7 +138,7 @@ impl<'mir> MirCtx<'mir> {
                 // Currently a new basic block is created after each "goto" statement which may
                 // contain unreachable code. I might want to consider generating a warning for
                 // the non-empty variant of these basic-blocks in the future or ignore them.
-                self.alloc_bb()
+                bb.set(self.alloc_bb());
             }
             hir::StmtKind::If(cond_expr, body_stmt, else_stmt) => {
                 let cond_rvalue = self.lower_to_rvalue(cond_expr, bb, span);
@@ -170,7 +162,8 @@ impl<'mir> MirCtx<'mir> {
                 };
 
                 let body_bb = self.alloc_bb();
-                let body_last_bb = self.lower_to_bb(body_stmt, body_bb);
+                let mut body_last_bb = body_bb;
+                self.lower_to_bb(body_stmt, &mut body_last_bb);
 
                 let next_bb = self.alloc_bb();
 
@@ -181,7 +174,8 @@ impl<'mir> MirCtx<'mir> {
 
                 let else_bb = if let Some(else_stmt) = else_stmt {
                     let else_bb = self.alloc_bb();
-                    let else_last_bb = self.lower_to_bb(else_stmt, else_bb);
+                    let mut else_last_bb = else_bb;
+                    self.lower_to_bb(else_stmt, &mut else_last_bb);
 
                     self.retrieve_bb(else_last_bb).terminator = Some(Terminator {
                         kind: TerminatorKind::Goto { bb: next_bb },
@@ -193,7 +187,7 @@ impl<'mir> MirCtx<'mir> {
                     next_bb
                 };
 
-                let bb_data = self.retrieve_bb(bb);
+                let bb_data = self.retrieve_bb(*bb);
 
                 bb_data.statements.push(Statement {
                     kind: StatementKind::Assign(cond_place.clone(), cond_rvalue),
@@ -211,9 +205,9 @@ impl<'mir> MirCtx<'mir> {
                     span,
                 });
 
-                next_bb
+                bb.set(next_bb);
             }
-            hir::StmtKind::TyDef(..) => bb,
+            hir::StmtKind::TyDef(..) => (),
         }
     }
 }

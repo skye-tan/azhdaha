@@ -89,6 +89,8 @@ pub(crate) const CAST_EXPRESSION: &str = "cast_expression";
 pub(crate) const INITIALIZER_LIST: &str = "initializer_list";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Comma`].  
 pub(crate) const COMMA_EXPRESSION: &str = "comma_expression";
+/// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Cond`].  
+pub(crate) const CONDITIONAL_EXPRESSION: &str = "conditional_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::SizeOf`].  
 pub(crate) const SIZEOF_EXPRESSION: &str = "sizeof_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Empty`].  

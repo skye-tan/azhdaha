@@ -27,6 +27,7 @@ pub enum ExprKind {
     Array(Vec<Expr>),
     Comma(Vec<Expr>),
     Sizeof(Sizeof),
+    Cond(Box<Expr>, Box<Expr>, Box<Expr>),
     Empty,
 }
 
@@ -261,6 +262,19 @@ impl HirCtx<'_> {
                 }
 
                 ExprKind::Comma(exprs)
+            }
+            constants::CONDITIONAL_EXPRESSION => {
+                let cond_expr = self.lower_to_expr(node.child(0).unwrap())?;
+
+                let body_expr = self.lower_to_expr(node.child(2).unwrap())?;
+
+                let else_expr = self.lower_to_expr(node.child(4).unwrap())?;
+
+                ExprKind::Cond(
+                    Box::new(cond_expr),
+                    Box::new(body_expr),
+                    Box::new(else_expr),
+                )
             }
             constants::SIZEOF_EXPRESSION => ExprKind::Sizeof(self.lower_to_sizeof(node)?),
             constants::SEMICOLON_EXPRESSION => ExprKind::Empty,

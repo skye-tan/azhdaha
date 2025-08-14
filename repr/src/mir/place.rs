@@ -53,6 +53,17 @@ impl<'mir> MirCtx<'mir> {
         bb: &mut BasicBlock,
         stmt_span: Span,
     ) -> Place {
+        let place = self.alloc_temp_place(stmt_span);
+
+        self.retrieve_bb(*bb).statements.push(Statement {
+            kind: StatementKind::Assign(place.clone(), rvalue),
+            span: stmt_span,
+        });
+
+        place
+    }
+
+    pub(crate) fn alloc_temp_place(&mut self, stmt_span: Span) -> Place {
         let local = self.alloc_local(
             None,
             None,
@@ -65,17 +76,10 @@ impl<'mir> MirCtx<'mir> {
             stmt_span,
         );
 
-        let place = Place {
+        Place {
             local,
             projections: vec![],
             span: stmt_span,
-        };
-
-        self.retrieve_bb(*bb).statements.push(Statement {
-            kind: StatementKind::Assign(place.clone(), rvalue),
-            span: stmt_span,
-        });
-
-        place
+        }
     }
 }

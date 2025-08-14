@@ -1,9 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use smallvec::SmallVec;
-
 use crate::{
-    hir::{self, PrimTyKind, Span, Ty, TyKind},
+    hir::{self, Span},
     mir::{MirCtx, datatypes::*},
 };
 
@@ -72,23 +70,7 @@ impl<'mir> MirCtx<'mir> {
                 let mut else_bb = self.alloc_bb();
                 let else_rvalue = self.lower_to_rvalue(else_expr, &mut else_bb, stmt_span);
 
-                let result_local = self.alloc_local(
-                    None,
-                    None,
-                    &Ty {
-                        kind: TyKind::PrimTy(PrimTyKind::Int),
-                        is_linear: false,
-                        quals: vec![],
-                        span: stmt_span,
-                    },
-                    stmt_span,
-                );
-
-                let result_place = Place {
-                    local: result_local,
-                    projections: vec![],
-                    span: stmt_span,
-                };
+                let result_place = self.alloc_temp_place(stmt_span);
 
                 self.retrieve_bb(body_bb).statements.push(Statement {
                     kind: StatementKind::Assign(result_place.clone(), body_rvalue),
@@ -111,10 +93,7 @@ impl<'mir> MirCtx<'mir> {
                 self.retrieve_bb(*bb).terminator = Some(Terminator {
                     kind: TerminatorKind::SwitchInt {
                         discr: Operand::Place(cond_place),
-                        targets: SwitchTargets {
-                            value: SmallVec::from_slice(&[1]),
-                            bbs: SmallVec::from_slice(&[body_bb, else_bb]),
-                        },
+                        targets: [body_bb, else_bb],
                     },
                     span,
                 });

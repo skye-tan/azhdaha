@@ -63,18 +63,9 @@ impl MirDisplay for Terminator {
             TerminatorKind::SwitchInt { discr, targets } => {
                 let mut result = format!("switch {} {{\n", discr.mir_display(body));
 
-                for (idx, val) in targets.value.iter().enumerate() {
-                    result.push_str(&format!(
-                        "\t\t{} => 'bb_{};\n",
-                        val,
-                        targets.bbs.get(idx).unwrap().get_id()
-                    ));
-                }
+                result.push_str(&format!("\t\t1 => 'bb_{};\n", targets[0].get_id()));
 
-                result.push_str(&format!(
-                    "\t\t_ => 'bb_{};\n\t}}",
-                    targets.bbs.last().unwrap().get_id()
-                ));
+                result.push_str(&format!("\t\t_ => 'bb_{};\n\t}}", targets[1].get_id()));
 
                 result
             }

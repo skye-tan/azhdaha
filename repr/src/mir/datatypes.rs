@@ -1,7 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use la_arena::{Arena, Idx};
-use smallvec::SmallVec;
 
 use crate::hir::{
     BinOp, Lit, Span, Storage, Ty, UnOp,
@@ -70,15 +69,9 @@ pub enum TerminatorKind {
     },
     SwitchInt {
         discr: Operand,
-        targets: SwitchTargets,
+        targets: [BasicBlock; 2],
     },
     Return,
-}
-
-#[derive(Debug, Clone)]
-pub struct SwitchTargets {
-    pub value: SmallVec<[u128; 1]>,
-    pub bbs: SmallVec<[BasicBlock; 2]>,
 }
 
 #[derive(Debug, Clone)]

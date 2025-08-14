@@ -18,7 +18,6 @@ env_logger = "0.11.8"
 itertools = "0.14.0"
 la-arena = "0.3.1"
 log = "0.4.27"
-smallvec = "1.15.1"
 tree-sitter = "0.25.8"
 tree-sitter-c = { git = "https://github.com/skye-tan/tree-sitter-c.git", version = "0.23.5" }
 

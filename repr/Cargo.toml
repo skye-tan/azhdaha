@@ -12,5 +12,4 @@ ast-utils = { version = "0.1.0", path = "../ast-utils" }
 itertools.workspace = true
 la-arena.workspace = true
 log.workspace = true
-smallvec.workspace = true
 tree-sitter.workspace = true

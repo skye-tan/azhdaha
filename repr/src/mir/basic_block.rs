@@ -1,7 +1,5 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use smallvec::SmallVec;
-
 use crate::{
     hir::{self},
     mir::{MirCtx, RETURN_LOCAL, datatypes::*},
@@ -173,10 +171,7 @@ impl<'mir> MirCtx<'mir> {
                 self.retrieve_bb(*bb).terminator = Some(Terminator {
                     kind: TerminatorKind::SwitchInt {
                         discr: Operand::Place(cond_place),
-                        targets: SwitchTargets {
-                            value: SmallVec::from_slice(&[1]),
-                            bbs: SmallVec::from_slice(&[body_bb, else_bb]),
-                        },
+                        targets: [body_bb, else_bb],
                     },
                     span,
                 });

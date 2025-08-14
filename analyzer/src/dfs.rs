@@ -43,9 +43,8 @@ impl LinearAnalyzer<'_> {
             match &terminator.kind {
                 mir::TerminatorKind::Goto { bb } => bb_stack.push(*bb),
                 mir::TerminatorKind::SwitchInt { targets, .. } => {
-                    for bb in &targets.bbs {
-                        bb_stack.push(*bb);
-                    }
+                    bb_stack.push(targets[0]);
+                    bb_stack.push(targets[1]);
                 }
                 mir::TerminatorKind::Return => continue,
             }

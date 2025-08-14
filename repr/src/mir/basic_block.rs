@@ -3,7 +3,7 @@
 use smallvec::SmallVec;
 
 use crate::{
-    hir::{self, PrimTyKind, Ty, TyKind},
+    hir::{self},
     mir::{MirCtx, RETURN_LOCAL, datatypes::*},
 };
 
@@ -142,24 +142,7 @@ impl<'mir> MirCtx<'mir> {
             }
             hir::StmtKind::If(cond_expr, body_stmt, else_stmt) => {
                 let cond_rvalue = self.lower_to_rvalue(cond_expr, bb, span);
-
-                let cond_local = self.alloc_local(
-                    None,
-                    None,
-                    &Ty {
-                        kind: TyKind::PrimTy(PrimTyKind::Int),
-                        is_linear: false,
-                        quals: vec![],
-                        span: cond_expr.span,
-                    },
-                    cond_expr.span,
-                );
-
-                let cond_place = Place {
-                    local: cond_local,
-                    projections: vec![],
-                    span: cond_expr.span,
-                };
+                let cond_place = self.store_in_temp_place(cond_rvalue, bb, span);
 
                 let body_bb = self.alloc_bb();
                 let mut body_last_bb = body_bb;
@@ -187,14 +170,7 @@ impl<'mir> MirCtx<'mir> {
                     next_bb
                 };
 
-                let bb_data = self.retrieve_bb(*bb);
-
-                bb_data.statements.push(Statement {
-                    kind: StatementKind::Assign(cond_place.clone(), cond_rvalue),
-                    span,
-                });
-
-                bb_data.terminator = Some(Terminator {
+                self.retrieve_bb(*bb).terminator = Some(Terminator {
                     kind: TerminatorKind::SwitchInt {
                         discr: Operand::Place(cond_place),
                         targets: SwitchTargets {

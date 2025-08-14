@@ -16,8 +16,12 @@ use crate::hir::{
 mod arena;
 /// Contains methods needed to lower HIR to MIR's [`BasicBlock`].
 mod basic_block;
-/// Contains methods needed to lower HIR to MIR's [`Rvalue`], [`Operand`], and [`Place`].
+/// Contains methods needed to lower HIR to MIR's [`Operand`].
 mod operand;
+/// Contains methods needed to lower HIR to MIR's [`Place`].
+mod place;
+/// Contains methods needed to lower HIR to MIR's [`Rvalue`].
+mod rvalue;
 
 /// Contains datatypes used to represent the MIR.
 mod datatypes;

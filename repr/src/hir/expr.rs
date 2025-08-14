@@ -22,7 +22,7 @@ pub enum ExprKind {
     Unary(UnOp, Box<Expr>),
     Assign(Box<Expr>, Box<Expr>),
     Field(Box<Expr>, Ident),
-    Index(Box<Expr>, Box<Expr>, Span),
+    Index(Box<Expr>, Box<Expr>),
     Cast(Box<Expr>, Ty),
     Array(Vec<Expr>),
     Comma(Vec<Expr>),
@@ -219,7 +219,7 @@ impl HirCtx<'_> {
 
                 let index = self.lower_to_expr(node.child(2).unwrap())?;
 
-                ExprKind::Index(Box::new(target), Box::new(index), span)
+                ExprKind::Index(Box::new(target), Box::new(index))
             }
             constants::CAST_EXPRESSION => {
                 let ty = self.lower_to_ty(node.child(1).unwrap())?;

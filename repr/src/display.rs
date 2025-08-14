@@ -169,9 +169,10 @@ impl MirDisplay for Place {
 }
 
 impl MirDisplay for PlaceElem {
-    fn mir_display(&self, _body: &Body) -> String {
+    fn mir_display(&self, body: &Body) -> String {
         match self {
             PlaceElem::Field(field) => format!(".{field}"),
+            PlaceElem::Index(place) => format!("[{}]", place.mir_display(body)),
         }
     }
 }

@@ -49,7 +49,7 @@ impl LinearCtx<'_> {
                     }
                 }
                 Err(error) => {
-                    error!("Failed process basic-block for linear bounds - {error:?}")
+                    error!("Failed to check linear bounds - {error:?}")
                 }
             }
 

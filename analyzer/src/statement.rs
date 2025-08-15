@@ -37,29 +37,26 @@ impl LinearCtx<'_> {
                             rhs_is_linear = body.local_decls[place.local].is_linear();
                         }
                     }
-                    mir::Rvalue::BinaryOp(_, left_operand, right_operand) => {
-                        if let mir::Operand::Place(place) = left_operand {
-                            if linear_local.local == place.local {
-                                is_accessed = true;
-                            }
-
-                            rhs_is_linear = body.local_decls[place.local].is_linear();
-                        } else if let mir::Operand::Place(place) = right_operand {
-                            if linear_local.local == place.local {
-                                is_accessed = true;
-                            }
-
-                            rhs_is_linear = body.local_decls[place.local].is_linear();
+                    mir::Rvalue::BinaryOp(..) | mir::Rvalue::UnaryOp(..) => {
+                        if lhs.local != linear_local.local {
+                            return Ok(false);
                         }
-                    }
-                    mir::Rvalue::UnaryOp(_, operand) => {
-                        if let mir::Operand::Place(place) = operand {
-                            if linear_local.local == place.local {
-                                is_accessed = true;
-                            }
 
-                            rhs_is_linear = body.local_decls[place.local].is_linear();
-                        }
+                        report_builder.set_message("Assignment of non-linear to linear");
+
+                        report_builder.add_label(
+                            Label::new(ReportSpan::new(statement.span))
+                                .with_message(format!(
+                                    "Cannot store a non-linear value in {} which is defined as linear",
+                                    format!("`{}`",linear_local.name)
+                                        .fg(DIAGNOSIS_REPORT_COLOR),
+                                ))
+                                .with_color(DIAGNOSIS_REPORT_COLOR),
+                        );
+
+                        report_builder.add_help("Try to store the value in a non-linear variable");
+
+                        return Ok(true);
                     }
                     mir::Rvalue::Call(func, func_params) => {
                         let (func_name, func_sig, decl_span) = match func {

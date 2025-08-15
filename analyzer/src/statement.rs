@@ -137,7 +137,7 @@ impl LinearCtx<'_> {
                                         return Ok(true);
                                     }
                                     LinearStatus::Free | LinearStatus::Unknown => {
-                                        linear_local.status = LinearStatus::Owner;
+                                        linear_local.set_owner();
 
                                         report_builder.add_label(
                                             Label::new(ReportSpan::new(statement.span))
@@ -202,12 +202,12 @@ impl LinearCtx<'_> {
 
                     let lhs_name = match &lhs_decl.kind {
                         mir::LocalKind::Real { ident, .. } => ident.name.clone(),
-                        mir::LocalKind::Temp => bail!("Cannot retrieve name of the local."),
+                        mir::LocalKind::Temp => "unknown".to_owned(),
                     };
 
                     match (lhs_decl.is_linear(), &linear_local.status) {
                         (true, LinearStatus::Owner | LinearStatus::Unknown) => {
-                            linear_local.status = LinearStatus::Free;
+                            linear_local.set_free();
 
                             report_builder.add_label(
                                 Label::new(ReportSpan::new(statement.span))
@@ -325,7 +325,7 @@ impl LinearCtx<'_> {
                             return Ok(true);
                         }
                         LinearStatus::Free | LinearStatus::Unknown => {
-                            linear_local.status = LinearStatus::Owner;
+                            linear_local.set_owner();
 
                             report_builder.add_label(
                                 Label::new(ReportSpan::new(statement.span))
@@ -435,7 +435,7 @@ impl LinearCtx<'_> {
 
             match linear_local.status {
                 LinearStatus::Owner | LinearStatus::Unknown => {
-                    linear_local.status = LinearStatus::Free;
+                    linear_local.set_free();
 
                     report_builder.add_label(
                         Label::new(ReportSpan::new(param_place.span))

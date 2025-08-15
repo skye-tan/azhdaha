@@ -53,6 +53,10 @@ impl LinearCtx<'_> {
                 }
             }
 
+            if linear_local.is_altered {
+                continue;
+            }
+
             let Some(terminator) = &bb_data.terminator else {
                 continue;
             };

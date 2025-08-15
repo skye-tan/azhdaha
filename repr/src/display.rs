@@ -213,7 +213,7 @@ impl MirDisplay for TyKind {
 
                 result.push_str(&kind.mir_display(body));
 
-                result.push_str(" *");
+                result.push('*');
 
                 for qual in quals {
                     result.push_str(&format!("{} ", qual.mir_display(body)));
@@ -221,10 +221,7 @@ impl MirDisplay for TyKind {
 
                 result
             }
-            TyKind::Array { kind, size } => match size {
-                Some(_) => format!("[{}; _]", kind.mir_display(body)),
-                None => format!("[{}]", kind.mir_display(body)),
-            },
+            TyKind::Array { kind, .. } => format!("{}[]", kind.mir_display(body)),
             TyKind::Func { .. } => "function pointer".to_owned(),
         }
     }

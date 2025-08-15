@@ -14,7 +14,26 @@ pub(crate) struct LinearLocal {
     pub(crate) name: String,
     pub(crate) local: mir::Local,
     pub(crate) status: LinearStatus,
+    pub(crate) is_altered: bool,
     pub(crate) span: Span,
+}
+
+impl LinearLocal {
+    pub(crate) fn set_free(&mut self) {
+        if matches!(self.status, LinearStatus::Owner) {
+            self.is_altered = true;
+        }
+
+        self.status = LinearStatus::Free;
+    }
+
+    pub(crate) fn set_owner(&mut self) {
+        if matches!(self.status, LinearStatus::Free) {
+            self.is_altered = true;
+        }
+
+        self.status = LinearStatus::Owner;
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -52,6 +71,7 @@ impl<'linear> LinearCtx<'linear> {
                             name: ident.name.clone(),
                             local,
                             status: LinearStatus::Unknown,
+                            is_altered: false,
                             span: local_decl.span,
                         })
                     } else {
@@ -67,18 +87,21 @@ impl<'linear> LinearCtx<'linear> {
             name: "dummy".to_owned(),
             local: Idx::from_raw(RawIdx::from_u32(u32::MAX)),
             status: LinearStatus::Free,
+            is_altered: false,
             span: repr::hir::Span { lo: 0, hi: 0 },
         });
 
         for linear_local in linear_locals {
             for (bb, _) in body.basic_blocks.iter() {
-                if let Some(report) = self.dfs_with_stack(body, linear_local.clone(), bb.into())
-                    && let Err(error) = report.print(ReportCache::new(
+                if let Some(report) = self.dfs_with_stack(body, linear_local.clone(), bb.into()) {
+                    if let Err(error) = report.print(ReportCache::new(
                         self.source_path.clone(),
                         &self.report_source,
-                    ))
-                {
-                    error!("Failed to print the linear analyzer's report - {error:?}");
+                    )) {
+                        error!("Failed to print the linear analyzer's report - {error:?}");
+                    }
+
+                    break;
                 }
             }
         }

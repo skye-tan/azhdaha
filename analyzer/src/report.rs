@@ -2,19 +2,20 @@
 
 use std::fmt;
 
-use ariadne::{Cache, Source};
+use ariadne::{Cache, Source, Span};
 
-use repr::hir::Span;
+use repr::hir;
 
-pub(crate) struct ReportSpan(Span);
+#[derive(Clone)]
+pub(crate) struct ReportSpan(hir::Span);
 
 impl ReportSpan {
-    pub(crate) fn new(span: Span) -> Self {
+    pub(crate) fn new(span: hir::Span) -> Self {
         Self(span)
     }
 }
 
-impl ariadne::Span for ReportSpan {
+impl Span for ReportSpan {
     type SourceId = ();
 
     fn source(&self) -> &Self::SourceId {

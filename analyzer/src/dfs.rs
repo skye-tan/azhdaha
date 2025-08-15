@@ -1,22 +1,37 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
+use ariadne::{Fmt as _, Label, Report, ReportBuilder, ReportKind};
 use log::error;
 
 use repr::mir;
 
-use crate::linear::{LinearAnalyzer, LinearLocal};
+use crate::{
+    DIAGNOSIS_REPORT_COLOR,
+    linear::{LinearCtx, LinearLocal},
+    report::ReportSpan,
+};
 
-impl LinearAnalyzer<'_> {
+impl LinearCtx<'_> {
     pub(crate) fn dfs_with_stack(
-        &mut self,
+        &self,
         body: &mir::Body,
         linear_local: LinearLocal,
         bb: mir::BasicBlock,
-    ) -> bool {
-        let mut visited = vec![false; body.basic_blocks.len()];
-        let mut bb_stack = vec![(bb, linear_local)];
+    ) -> Option<Report<'_, ReportSpan>> {
+        let report_builder = Report::build(ReportKind::Error, ReportSpan::new(body.span))
+            .with_label(
+                Label::new(ReportSpan::new(linear_local.span))
+                    .with_message(format!(
+                        "Variable {} is defined in here as linear",
+                        format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
+                    ))
+                    .with_color(DIAGNOSIS_REPORT_COLOR),
+            );
 
-        while let Some((bb, mut linear_local)) = bb_stack.pop() {
+        let mut visited = vec![false; body.basic_blocks.len()];
+        let mut bb_stack = vec![(report_builder, linear_local, bb)];
+
+        while let Some((mut report_builder, mut linear_local, bb)) = bb_stack.pop() {
             let index = bb.get_id();
 
             if visited[index] {
@@ -27,13 +42,15 @@ impl LinearAnalyzer<'_> {
 
             let bb_data = &body.basic_blocks[bb.into_inner()];
 
-            match self.process_bb(body, &mut linear_local, bb_data) {
+            match self.process_bb(body, &mut report_builder, &mut linear_local, bb_data) {
                 Ok(should_be_reported) => {
                     if should_be_reported {
-                        return true;
+                        return Some(report_builder.finish());
                     }
                 }
-                Err(error) => error!("Failed to finish linear analyzing - {error:?}"),
+                Err(error) => {
+                    error!("Failed process basic-block for linear bounds - {error:?}")
+                }
             }
 
             let Some(terminator) = &bb_data.terminator else {
@@ -41,30 +58,33 @@ impl LinearAnalyzer<'_> {
             };
 
             match &terminator.kind {
-                mir::TerminatorKind::Goto { bb } => bb_stack.push((*bb, linear_local)),
+                mir::TerminatorKind::Goto { bb } => {
+                    bb_stack.push((report_builder, linear_local, *bb))
+                }
                 mir::TerminatorKind::SwitchInt { targets, .. } => {
-                    bb_stack.push((targets[0], linear_local.clone()));
-                    bb_stack.push((targets[1], linear_local));
+                    bb_stack.push((report_builder.clone(), linear_local.clone(), targets[0]));
+                    bb_stack.push((report_builder, linear_local, targets[1]));
                 }
                 mir::TerminatorKind::Return => continue,
             }
         }
 
-        false
+        None
     }
 
-    pub fn process_bb(
-        &mut self,
+    fn process_bb(
+        &self,
         body: &mir::Body,
+        report_builder: &mut ReportBuilder<'_, ReportSpan>,
         linear_local: &mut LinearLocal,
         bb_data: &mir::BasicBlockData,
     ) -> anyhow::Result<bool> {
         for statement in &bb_data.statements {
-            if self.process_statement(body, linear_local, statement)? {
+            if self.process_statement(body, report_builder, linear_local, statement)? {
                 return Ok(true);
             }
         }
 
-        self.process_terminator(linear_local, &bb_data.terminator)
+        self.process_terminator(report_builder, linear_local, &bb_data.terminator)
     }
 }

@@ -1,16 +1,13 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use anyhow::Context;
-use ariadne::{Fmt as _, Label, Report, ReportBuilder, ReportKind, Source};
+use ariadne::Source;
 use la_arena::{Idx, RawIdx};
 use log::error;
 
 use repr::{hir::Span, mir};
 
-use crate::{
-    DIAGNOSIS_REPORT_COLOR,
-    report::{ReportCache, ReportSpan},
-};
+use crate::report::ReportCache;
 
 #[derive(Debug, Clone)]
 pub(crate) struct LinearLocal {
@@ -25,18 +22,6 @@ pub(crate) enum LinearStatus {
     Owner,
     Free,
     Unknown,
-}
-
-pub(crate) struct LinearAnalyzer<'linear> {
-    pub(crate) report: ReportBuilder<'linear, ReportSpan>,
-}
-
-impl LinearAnalyzer<'_> {
-    pub(crate) fn new(span: ReportSpan) -> Self {
-        Self {
-            report: Report::build(ReportKind::Error, span),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -87,19 +72,8 @@ impl<'linear> LinearCtx<'linear> {
 
         for linear_local in linear_locals {
             for (bb, _) in body.basic_blocks.iter() {
-                let mut linear_analyzer = LinearAnalyzer::new(ReportSpan::new(body.span));
-
-                linear_analyzer.report.add_label(
-                    Label::new(ReportSpan::new(linear_local.span))
-                        .with_message(format!(
-                            "Variable {} is defined in here as linear",
-                            format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
-                        ))
-                        .with_color(DIAGNOSIS_REPORT_COLOR),
-                );
-
-                if linear_analyzer.dfs_with_stack(body, linear_local.clone(), bb.into())
-                    && let Err(error) = linear_analyzer.report.finish().print(ReportCache::new(
+                if let Some(report) = self.dfs_with_stack(body, linear_local.clone(), bb.into())
+                    && let Err(error) = report.print(ReportCache::new(
                         self.source_path.clone(),
                         &self.report_source,
                     ))

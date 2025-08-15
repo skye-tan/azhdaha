@@ -12,7 +12,7 @@ edition = "2024"
 
 [workspace.dependencies]
 anyhow = "1.0.98"
-ariadne = "0.5.1"
+ariadne = { git = "https://github.com/skye-tan/ariadne.git", branch = "derive-clone-for-report-builder"}
 compile_commands = "0.3.0"
 env_logger = "0.11.8"
 itertools = "0.14.0"

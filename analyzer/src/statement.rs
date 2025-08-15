@@ -1,7 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use anyhow::bail;
-use ariadne::{Fmt as _, Label};
+use ariadne::{Fmt as _, Label, ReportBuilder};
 
 use repr::{
     hir::{self, Span, resolver},
@@ -10,14 +10,15 @@ use repr::{
 
 use crate::{
     DIAGNOSIS_REPORT_COLOR,
-    linear::{LinearAnalyzer, LinearLocal, LinearStatus},
+    linear::{LinearCtx, LinearLocal, LinearStatus},
     report::ReportSpan,
 };
 
-impl LinearAnalyzer<'_> {
+impl LinearCtx<'_> {
     pub(crate) fn process_statement(
-        &mut self,
+        &self,
         body: &mir::Body,
+        report_builder: &mut ReportBuilder<'_, ReportSpan>,
         linear_local: &mut LinearLocal,
         statement: &mir::Statement,
     ) -> anyhow::Result<bool> {
@@ -33,9 +34,7 @@ impl LinearAnalyzer<'_> {
                                 is_accessed = true;
                             }
 
-                            if body.local_decls[place.local].is_linear() {
-                                rhs_is_linear = true;
-                            }
+                            rhs_is_linear = body.local_decls[place.local].is_linear();
                         }
                     }
                     mir::Rvalue::BinaryOp(_, left_operand, right_operand) => {
@@ -44,17 +43,13 @@ impl LinearAnalyzer<'_> {
                                 is_accessed = true;
                             }
 
-                            if body.local_decls[place.local].is_linear() {
-                                rhs_is_linear = true;
-                            }
+                            rhs_is_linear = body.local_decls[place.local].is_linear();
                         } else if let mir::Operand::Place(place) = right_operand {
                             if linear_local.local == place.local {
                                 is_accessed = true;
                             }
 
-                            if body.local_decls[place.local].is_linear() {
-                                rhs_is_linear = true;
-                            }
+                            rhs_is_linear = body.local_decls[place.local].is_linear();
                         }
                     }
                     mir::Rvalue::UnaryOp(_, operand) => {
@@ -63,9 +58,7 @@ impl LinearAnalyzer<'_> {
                                 is_accessed = true;
                             }
 
-                            if body.local_decls[place.local].is_linear() {
-                                rhs_is_linear = true;
-                            }
+                            rhs_is_linear = body.local_decls[place.local].is_linear();
                         }
                     }
                     mir::Rvalue::Call(func, func_params) => {
@@ -110,6 +103,7 @@ impl LinearAnalyzer<'_> {
 
                         if self.process_func_call(
                             body,
+                            report_builder,
                             linear_local,
                             func_name,
                             func_sig,
@@ -125,9 +119,9 @@ impl LinearAnalyzer<'_> {
                             if func_sig.ret_ty.is_linear {
                                 match linear_local.status {
                                     LinearStatus::Owner => {
-                                        self.report.set_message("Overwriting owned value");
+                                        report_builder.set_message("Overwriting owned value");
 
-                                        self.report.add_label(
+                                        report_builder.add_label(
                                         Label::new(ReportSpan::new(statement.span))
                                             .with_message(format!(
                                                 "Current owned value of {} is overwritten in here",
@@ -137,7 +131,7 @@ impl LinearAnalyzer<'_> {
                                             .with_color(DIAGNOSIS_REPORT_COLOR),
                                         );
 
-                                        self.report.add_help(format!(
+                                        report_builder.add_help(format!(
                                             "Try to move {}'s value before reaching this statement",
                                             format!("`{}`", linear_local.name)
                                                 .fg(DIAGNOSIS_REPORT_COLOR)
@@ -148,7 +142,7 @@ impl LinearAnalyzer<'_> {
                                     LinearStatus::Free | LinearStatus::Unknown => {
                                         linear_local.status = LinearStatus::Owner;
 
-                                        self.report.add_label(
+                                        report_builder.add_label(
                                             Label::new(ReportSpan::new(statement.span))
                                                 .with_message(format!(
                                                     "A new value is moved to {} in here",
@@ -160,10 +154,9 @@ impl LinearAnalyzer<'_> {
                                     }
                                 }
                             } else {
-                                self.report
-                                    .set_message("Assignment of non-linear to linear");
+                                report_builder.set_message("Assignment of non-linear to linear");
 
-                                self.report.add_label(
+                                report_builder.add_label(
                                     Label::new(ReportSpan::new(decl_span))
                                         .with_message(format!(
                                             "Function {} is defined in here which does not return a linear value",
@@ -172,7 +165,7 @@ impl LinearAnalyzer<'_> {
                                         .with_color(DIAGNOSIS_REPORT_COLOR),
                                 );
 
-                                self.report.add_label(
+                                report_builder.add_label(
                                     Label::new(ReportSpan::new(statement.span))
                                         .with_message(format!(
                                             "Cannot store a non-linear value in {} which is defined as linear",
@@ -182,7 +175,7 @@ impl LinearAnalyzer<'_> {
                                         .with_color(DIAGNOSIS_REPORT_COLOR),
                                 );
 
-                                self.report.add_help(
+                                report_builder.add_help(
                                     "Try to store the returned value in a non-linear variable",
                                 );
 
@@ -219,7 +212,7 @@ impl LinearAnalyzer<'_> {
                         (true, LinearStatus::Owner | LinearStatus::Unknown) => {
                             linear_local.status = LinearStatus::Free;
 
-                            self.report.add_label(
+                            report_builder.add_label(
                                 Label::new(ReportSpan::new(statement.span))
                                     .with_message(format!(
                                         "{}'s value is moved in here",
@@ -230,9 +223,9 @@ impl LinearAnalyzer<'_> {
                             );
                         }
                         (true, LinearStatus::Free) => {
-                            self.report.set_message("Use of moved value");
+                            report_builder.set_message("Use of moved value");
 
-                            self.report.add_label(
+                            report_builder.add_label(
                                 Label::new(ReportSpan::new(lhs_decl.span))
                                     .with_message(format!(
                                         "Variable {} is defined in here as linear",
@@ -241,7 +234,7 @@ impl LinearAnalyzer<'_> {
                                     .with_color(DIAGNOSIS_REPORT_COLOR),
                             );
 
-                            self.report.add_label(
+                            report_builder.add_label(
                                 Label::new(ReportSpan::new(statement.span))
                                     .with_message(format!(
                                         "Cannot move {}'s invalid value to {}",
@@ -252,7 +245,7 @@ impl LinearAnalyzer<'_> {
                                     .with_color(DIAGNOSIS_REPORT_COLOR),
                             );
 
-                            self.report.add_help(format!(
+                            report_builder.add_help(format!(
                                 "Try to move a value to {} before reaching this statement",
                                 format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
                             ));
@@ -261,18 +254,18 @@ impl LinearAnalyzer<'_> {
                         }
                         (false, LinearStatus::Owner | LinearStatus::Unknown) => (),
                         (false, LinearStatus::Free) => {
-                            self.report.set_message("Use of moved value");
+                            report_builder.set_message("Use of moved value");
 
-                            self.report.add_label(
+                            report_builder.add_label(
                                 Label::new(ReportSpan::new(lhs_decl.span))
                                     .with_message(format!(
-                                        "Variable {} is defined in here as linear",
+                                        "Variable {} is defined in here as non-linear",
                                         format!("`{lhs_name}`").fg(DIAGNOSIS_REPORT_COLOR)
                                     ))
                                     .with_color(DIAGNOSIS_REPORT_COLOR),
                             );
 
-                            self.report.add_label(
+                            report_builder.add_label(
                                 Label::new(ReportSpan::new(statement.span))
                                     .with_message(format!(
                                         "Cannot lend {}'s invalid value to {}",
@@ -283,7 +276,7 @@ impl LinearAnalyzer<'_> {
                                     .with_color(DIAGNOSIS_REPORT_COLOR),
                             );
 
-                            self.report.add_help(format!(
+                            report_builder.add_help(format!(
                                 "Try to move a value to {} before reaching this statement",
                                 format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
                             ));
@@ -296,10 +289,9 @@ impl LinearAnalyzer<'_> {
                 // TODO: Better reports when a non-linear is assigned to a linear.
                 if lhs.local == linear_local.local {
                     if !rhs_is_linear {
-                        self.report
-                            .set_message("Assignment of non-linear to linear");
+                        report_builder.set_message("Assignment of non-linear to linear");
 
-                        self.report.add_label(
+                        report_builder.add_label(
                             Label::new(ReportSpan::new(statement.span))
                                 .with_message(format!(
                                     "Cannot store a non-linear value in {} which is defined as linear",
@@ -309,17 +301,16 @@ impl LinearAnalyzer<'_> {
                                 .with_color(DIAGNOSIS_REPORT_COLOR),
                         );
 
-                        self.report
-                            .add_help("Try to store the value in a non-linear variable");
+                        report_builder.add_help("Try to store the value in a non-linear variable");
 
                         return Ok(true);
                     }
 
                     match linear_local.status {
                         LinearStatus::Owner => {
-                            self.report.set_message("Overwriting owned value");
+                            report_builder.set_message("Overwriting owned value");
 
-                            self.report.add_label(
+                            report_builder.add_label(
                                 Label::new(ReportSpan::new(statement.span))
                                     .with_message(format!(
                                         "Current owned value of {} is overwritten in here",
@@ -329,7 +320,7 @@ impl LinearAnalyzer<'_> {
                                     .with_color(DIAGNOSIS_REPORT_COLOR),
                             );
 
-                            self.report.add_help(format!(
+                            report_builder.add_help(format!(
                                 "Try to move {}'s value before reaching this statement",
                                 format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
                             ));
@@ -339,7 +330,7 @@ impl LinearAnalyzer<'_> {
                         LinearStatus::Free | LinearStatus::Unknown => {
                             linear_local.status = LinearStatus::Owner;
 
-                            self.report.add_label(
+                            report_builder.add_label(
                                 Label::new(ReportSpan::new(statement.span))
                                     .with_message(format!(
                                         "A new value is moved to {} in here",
@@ -394,6 +385,7 @@ impl LinearAnalyzer<'_> {
 
                 if self.process_func_call(
                     body,
+                    report_builder,
                     linear_local,
                     func_name,
                     func_sig,
@@ -412,9 +404,11 @@ impl LinearAnalyzer<'_> {
         Ok(false)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn process_func_call(
-        &mut self,
+        &self,
         body: &mir::Body,
+        report_builder: &mut ReportBuilder<'_, ReportSpan>,
         linear_local: &mut LinearLocal,
         func_name: &str,
         func_sig: &hir::FuncSig,
@@ -446,7 +440,7 @@ impl LinearAnalyzer<'_> {
                 LinearStatus::Owner | LinearStatus::Unknown => {
                     linear_local.status = LinearStatus::Free;
 
-                    self.report.add_label(
+                    report_builder.add_label(
                         Label::new(ReportSpan::new(param_place.span))
                             .with_message(format!(
                                 "{}'s value is moved in here",
@@ -466,9 +460,9 @@ impl LinearAnalyzer<'_> {
                 .map(|ident| ident.name)
                 .unwrap_or_default();
 
-            self.report.set_message("Use of moved value");
+            report_builder.set_message("Use of moved value");
 
-            self.report.add_label(
+            report_builder.add_label(
                 Label::new(ReportSpan::new(decl_span))
                     .with_message(format!(
                         "Function {} is defined in here which captures parameter {} as linear",
@@ -478,7 +472,7 @@ impl LinearAnalyzer<'_> {
                     .with_color(DIAGNOSIS_REPORT_COLOR),
             );
 
-            self.report.add_label(
+            report_builder.add_label(
                 Label::new(ReportSpan::new(param_place.span))
                     .with_message(format!(
                         "Cannot move and pass {}'s invalid value",
@@ -487,7 +481,7 @@ impl LinearAnalyzer<'_> {
                     .with_color(DIAGNOSIS_REPORT_COLOR),
             );
 
-            self.report.add_help(format!(
+            report_builder.add_help(format!(
                 "Try to move a value to {} before reaching this statement",
                 format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
             ));

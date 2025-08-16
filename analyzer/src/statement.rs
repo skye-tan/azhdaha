@@ -134,141 +134,13 @@ impl LinearCtx<'_> {
 
                         return Ok(true);
                     }
-                    mir::Rvalue::Call(func, func_params) => {
-                        let (func_name, func_sig, decl_span) = match func {
-                            mir::Operand::Place(_) => unreachable!(),
-                            mir::Operand::Const(_const) => match _const {
-                                mir::Const::Symbol(symbol) => {
-                                    let symbol_kind = body.symbol_resolver.get_data_by_res(symbol);
-
-                                    match symbol_kind {
-                                        resolver::SymbolKind::Func(func_decl) => {
-                                            (&func_decl.ident.name, &func_decl.sig, func_decl.span)
-                                        }
-                                        resolver::SymbolKind::Var(local_decl) => {
-                                            let mut ty_kind = &local_decl.ty.kind;
-
-                                            loop {
-                                                match ty_kind {
-                                                    hir::TyKind::Ptr { kind, .. } => {
-                                                        ty_kind = kind.as_ref();
-                                                    }
-                                                    hir::TyKind::Array { kind, .. } => {
-                                                        ty_kind = kind.as_ref();
-                                                    }
-                                                    hir::TyKind::Func { sig } => {
-                                                        break (
-                                                            &local_decl.ident.name,
-                                                            sig.as_ref(),
-                                                            local_decl.span,
-                                                        );
-                                                    }
-                                                    _ => unreachable!(),
-                                                };
-                                            }
-                                        }
-                                        _ => unreachable!(),
-                                    }
-                                }
-                                _ => unreachable!(),
-                            },
-                        };
-
-                        if self.process_func_call(
+                    mir::Rvalue::Call(..) => {
+                        return self.process_func_call(
                             body,
                             report_builder,
                             linear_local,
-                            func_name,
-                            func_sig,
-                            func_params,
-                            decl_span,
-                        )? {
-                            return Ok(true);
-                        };
-
-                        let lhs_decl = &body.local_decls[lhs.local];
-
-                        if lhs.local == linear_local.local {
-                            if func_sig.ret_ty.is_linear {
-                                match linear_local.status {
-                                    LinearStatus::Owner => {
-                                        report_builder.set_message("Overwriting owned value");
-
-                                        report_builder.add_label(
-                                        Label::new(ReportSpan::new(statement.span))
-                                            .with_message(format!(
-                                                "Current owned value of {} is overwritten in here",
-                                                format!("`{}`", linear_local.name)
-                                                    .fg(DIAGNOSIS_REPORT_COLOR)
-                                            ))
-                                            .with_color(DIAGNOSIS_REPORT_COLOR),
-                                        );
-
-                                        report_builder.add_help(format!(
-                                            "Try to move {}'s value before reaching this statement",
-                                            format!("`{}`", linear_local.name)
-                                                .fg(DIAGNOSIS_REPORT_COLOR)
-                                        ));
-
-                                        return Ok(true);
-                                    }
-                                    LinearStatus::Free | LinearStatus::Unknown => {
-                                        linear_local.set_owner();
-
-                                        report_builder.add_label(
-                                            Label::new(ReportSpan::new(statement.span))
-                                                .with_message(format!(
-                                                    "A new value is moved to {} in here",
-                                                    format!("`{}`", linear_local.name)
-                                                        .fg(DIAGNOSIS_REPORT_COLOR),
-                                                ))
-                                                .with_color(DIAGNOSIS_REPORT_COLOR),
-                                        );
-                                    }
-                                }
-                            } else {
-                                report_builder.set_message("Assignment of non-linear to linear");
-
-                                report_builder.add_label(
-                                    Label::new(ReportSpan::new(decl_span))
-                                        .with_message(format!(
-                                            "Function {} is defined in here which does not return a linear value",
-                                            format!("`{func_name}`").fg(DIAGNOSIS_REPORT_COLOR),
-                                        ))
-                                        .with_color(DIAGNOSIS_REPORT_COLOR),
-                                );
-
-                                report_builder.add_label(
-                                    Label::new(ReportSpan::new(statement.span))
-                                        .with_message(format!(
-                                            "Cannot store a non-linear value in {} which is defined as linear",
-                                            format!("`{}`", linear_local.name)
-                                                .fg(DIAGNOSIS_REPORT_COLOR),
-                                        ))
-                                        .with_color(DIAGNOSIS_REPORT_COLOR),
-                                );
-
-                                report_builder.add_help(
-                                    "Try to store the returned value in a non-linear variable",
-                                );
-
-                                return Ok(true);
-                            }
-
-                            return Ok(false);
-                        }
-
-                        if lhs_decl.is_linear() && !func_sig.ret_ty.is_linear {
-                            bail!(
-                                "Not supported yet - Stored non-linear in linear after function call."
-                            );
-                        } else if !lhs_decl.is_linear() && func_sig.ret_ty.is_linear {
-                            bail!(
-                                "Not supported yet - Stored linear in non-linear after function call."
-                            );
-                        }
-
-                        return Ok(false);
+                            statement,
+                        );
                     }
                     mir::Rvalue::Empty => (),
                 }
@@ -415,66 +287,13 @@ impl LinearCtx<'_> {
                         }
                     }
                 }
+
+                Ok(false)
             }
-            mir::StatementKind::Call(func, func_params) => {
-                let (func_name, func_sig, decl_span) = match func {
-                    mir::Operand::Place(_) => unreachable!(),
-                    mir::Operand::Const(_const) => match _const {
-                        mir::Const::Symbol(symbol) => {
-                            let symbol_kind = body.symbol_resolver.get_data_by_res(symbol);
-
-                            match symbol_kind {
-                                resolver::SymbolKind::Func(func_decl) => {
-                                    (&func_decl.ident.name, &func_decl.sig, func_decl.span)
-                                }
-                                resolver::SymbolKind::Var(local_decl) => {
-                                    let mut ty_kind = &local_decl.ty.kind;
-
-                                    loop {
-                                        match ty_kind {
-                                            hir::TyKind::Ptr { kind, .. } => {
-                                                ty_kind = kind.as_ref();
-                                            }
-                                            hir::TyKind::Array { kind, .. } => {
-                                                ty_kind = kind.as_ref();
-                                            }
-                                            hir::TyKind::Func { sig } => {
-                                                break (
-                                                    &local_decl.ident.name,
-                                                    sig.as_ref(),
-                                                    local_decl.span,
-                                                );
-                                            }
-                                            _ => unreachable!(),
-                                        };
-                                    }
-                                }
-                                _ => unreachable!(),
-                            }
-                        }
-                        _ => unreachable!(),
-                    },
-                };
-
-                if self.process_func_call(
-                    body,
-                    report_builder,
-                    linear_local,
-                    func_name,
-                    func_sig,
-                    func_params,
-                    decl_span,
-                )? {
-                    return Ok(true);
-                };
-
-                if func_sig.ret_ty.is_linear {
-                    bail!("Not supported yet - Ignored linear result after function call.")
-                }
+            mir::StatementKind::Call(..) => {
+                self.process_func_call(body, report_builder, linear_local, statement)
             }
         }
-
-        Ok(false)
     }
 
     fn process_operand(
@@ -520,22 +339,65 @@ impl LinearCtx<'_> {
         Ok(true)
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn process_func_call(
         &self,
         body: &mir::Body,
         report_builder: &mut ReportBuilder<'_, ReportSpan>,
         linear_local: &mut LinearLocal,
-        func_name: &str,
-        func_sig: &hir::FuncSig,
-        func_params: &[mir::Operand],
-        decl_span: Span,
+        statement: &mir::Statement,
     ) -> anyhow::Result<bool> {
-        if func_params.len() != func_sig.params.len() {
+        let (lhs, func, params) = match &statement.kind {
+            mir::StatementKind::Assign(lhs, rvalue) => match rvalue {
+                mir::Rvalue::Call(func, params) => (Some(lhs), func, params),
+                _ => unreachable!(),
+            },
+            mir::StatementKind::Call(func, params) => (None, func, params),
+        };
+
+        let (func_name, func_sig, decl_span) = match func {
+            mir::Operand::Place(_) => unreachable!(),
+            mir::Operand::Const(_const) => match _const {
+                mir::Const::Symbol(symbol) => {
+                    let symbol_kind = body.symbol_resolver.get_data_by_res(symbol);
+
+                    match symbol_kind {
+                        resolver::SymbolKind::Func(func_decl) => {
+                            (&func_decl.ident.name, &func_decl.sig, func_decl.span)
+                        }
+                        resolver::SymbolKind::Var(local_decl) => {
+                            let mut ty_kind = &local_decl.ty.kind;
+
+                            loop {
+                                match ty_kind {
+                                    hir::TyKind::Ptr { kind, .. } => {
+                                        ty_kind = kind.as_ref();
+                                    }
+                                    hir::TyKind::Array { kind, .. } => {
+                                        ty_kind = kind.as_ref();
+                                    }
+                                    hir::TyKind::Func { sig } => {
+                                        break (
+                                            &local_decl.ident.name,
+                                            sig.as_ref(),
+                                            local_decl.span,
+                                        );
+                                    }
+                                    _ => unreachable!(),
+                                };
+                            }
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                _ => unreachable!(),
+            },
+        };
+
+        if params.len() != func_sig.params.len() {
             bail!("Invalid number of arguments for the function call.");
         }
 
-        for (param_operand, func_param_decl) in func_params.iter().zip(func_sig.params.iter()) {
+        for (param_operand, func_param_decl) in params.iter().zip(func_sig.params.iter()) {
             let mir::Operand::Place(param_place) = param_operand else {
                 continue;
             };
@@ -603,6 +465,86 @@ impl LinearCtx<'_> {
             ));
 
             return Ok(true);
+        }
+
+        let Some(lhs) = lhs else {
+            if func_sig.ret_ty.is_linear {
+                bail!("Not supported yet - Ignored linear result after function call.")
+            }
+
+            return Ok(false);
+        };
+
+        let lhs_decl = &body.local_decls[lhs.local];
+
+        if lhs.local == linear_local.local {
+            if func_sig.ret_ty.is_linear {
+                match linear_local.status {
+                    LinearStatus::Owner => {
+                        report_builder.set_message("Overwriting owned value");
+
+                        report_builder.add_label(
+                            Label::new(ReportSpan::new(statement.span))
+                                .with_message(format!(
+                                    "Current owned value of {} is overwritten in here",
+                                    format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
+                                ))
+                                .with_color(DIAGNOSIS_REPORT_COLOR),
+                        );
+
+                        report_builder.add_help(format!(
+                            "Try to move {}'s value before reaching this statement",
+                            format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
+                        ));
+
+                        return Ok(true);
+                    }
+                    LinearStatus::Free | LinearStatus::Unknown => {
+                        linear_local.set_owner();
+
+                        report_builder.add_label(
+                            Label::new(ReportSpan::new(statement.span))
+                                .with_message(format!(
+                                    "A new value is moved to {} in here",
+                                    format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR),
+                                ))
+                                .with_color(DIAGNOSIS_REPORT_COLOR),
+                        );
+                    }
+                }
+            } else {
+                report_builder.set_message("Assignment of non-linear to linear");
+
+                report_builder.add_label(
+                    Label::new(ReportSpan::new(decl_span))
+                        .with_message(format!(
+                            "Function {} is defined in here which does not return a linear value",
+                            format!("`{func_name}`").fg(DIAGNOSIS_REPORT_COLOR),
+                        ))
+                        .with_color(DIAGNOSIS_REPORT_COLOR),
+                );
+
+                report_builder.add_label(
+                    Label::new(ReportSpan::new(statement.span))
+                        .with_message(format!(
+                            "Cannot store a non-linear value in {} which is defined as linear",
+                            format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR),
+                        ))
+                        .with_color(DIAGNOSIS_REPORT_COLOR),
+                );
+
+                report_builder.add_help("Try to store the returned value in a non-linear variable");
+
+                return Ok(true);
+            }
+
+            return Ok(false);
+        }
+
+        if lhs_decl.is_linear() && !func_sig.ret_ty.is_linear {
+            bail!("Not supported yet - Stored non-linear in linear after function call.");
+        } else if !lhs_decl.is_linear() && func_sig.ret_ty.is_linear {
+            bail!("Not supported yet - Stored linear in non-linear after function call.");
         }
 
         Ok(false)

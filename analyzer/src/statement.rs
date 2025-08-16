@@ -28,7 +28,7 @@ impl LinearCtx<'_> {
                 let mut rhs_is_linear = false;
 
                 match rhs {
-                    mir::Rvalue::Use(operand) => {
+                    mir::Rvalue::Use(operand) | mir::Rvalue::Cast(operand, _) => {
                         if let mir::Operand::Place(place) = operand {
                             if linear_local.local == place.local {
                                 is_accessed = true;

@@ -115,6 +115,9 @@ impl MirDisplay for Rvalue {
                         .join(", ")
                 )
             }
+            Rvalue::Cast(operand, ty) => {
+                format!("({}) {}", ty.mir_display(body), operand.mir_display(body),)
+            }
             Rvalue::Empty => String::new(),
         }
     }

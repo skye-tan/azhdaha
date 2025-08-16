@@ -34,6 +34,11 @@ impl<'mir> MirCtx<'mir> {
 
                 Rvalue::Call(operand, arguments)
             }
+            hir::ExprKind::Cast(expr, ty) => {
+                let operand = self.lower_to_operand(expr, bb, stmt_span);
+
+                Rvalue::Cast(operand, ty.clone())
+            }
             hir::ExprKind::Empty => Rvalue::Empty,
             hir::ExprKind::Lit(..)
             | hir::ExprKind::Local(..)

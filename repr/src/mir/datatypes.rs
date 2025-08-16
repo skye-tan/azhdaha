@@ -109,6 +109,7 @@ pub enum Rvalue {
     BinaryOp(BinOp, Operand, Operand),
     UnaryOp(UnOp, Operand),
     Call(Operand, Vec<Operand>),
+    Cast(Operand, Ty),
     Empty,
 }
 

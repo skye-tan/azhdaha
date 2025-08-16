@@ -155,9 +155,18 @@ impl HirCtx<'_> {
                 ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs))
             }
             constants::UPDATE_EXPRESSION => {
-                let lhs = self.lower_to_expr(node.child(0).unwrap())?;
+                let (lhs, bin_op) = if let Ok(bin_op) = self.lower_to_bin_op(node.child(1).unwrap())
+                {
+                    let lhs = self.lower_to_expr(node.child(0).unwrap())?;
 
-                let bin_op = self.lower_to_bin_op(node.child(1).unwrap())?;
+                    (lhs, bin_op)
+                } else {
+                    let bin_op = self.lower_to_bin_op(node.child(0).unwrap())?;
+
+                    let lhs = self.lower_to_expr(node.child(1).unwrap())?;
+
+                    (lhs, bin_op)
+                };
 
                 let rhs = Expr {
                     kind: ExprKind::Lit(Lit {

@@ -39,6 +39,17 @@ impl<'mir> MirCtx<'mir> {
 
                 Rvalue::Cast(operand, ty.clone())
             }
+            hir::ExprKind::Comma(exprs) => {
+                let (first_expr, exprs) = exprs.split_first().unwrap();
+
+                let first_place = self.lower_to_operand(first_expr, bb, stmt_span);
+
+                for expr in exprs {
+                    _ = self.lower_to_operand(expr, bb, stmt_span);
+                }
+
+                Rvalue::Use(first_place)
+            }
             hir::ExprKind::Empty => Rvalue::Empty,
             hir::ExprKind::Lit(..)
             | hir::ExprKind::Local(..)

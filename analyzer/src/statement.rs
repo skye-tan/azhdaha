@@ -37,9 +37,83 @@ impl LinearCtx<'_> {
                             rhs_is_linear = body.local_decls[place.local].is_linear();
                         }
                     }
-                    mir::Rvalue::BinaryOp(..)
-                    | mir::Rvalue::UnaryOp(..)
-                    | mir::Rvalue::List(..) => {
+                    mir::Rvalue::BinaryOp(_, left_operand, right_operand) => {
+                        if self.process_operand(
+                            report_builder,
+                            linear_local,
+                            left_operand,
+                            statement.span,
+                        )? || self.process_operand(
+                            report_builder,
+                            linear_local,
+                            right_operand,
+                            statement.span,
+                        )? {
+                            return Ok(true);
+                        }
+
+                        if lhs.local != linear_local.local {
+                            return Ok(false);
+                        }
+
+                        report_builder.set_message("Assignment of non-linear to linear");
+
+                        report_builder.add_label(
+                            Label::new(ReportSpan::new(statement.span))
+                                .with_message(format!(
+                                    "Cannot store a non-linear value in {} which is defined as linear",
+                                    format!("`{}`",linear_local.name)
+                                        .fg(DIAGNOSIS_REPORT_COLOR),
+                                ))
+                                .with_color(DIAGNOSIS_REPORT_COLOR),
+                        );
+
+                        report_builder.add_help("Try to store the value in a non-linear variable");
+
+                        return Ok(true);
+                    }
+                    mir::Rvalue::UnaryOp(_, operand) => {
+                        if self.process_operand(
+                            report_builder,
+                            linear_local,
+                            operand,
+                            statement.span,
+                        )? {
+                            return Ok(true);
+                        }
+
+                        if lhs.local != linear_local.local {
+                            return Ok(false);
+                        }
+
+                        report_builder.set_message("Assignment of non-linear to linear");
+
+                        report_builder.add_label(
+                            Label::new(ReportSpan::new(statement.span))
+                                .with_message(format!(
+                                    "Cannot store a non-linear value in {} which is defined as linear",
+                                    format!("`{}`",linear_local.name)
+                                        .fg(DIAGNOSIS_REPORT_COLOR),
+                                ))
+                                .with_color(DIAGNOSIS_REPORT_COLOR),
+                        );
+
+                        report_builder.add_help("Try to store the value in a non-linear variable");
+
+                        return Ok(true);
+                    }
+                    mir::Rvalue::List(operands) => {
+                        for operand in operands {
+                            if self.process_operand(
+                                report_builder,
+                                linear_local,
+                                operand,
+                                statement.span,
+                            )? {
+                                return Ok(true);
+                            }
+                        }
+
                         if lhs.local != linear_local.local {
                             return Ok(false);
                         }
@@ -401,6 +475,49 @@ impl LinearCtx<'_> {
         }
 
         Ok(false)
+    }
+
+    fn process_operand(
+        &self,
+        report_builder: &mut ReportBuilder<'_, ReportSpan>,
+        linear_local: &mut LinearLocal,
+        operand: &mir::Operand,
+        stmt_span: Span,
+    ) -> anyhow::Result<bool> {
+        let mir::Operand::Place(place) = operand else {
+            return Ok(false);
+        };
+
+        if linear_local.local != place.local {
+            return Ok(false);
+        }
+
+        match linear_local.status {
+            LinearStatus::Owner => return Ok(false),
+            LinearStatus::Unknown => {
+                linear_local.set_owner();
+                return Ok(false);
+            }
+            LinearStatus::Free => (),
+        }
+
+        report_builder.set_message("Use of moved value");
+
+        report_builder.add_label(
+            Label::new(ReportSpan::new(stmt_span))
+                .with_message(format!(
+                    "Cannot lend {}'s invalid value.",
+                    format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR),
+                ))
+                .with_color(DIAGNOSIS_REPORT_COLOR),
+        );
+
+        report_builder.add_help(format!(
+            "Try to move a value to {} before reaching this statement",
+            format!("`{}`", linear_local.name).fg(DIAGNOSIS_REPORT_COLOR)
+        ));
+
+        Ok(true)
     }
 
     #[allow(clippy::too_many_arguments)]

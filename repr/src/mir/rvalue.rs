@@ -50,6 +50,15 @@ impl<'mir> MirCtx<'mir> {
 
                 Rvalue::Use(first_place)
             }
+            hir::ExprKind::Array(exprs) => {
+                let mut operands = vec![];
+
+                for expr in exprs {
+                    operands.push(self.lower_to_operand(expr, bb, stmt_span));
+                }
+
+                Rvalue::List(operands)
+            }
             hir::ExprKind::Empty => Rvalue::Empty,
             hir::ExprKind::Lit(..)
             | hir::ExprKind::Local(..)
@@ -58,7 +67,6 @@ impl<'mir> MirCtx<'mir> {
             | hir::ExprKind::Sizeof(..)
             | hir::ExprKind::Field(..)
             | hir::ExprKind::Index(..) => Rvalue::Use(self.lower_to_operand(expr, bb, stmt_span)),
-            kind => panic!("Cannot construct [Rvalue] from: {kind:#?}"),
         }
     }
 }

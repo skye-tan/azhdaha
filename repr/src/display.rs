@@ -118,6 +118,21 @@ impl MirDisplay for Rvalue {
             Rvalue::Cast(operand, ty) => {
                 format!("({}) {}", ty.mir_display(body), operand.mir_display(body),)
             }
+            Rvalue::List(operands) => {
+                let mut result = "{".to_owned();
+
+                for operand in operands {
+                    result.push_str(&format!(" {},", operand.mir_display(body)));
+                }
+
+                if !operands.is_empty() {
+                    result.pop();
+                }
+
+                result.push_str(" }");
+
+                result
+            }
             Rvalue::Empty => String::new(),
         }
     }

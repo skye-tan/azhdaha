@@ -37,7 +37,9 @@ impl LinearCtx<'_> {
                             rhs_is_linear = body.local_decls[place.local].is_linear();
                         }
                     }
-                    mir::Rvalue::BinaryOp(..) | mir::Rvalue::UnaryOp(..) => {
+                    mir::Rvalue::BinaryOp(..)
+                    | mir::Rvalue::UnaryOp(..)
+                    | mir::Rvalue::List(..) => {
                         if lhs.local != linear_local.local {
                             return Ok(false);
                         }

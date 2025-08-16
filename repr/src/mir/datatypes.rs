@@ -110,6 +110,7 @@ pub enum Rvalue {
     UnaryOp(UnOp, Operand),
     Call(Operand, Vec<Operand>),
     Cast(Operand, Ty),
+    List(Vec<Operand>),
     Empty,
 }
 

@@ -45,6 +45,66 @@ pub struct Ident {
 }
 
 impl HirCtx<'_> {
+    pub(crate) fn lower_to_var_decl_list(&mut self, node: Node) -> anyhow::Result<Vec<VarDecl>> {
+        trace!("[HIR/LocalDeclList] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
+        let mut storage = None;
+
+        let mut cursor = node.walk();
+
+        for child in node.children(&mut cursor) {
+            if child.kind() == constants::STORAGE_CLASS_SPECIFIER {
+                storage = Some(self.lower_to_storage(child.child(0).unwrap())?);
+                break;
+            }
+        }
+
+        let mut decls = vec![];
+
+        let mut cursor = node.walk();
+
+        for mut decl_node in node.children_by_field_name("declarator", &mut cursor) {
+            let ty = self.lower_to_ty(node, decl_node)?;
+
+            let init = if decl_node.kind() == constants::INIT_DECLARATOR {
+                let init =
+                    self.lower_to_expr(decl_node.child(decl_node.child_count() - 1).unwrap())?;
+
+                Some(init)
+            } else {
+                None
+            };
+
+            let ident = loop {
+                match decl_node.kind() {
+                    constants::IDENTIFIER | constants::TYPE_IDENTIFIER => {
+                        break self.lower_to_ident(decl_node)?;
+                    }
+                    _ => {
+                        decl_node = decl_node
+                            .child_by_field_name("declarator")
+                            .context("Cannot find declarator.")?;
+                    }
+                }
+            };
+
+            decls.push(VarDecl {
+                storage: storage.clone(),
+                ident,
+                ty,
+                init,
+                span,
+            });
+        }
+
+        Ok(decls)
+    }
+
     pub(crate) fn lower_to_var_decl(&mut self, node: Node) -> anyhow::Result<VarDecl> {
         trace!("[HIR/LocalDecl] Lowering '{}'", node.kind());
 
@@ -64,9 +124,9 @@ impl HirCtx<'_> {
             }
         }
 
-        let ty = self.lower_to_ty(node)?;
-
         let mut decl_node = node.child_by_field_name("declarator").unwrap();
+
+        let ty = self.lower_to_ty(node, decl_node)?;
 
         let init = if decl_node.kind() == constants::INIT_DECLARATOR {
             let init = self.lower_to_expr(decl_node.child(decl_node.child_count() - 1).unwrap())?;
@@ -117,9 +177,9 @@ impl HirCtx<'_> {
             }
         }
 
-        let ty = self.lower_to_ty(node)?;
-
         let mut decl_node = node.child_by_field_name("declarator").unwrap();
+
+        let ty = self.lower_to_ty(node, decl_node)?;
 
         while decl_node.kind() != constants::FUNCTION_DECLARATOR {
             decl_node = decl_node.child_by_field_name("declarator").unwrap();
@@ -192,11 +252,11 @@ impl HirCtx<'_> {
             }
         }
 
-        let ty = self.lower_to_ty(node)?;
+        let mut decl_node = node;
+
+        let ty = self.lower_to_ty(node, decl_node)?;
 
         let mut ident = None;
-
-        let mut decl_node = node;
 
         while let Some(node) = decl_node.child_by_field_name("declarator") {
             decl_node = node;

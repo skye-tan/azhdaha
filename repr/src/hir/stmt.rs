@@ -22,7 +22,7 @@ pub struct Stmt {
 pub enum StmtKind {
     Block(Block),
     Expr(Expr),
-    Decl(Symbol),
+    Decl(Vec<Symbol>),
     Ret(Option<Expr>),
     Label(Label, Option<Box<Stmt>>),
     Goto(Label),
@@ -61,13 +61,19 @@ impl HirCtx<'_> {
                 StmtKind::Expr(self.lower_to_expr(node.child(0).unwrap())?)
             }
             constants::DECLARATION => {
-                let var_decl = self.lower_to_var_decl(node)?;
+                let var_decl_list = self.lower_to_var_decl_list(node)?;
 
-                let symbol = self
-                    .symbol_resolver
-                    .insert_symbol(var_decl.ident.name.clone(), SymbolKind::Var(var_decl));
+                let mut symbols = vec![];
 
-                StmtKind::Decl(symbol)
+                for var_decl in var_decl_list {
+                    let symbol = self
+                        .symbol_resolver
+                        .insert_symbol(var_decl.ident.name.clone(), SymbolKind::Var(var_decl));
+
+                    symbols.push(symbol);
+                }
+
+                StmtKind::Decl(symbols)
             }
             constants::RETURN_STATEMENT => {
                 let ret_expr = if node.child_count() == 3 {

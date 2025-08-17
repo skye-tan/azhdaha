@@ -69,7 +69,7 @@ pub enum Storage {
 }
 
 impl HirCtx<'_> {
-    pub(crate) fn lower_to_ty(&mut self, node: Node) -> anyhow::Result<Ty> {
+    pub(crate) fn lower_to_ty(&mut self, node: Node, mut decl_node: Node) -> anyhow::Result<Ty> {
         trace!("[HIR/Ty] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -92,7 +92,7 @@ impl HirCtx<'_> {
             }
         }
 
-        let mut kind = self.lower_to_ty_kind(node)?;
+        let mut kind = self.lower_to_ty_kind(node, decl_node)?;
 
         if node.kind() == constants::FUNCTION_DEFINITION {
             return Ok(Ty {
@@ -103,14 +103,10 @@ impl HirCtx<'_> {
             });
         }
 
-        let mut decl_node = node;
-
-        while let Some(node) = decl_node.child_by_field_name("declarator") {
+        while decl_node.kind() != constants::FUNCTION_DECLARATOR
+            && let Some(node) = decl_node.child_by_field_name("declarator")
+        {
             decl_node = node;
-
-            if decl_node.kind() == constants::FUNCTION_DECLARATOR {
-                break;
-            }
         }
 
         if decl_node.kind() != constants::FUNCTION_DECLARATOR {
@@ -184,7 +180,7 @@ impl HirCtx<'_> {
         })
     }
 
-    fn lower_to_ty_kind(&mut self, node: Node) -> anyhow::Result<TyKind> {
+    fn lower_to_ty_kind(&mut self, node: Node, mut decl_node: Node) -> anyhow::Result<TyKind> {
         trace!("[HIR/TyKind] Lowering '{}'", node.kind());
 
         let mut ty_node = node.child_by_field_name("type").unwrap();
@@ -194,7 +190,9 @@ impl HirCtx<'_> {
         }
 
         let mut ty_kind = match ty_node.kind() {
-            constants::TYPE_DESCRIPTOR => self.lower_to_ty_kind(ty_node.child(0).unwrap())?,
+            constants::TYPE_DESCRIPTOR => {
+                self.lower_to_ty_kind(ty_node.child(0).unwrap(), decl_node)?
+            }
             constants::TYPE_IDENTIFIER => {
                 let ident = self.lower_to_ident(ty_node)?;
 
@@ -223,11 +221,7 @@ impl HirCtx<'_> {
             kind => bail!("Cannot lower '{kind}' to 'TyKind'."),
         };
 
-        let mut decl_node = node;
-
-        while let Some(node) = decl_node.child_by_field_name("declarator") {
-            decl_node = node;
-
+        loop {
             match decl_node.kind() {
                 constants::POINTER_DECLARATOR | constants::ABSTRACT_POINTER_DECLARATOR => {
                     let mut quals = vec![];
@@ -257,14 +251,19 @@ impl HirCtx<'_> {
                         size,
                     }
                 }
-                constants::INIT_DECLARATOR => continue,
                 constants::FUNCTION_DECLARATOR
                 | constants::PARAMETER_DECLARATION
                 | constants::TYPE_IDENTIFIER
                 | constants::IDENTIFIER => {
                     break;
                 }
+                constants::INIT_DECLARATOR => (),
                 kind => bail!("Cannot lower '{kind}' to 'TyKind'."),
+            }
+
+            match decl_node.child_by_field_name("declarator") {
+                Some(node) => decl_node = node,
+                None => break,
             }
         }
 

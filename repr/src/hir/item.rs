@@ -21,7 +21,7 @@ pub struct Item {
 #[derive(Debug, Clone)]
 pub enum ItemKind {
     Func(Box<FuncDef>),
-    Decl(Symbol),
+    Decl(Vec<Symbol>),
     TyDef(Symbol),
 }
 
@@ -65,13 +65,19 @@ impl HirCtx<'_> {
                 ItemKind::Func(Box::new(self.lower_to_func_def(node)?))
             }
             constants::DECLARATION => {
-                let var_decl = self.lower_to_var_decl(node)?;
+                let var_decl_list = self.lower_to_var_decl_list(node)?;
 
-                let symbol = self
-                    .symbol_resolver
-                    .insert_symbol(var_decl.ident.name.clone(), SymbolKind::Var(var_decl));
+                let mut symbols = vec![];
 
-                ItemKind::Decl(symbol)
+                for var_decl in var_decl_list {
+                    let symbol = self
+                        .symbol_resolver
+                        .insert_symbol(var_decl.ident.name.clone(), SymbolKind::Var(var_decl));
+
+                    symbols.push(symbol);
+                }
+
+                ItemKind::Decl(symbols)
             }
             constants::TYPE_DEFINITION => {
                 let var_decl = self.lower_to_var_decl(node)?;

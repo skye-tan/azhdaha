@@ -231,7 +231,12 @@ impl HirCtx<'_> {
                 ExprKind::Index(Box::new(target), Box::new(index))
             }
             constants::CAST_EXPRESSION => {
-                let ty = self.lower_to_ty(node.child(1).unwrap())?;
+                let cast_node = node.child(1).unwrap();
+
+                let ty = self.lower_to_ty(
+                    cast_node,
+                    cast_node.child_by_field_name("declarator").unwrap(),
+                )?;
 
                 let target = self.lower_to_expr(node.child(3).unwrap())?;
 
@@ -316,7 +321,9 @@ impl HirCtx<'_> {
 
             let child = node.child(2).unwrap();
             if child.kind() == constants::TYPE_DESCRIPTOR {
-                break 'size_of SizeofKind::Ty(self.lower_to_ty(child)?);
+                break 'size_of SizeofKind::Ty(
+                    self.lower_to_ty(child, child.child_by_field_name("declarator").unwrap())?,
+                );
             }
 
             bail!("Cannot lower '{}' to 'SizeofKind'.", node.kind());

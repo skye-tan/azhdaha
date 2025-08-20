@@ -75,6 +75,7 @@ impl<'mir> MirCtx<'mir> {
             func_dec.storage.clone(),
             func_dec.sig.ret_ty.clone(),
             func_dec.ident.clone(),
+            false,
             func_def.body.span,
         );
 
@@ -93,6 +94,7 @@ impl<'mir> MirCtx<'mir> {
                     param.storage.clone(),
                     param.ty.clone(),
                     ident.clone(),
+                    true,
                     param.span,
                 );
 

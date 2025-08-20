@@ -28,17 +28,13 @@ impl LinearCtx<'_> {
                     .with_color(DIAGNOSIS_REPORT_COLOR),
             );
 
-        let mut visited = vec![false; body.basic_blocks.len()];
+        let node_count = body.basic_blocks.len();
+        let mut visited_edges = vec![vec![false; node_count]; node_count];
+
         let mut bb_stack = vec![(report_builder, linear_local, bb)];
 
         while let Some((mut report_builder, mut linear_local, bb)) = bb_stack.pop() {
             let index = bb.get_id();
-
-            if visited[index] {
-                continue;
-            }
-
-            visited[index] = true;
 
             let bb_data = &body.basic_blocks[bb.into_inner()];
 
@@ -63,11 +59,21 @@ impl LinearCtx<'_> {
 
             match &terminator.kind {
                 mir::TerminatorKind::Goto { bb } => {
-                    bb_stack.push((report_builder, linear_local, *bb))
+                    if !visited_edges[index][bb.get_id()] {
+                        bb_stack.push((report_builder, linear_local, *bb));
+                        visited_edges[index][bb.get_id()] = true;
+                    }
                 }
                 mir::TerminatorKind::SwitchInt { targets, .. } => {
-                    bb_stack.push((report_builder.clone(), linear_local.clone(), targets[0]));
-                    bb_stack.push((report_builder, linear_local, targets[1]));
+                    if !visited_edges[index][targets[0].get_id()] {
+                        bb_stack.push((report_builder.clone(), linear_local.clone(), targets[0]));
+                        visited_edges[index][targets[0].get_id()] = true;
+                    }
+
+                    if !visited_edges[index][targets[1].get_id()] {
+                        bb_stack.push((report_builder, linear_local, targets[1]));
+                        visited_edges[index][targets[1].get_id()] = true;
+                    }
                 }
                 mir::TerminatorKind::Return => continue,
             }

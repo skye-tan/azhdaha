@@ -40,6 +40,7 @@ pub enum LocalKind {
         storage: Option<Storage>,
         ty: Ty,
         ident: Ident,
+        is_arg: bool,
     },
     Temp,
 }

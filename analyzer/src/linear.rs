@@ -61,39 +61,53 @@ impl<'linear> LinearCtx<'linear> {
     }
 
     pub fn analyze(&self, body: &mir::Body) {
-        let mut linear_locals: Vec<LinearLocal> = body
+        let mut linear_locals: Vec<(LinearLocal, bool)> = body
             .local_decls
             .iter()
             .filter_map(|(local, local_decl)| match &local_decl.kind {
-                mir::LocalKind::Real { ty, ident, .. } => {
-                    if ty.is_linear {
-                        Some(LinearLocal {
+                mir::LocalKind::Real {
+                    ty, ident, is_arg, ..
+                } => {
+                    if !ty.is_linear {
+                        return None;
+                    }
+
+                    Some((
+                        LinearLocal {
                             name: ident.name.clone(),
                             local,
                             status: LinearStatus::Unknown,
                             is_altered: false,
                             span: local_decl.span,
-                        })
-                    } else {
-                        None
-                    }
+                        },
+                        *is_arg,
+                    ))
                 }
                 mir::LocalKind::Temp => None,
             })
             .collect();
 
         // TODO: Must be removed in the future.
-        linear_locals.push(LinearLocal {
-            name: "dummy".to_owned(),
-            local: Idx::from_raw(RawIdx::from_u32(u32::MAX)),
-            status: LinearStatus::Free,
-            is_altered: false,
-            span: repr::hir::Span { lo: 0, hi: 0 },
-        });
+        linear_locals.push((
+            LinearLocal {
+                name: "dummy".to_owned(),
+                local: Idx::from_raw(RawIdx::from_u32(u32::MAX)),
+                status: LinearStatus::Free,
+                is_altered: false,
+                span: repr::hir::Span { lo: 0, hi: 0 },
+            },
+            false,
+        ));
 
-        for linear_local in linear_locals {
+        for (linear_local, is_arg) in linear_locals {
             for (bb, _) in body.basic_blocks.iter() {
-                if let Some(report) = self.dfs_with_stack(body, linear_local.clone(), bb.into()) {
+                let mut linear_local = linear_local.clone();
+
+                if bb.into_raw().into_u32() == 0 && is_arg {
+                    linear_local.status = LinearStatus::Owner;
+                }
+
+                if let Some(report) = self.dfs_with_stack(body, linear_local, bb.into()) {
                     if let Err(error) = report.print(ReportCache::new(
                         self.source_path.clone(),
                         &self.report_source,

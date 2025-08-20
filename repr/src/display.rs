@@ -19,8 +19,19 @@ impl Display for Body<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (local, local_decl) in self.local_decls.iter() {
             match &local_decl.kind {
-                LocalKind::Real { storage, ty, ident } => {
-                    write!(f, "let {}_{}:", ident.name, local.into_raw())?;
+                LocalKind::Real {
+                    storage,
+                    ty,
+                    ident,
+                    is_arg,
+                } => {
+                    write!(f, "let {}_{}", ident.name, local.into_raw())?;
+
+                    if *is_arg {
+                        write!(f, "(arg)")?;
+                    }
+
+                    write!(f, ":")?;
 
                     if let Some(storage) = storage {
                         write!(f, " {}", storage.mir_display(self))?;

@@ -22,10 +22,16 @@ impl MirCtx<'_> {
         storage: Option<Storage>,
         ty: Ty,
         ident: Ident,
+        is_arg: bool,
         span: Span,
     ) -> Local {
         self.body.local_decls.alloc(LocalDecl {
-            kind: LocalKind::Real { storage, ty, ident },
+            kind: LocalKind::Real {
+                storage,
+                ty,
+                ident,
+                is_arg,
+            },
             span,
         })
     }

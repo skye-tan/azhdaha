@@ -54,8 +54,13 @@ impl<'mir> MirCtx<'mir> {
                         .as_ref()
                         .map(|init_expr| self.lower_to_rvalue(init_expr, bb, span));
 
-                    let local =
-                        self.alloc_real_local(storage.clone(), ty.clone(), ident.clone(), span);
+                    let local = self.alloc_real_local(
+                        storage.clone(),
+                        ty.clone(),
+                        ident.clone(),
+                        false,
+                        span,
+                    );
 
                     self.local_map.insert(*symbol, local);
 

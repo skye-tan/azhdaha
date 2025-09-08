@@ -24,7 +24,7 @@ convert-dot-graphs PATH=".":
     @ for file in {{PATH}}/*.dot; do dot -Tsvg $file > {{PATH}}/${file%.dot}.svg; done
 
 # check clippy lints
-clippy:
+check-lints:
     cargo clippy -- --deny warnings
 
 # clean target directory and other unwanted files

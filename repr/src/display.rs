@@ -176,10 +176,20 @@ impl MirDisplay for Operand {
 
 impl MirDisplay for Place {
     fn mir_display(&self, body: &Body) -> String {
-        let mut result = self.local.mir_display(body);
+        let mut result = String::new();
 
         for projection in &self.projections {
-            result.push_str(&projection.mir_display(body));
+            if matches!(projection, PlaceElem::Deref) {
+                result.push_str(&projection.mir_display(body));
+            }
+        }
+
+        result.push_str(&self.local.mir_display(body));
+
+        for projection in &self.projections {
+            if !matches!(projection, PlaceElem::Deref) {
+                result.push_str(&projection.mir_display(body));
+            }
         }
 
         result
@@ -191,6 +201,7 @@ impl MirDisplay for PlaceElem {
         match self {
             PlaceElem::Field(field) => format!(".{field}"),
             PlaceElem::Index(place) => format!("[{}]", place.mir_display(body)),
+            PlaceElem::Deref => "*".to_owned(),
         }
     }
 }

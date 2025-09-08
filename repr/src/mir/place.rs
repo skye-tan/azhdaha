@@ -43,6 +43,14 @@ impl<'mir> MirCtx<'mir> {
 
                 place
             }
+            hir::ExprKind::Unary(hir::UnOp::Deref, expr) => {
+                let rvalue = self.lower_to_rvalue(expr, bb, stmt_span);
+                let mut place = self.store_in_temp_place(rvalue, bb, stmt_span);
+
+                place.projections.push(PlaceElem::Deref);
+
+                place
+            }
             kind => panic!("Cannot construct [Place] from: {kind:#?}"),
         }
     }

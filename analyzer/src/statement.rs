@@ -24,6 +24,11 @@ impl LinearCtx<'_> {
     ) -> anyhow::Result<bool> {
         match &statement.kind {
             mir::StatementKind::Assign(lhs, rhs) => {
+                // TODO: Projections are ignored for the time being.
+                if !lhs.projections.is_empty() {
+                    return Ok(false);
+                }
+
                 let mut is_accessed = false;
                 let mut rhs_is_linear = false;
 
@@ -32,6 +37,11 @@ impl LinearCtx<'_> {
                         if let mir::Operand::Place(place) = operand {
                             if linear_local.local == place.local {
                                 is_accessed = true;
+                            }
+
+                            // TODO: Projections are ignored for the time being.
+                            if !place.projections.is_empty() {
+                                return Ok(false);
                             }
 
                             rhs_is_linear = body.local_decls[place.local].is_linear();
@@ -307,6 +317,11 @@ impl LinearCtx<'_> {
             return Ok(false);
         };
 
+        // TODO: Projections are ignored for the time being.
+        if !place.projections.is_empty() {
+            return Ok(false);
+        }
+
         if linear_local.local != place.local {
             return Ok(false);
         }
@@ -407,7 +422,10 @@ impl LinearCtx<'_> {
             }
 
             if linear_local.local != param_place.local {
-                if !body.local_decls[param_place.local].is_linear() {
+                // TODO: Projections are ignored for the time being.
+                if !body.local_decls[param_place.local].is_linear()
+                    && param_place.projections.is_empty()
+                {
                     bail!("Not supported yet - Passed non-linear as linear to function.");
                 }
 
@@ -541,10 +559,13 @@ impl LinearCtx<'_> {
             return Ok(false);
         }
 
-        if lhs_decl.is_linear() && !func_sig.ret_ty.is_linear {
-            bail!("Not supported yet - Stored non-linear in linear after function call.");
-        } else if !lhs_decl.is_linear() && func_sig.ret_ty.is_linear {
-            bail!("Not supported yet - Stored linear in non-linear after function call.");
+        // TODO: Projections are ignored for the time being.
+        if lhs.projections.is_empty() {
+            if lhs_decl.is_linear() && !func_sig.ret_ty.is_linear {
+                bail!("Not supported yet - Stored non-linear in linear after function call.");
+            } else if !lhs_decl.is_linear() && func_sig.ret_ty.is_linear {
+                bail!("Not supported yet - Stored linear in non-linear after function call.");
+            }
         }
 
         Ok(false)

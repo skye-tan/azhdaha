@@ -13,4 +13,5 @@ ast-utils = { version = "0.1.0", path = "../ast-utils" }
 cli-utils = { version = "0.1.0", path = "../cli-utils" }
 env_logger.workspace = true
 log.workspace = true
+rayon.workspace = true
 repr = { version = "0.1.0", path = "../repr" }

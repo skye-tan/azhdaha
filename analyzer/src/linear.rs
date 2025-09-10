@@ -60,7 +60,7 @@ impl<'linear> LinearCtx<'linear> {
         })
     }
 
-    pub fn analyze(&self, body: &mir::Body) {
+    pub fn analyze(&self, body: &mir::Body) -> Option<Vec<u8>> {
         let mut linear_locals: Vec<(LinearLocal, bool)> = body
             .local_decls
             .iter()
@@ -108,16 +108,21 @@ impl<'linear> LinearCtx<'linear> {
                 }
 
                 if let Some(report) = self.dfs_with_stack(body, linear_local, bb.into()) {
-                    if let Err(error) = report.print(ReportCache::new(
-                        self.source_path.clone(),
-                        &self.report_source,
-                    )) {
-                        error!("Failed to print the linear analyzer's report - {error:?}");
-                    }
+                    let mut result = vec![];
 
-                    break;
+                    match report.write_for_stdout(
+                        ReportCache::new(self.source_path.clone(), &self.report_source),
+                        &mut result,
+                    ) {
+                        Ok(()) => return Some(result),
+                        Err(error) => {
+                            error!("Failed to print the linear analyzer's report - {error:?}")
+                        }
+                    }
                 }
             }
         }
+
+        None
     }
 }

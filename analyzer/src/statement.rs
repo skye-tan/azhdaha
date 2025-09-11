@@ -431,7 +431,7 @@ impl LinearCtx<'_> {
 
                     report_builder.add_label(
                         Label::new(ReportSpan::new(param_place.span))
-                            .with_message(format!("Passed non-linear as linear in function call"))
+                            .with_message("Passed non-linear as linear in function call")
                             .with_color(DIAGNOSIS_REPORT_COLOR),
                     );
 
@@ -500,7 +500,7 @@ impl LinearCtx<'_> {
 
                 report_builder.add_label(
                     Label::new(ReportSpan::new(statement.span))
-                        .with_message(format!("Ignored linear result after function call"))
+                        .with_message("Ignored linear result after function call")
                         .with_color(DIAGNOSIS_REPORT_COLOR),
                 );
 
@@ -583,7 +583,7 @@ impl LinearCtx<'_> {
 
                 report_builder.add_label(
                     Label::new(ReportSpan::new(statement.span))
-                        .with_message(format!("Stored non-linear as linear after function call"))
+                        .with_message("Stored non-linear as linear after function call")
                         .with_color(DIAGNOSIS_REPORT_COLOR),
                 );
 
@@ -593,7 +593,7 @@ impl LinearCtx<'_> {
 
                 report_builder.add_label(
                     Label::new(ReportSpan::new(statement.span))
-                        .with_message(format!("Stored linear as non-linear after function call."))
+                        .with_message("Stored linear as non-linear after function call.")
                         .with_color(DIAGNOSIS_REPORT_COLOR),
                 );
 

@@ -321,9 +321,7 @@ impl HirCtx<'_> {
 
             let child = node.child(2).unwrap();
             if child.kind() == constants::TYPE_DESCRIPTOR {
-                break 'size_of SizeofKind::Ty(
-                    self.lower_to_ty(child, child.child_by_field_name("declarator").unwrap())?,
-                );
+                break 'size_of SizeofKind::Ty(self.lower_to_ty(child, child.child(0).unwrap())?);
             }
 
             bail!("Cannot lower '{}' to 'SizeofKind'.", node.kind());
@@ -361,7 +359,21 @@ impl HirCtx<'_> {
                 let literal =
                     std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])?;
 
+                let literal = if let Some(literal) = literal.strip_suffix("U") {
+                    literal
+                } else if let Some(literal) = literal.strip_suffix("LL") {
+                    literal
+                } else if let Some(literal) = literal.strip_suffix("L") {
+                    literal
+                } else {
+                    literal
+                };
+
                 if let Ok(value) = literal.parse() {
+                    LitKind::Int(value)
+                } else if let Some(stripped_literal) = literal.strip_prefix("0x")
+                    && let Ok(value) = i64::from_str_radix(stripped_literal, 16)
+                {
                     LitKind::Int(value)
                 } else {
                     LitKind::Float(literal.parse()?)

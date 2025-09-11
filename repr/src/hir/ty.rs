@@ -189,6 +189,12 @@ impl HirCtx<'_> {
             ty_node = child;
         }
 
+        // trace!("BINGO '{}'", ty_node.kind());
+        // if ty_node.kind() == "sized_type_specifier" {
+        //     ty_node = ty_node.child(ty_node.child_count() - 1).unwrap();
+        // }
+        // trace!("BINGO '{}'", ty_node.kind());
+
         let mut ty_kind = match ty_node.kind() {
             constants::TYPE_DESCRIPTOR => {
                 self.lower_to_ty_kind(ty_node.child(0).unwrap(), decl_node)?
@@ -209,6 +215,7 @@ impl HirCtx<'_> {
                 }
             }
             constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_to_prim_ty_kind(ty_node)?),
+            constants::SIZED_TYPE_SPECIFIER => TyKind::PrimTy(PrimTyKind::Int),
             constants::STRUCT_SPECIFIER => {
                 TyKind::Struct(self.lower_to_ident(ty_node.child(1).unwrap())?)
             }

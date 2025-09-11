@@ -102,6 +102,12 @@ impl<'mir> MirCtx<'mir> {
 
                 Operand::Place(result_place)
             }
+            hir::ExprKind::Call(..) => {
+                let rvalue = self.lower_to_rvalue(expr, bb, span);
+                let place = self.store_in_temp_place(rvalue, bb, stmt_span);
+
+                Operand::Place(place)
+            }
             // TODO: Inner value must be evaluated and then saved.
             hir::ExprKind::Sizeof(_) => Operand::Const(Const::Sizeof),
             hir::ExprKind::Field(..) | hir::ExprKind::Index(..) => {

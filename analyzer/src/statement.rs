@@ -2,6 +2,7 @@
 
 use anyhow::bail;
 use ariadne::{Fmt as _, Label, ReportBuilder};
+use log::info;
 
 use repr::{
     hir::{self, Span, resolver},
@@ -25,9 +26,9 @@ impl LinearCtx<'_> {
         match &statement.kind {
             mir::StatementKind::Assign(lhs, rhs) => {
                 // TODO: Projections are ignored for the time being.
-                if !lhs.projections.is_empty() {
-                    return Ok(false);
-                }
+                // if !lhs.projections.is_empty() {
+                //     return Ok(false);
+                // }
 
                 let mut is_accessed = false;
                 let mut rhs_is_linear = false;
@@ -35,13 +36,13 @@ impl LinearCtx<'_> {
                 match rhs {
                     mir::Rvalue::Use(operand) | mir::Rvalue::Cast(operand, _) => {
                         if let mir::Operand::Place(place) = operand {
+                            // TODO: Projections are ignored for the time being.
+                            // if !place.projections.is_empty() {
+                            //     return Ok(false);
+                            // }
+
                             if linear_local.local == place.local {
                                 is_accessed = true;
-                            }
-
-                            // TODO: Projections are ignored for the time being.
-                            if !place.projections.is_empty() {
-                                return Ok(false);
                             }
 
                             rhs_is_linear = body.local_decls[place.local].is_linear();
@@ -426,7 +427,15 @@ impl LinearCtx<'_> {
                 if !body.local_decls[param_place.local].is_linear()
                     && param_place.projections.is_empty()
                 {
-                    bail!("Not supported yet - Passed non-linear as linear to function.");
+                    info!("Not supported yet - Passed non-linear as linear in function call.");
+
+                    report_builder.add_label(
+                        Label::new(ReportSpan::new(param_place.span))
+                            .with_message(format!("Passed non-linear as linear in function call"))
+                            .with_color(DIAGNOSIS_REPORT_COLOR),
+                    );
+
+                    return Ok(true);
                 }
 
                 continue;
@@ -487,7 +496,15 @@ impl LinearCtx<'_> {
 
         let Some(lhs) = lhs else {
             if func_sig.ret_ty.is_linear {
-                bail!("Not supported yet - Ignored linear result after function call.")
+                info!("Not supported yet - Ignored linear result after function call.");
+
+                report_builder.add_label(
+                    Label::new(ReportSpan::new(statement.span))
+                        .with_message(format!("Ignored linear result after function call"))
+                        .with_color(DIAGNOSIS_REPORT_COLOR),
+                );
+
+                return Ok(true);
             }
 
             return Ok(false);
@@ -562,9 +579,25 @@ impl LinearCtx<'_> {
         // TODO: Projections are ignored for the time being.
         if lhs.projections.is_empty() {
             if lhs_decl.is_linear() && !func_sig.ret_ty.is_linear {
-                bail!("Not supported yet - Stored non-linear in linear after function call.");
+                info!("Not supported yet - Stored non-linear as linear after function call.");
+
+                report_builder.add_label(
+                    Label::new(ReportSpan::new(statement.span))
+                        .with_message(format!("Stored non-linear as linear after function call"))
+                        .with_color(DIAGNOSIS_REPORT_COLOR),
+                );
+
+                return Ok(true);
             } else if !lhs_decl.is_linear() && func_sig.ret_ty.is_linear {
-                bail!("Not supported yet - Stored linear in non-linear after function call.");
+                info!("Not supported yet - Stored linear as non-linear after function call.");
+
+                report_builder.add_label(
+                    Label::new(ReportSpan::new(statement.span))
+                        .with_message(format!("Stored linear as non-linear after function call."))
+                        .with_color(DIAGNOSIS_REPORT_COLOR),
+                );
+
+                return Ok(true);
             }
         }
 

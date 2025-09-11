@@ -10,6 +10,10 @@ build-release:
 build-debug:
     cargo build
 
+# run azhdaha with the given command
+run *CMD:
+    cargo run --release -- {{CMD}}
+
 # run with examples as input
 run-examples:
     cargo run --release -- ./examples/compile_commands.json

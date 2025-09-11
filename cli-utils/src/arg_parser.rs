@@ -17,6 +17,9 @@ pub struct Args {
     /// Determines whether the dot-graph of the source code should be generated or not.
     #[arg(long)]
     pub dot_graph: bool,
+    /// Determines whether the reports should be printed or not.
+    #[arg(long)]
+    pub do_not_report: bool,
 }
 
 /// Parse compile-commands into a [`CompilationDatabase`].

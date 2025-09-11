@@ -68,8 +68,22 @@ fn main() -> anyhow::Result<()> {
             })
             .collect();
 
-        for report in reports {
-            std::io::stdout().write_all(&report)?;
+        if reports.is_empty() {
+            println!(
+                "Entry \"{}\" was analyzed successfully.",
+                ast_repr.source_info.path
+            );
+        } else {
+            println!(
+                "Entry \"{}\" was found to be problematic.",
+                ast_repr.source_info.path
+            );
+        }
+
+        if !args.do_not_report {
+            for report in reports {
+                std::io::stdout().write_all(&report)?;
+            }
         }
     }
 

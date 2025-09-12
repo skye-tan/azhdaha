@@ -1,0 +1,1322 @@
+[
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-1.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-1.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-2.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-2.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-3.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-3.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-4.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-4.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-5.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-5.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-6.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-6.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-7.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-7.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-8.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-8.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-9.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-9.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-10.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-10.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-11.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-11.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-12.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-12.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-13.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-13.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-14.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-14.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-15.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-15.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-16.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-16.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-17.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-17.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-18.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-18.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-19.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-19.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-20.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-20.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-21.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-21.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-22.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-22.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-23.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-23.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-24.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-24.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-25.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-25.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-26.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-26.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-27.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-27.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-28.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-28.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-29.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-29.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-30.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-30.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-31.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-31.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-32.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-32.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-33.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-33.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-34.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-34.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-35.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-35.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-36.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-36.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-37.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-37.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-38.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-38.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-39.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-39.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-40.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-40.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-41.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-41.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-42.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-42.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-43.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-43.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-44.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-44.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-45.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-45.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-46.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-46.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-47.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-47.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-48.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-48.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-49.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-49.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-50.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-50.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-51.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-51.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-52.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-52.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-53.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-53.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-54.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-54.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-55.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-55.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-56.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-56.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-57.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-57.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-58.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-58.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-59.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-59.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-60.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-60.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-61.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-61.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-62.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-62.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-63.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-63.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-64.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-64.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-65.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-65.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-66.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-66.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-67.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-67.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-68.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-68.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-69.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-69.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-70.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-70.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-71.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-71.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-72.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-72.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-73.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-73.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-74.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-74.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-75.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-75.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-76.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-76.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-77.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-77.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-78.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-78.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-79.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-79.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-80.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-80.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-81.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-81.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-82.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-82.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-83.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-83.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-84.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-84.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-85.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-85.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-86.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-86.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-87.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-87.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-88.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-88.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-89.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-89.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-90.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-90.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-91.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-91.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-92.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-92.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-93.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-93.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-94.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-94.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-95.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-95.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-96.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-96.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-97.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-97.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-98.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-98.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-99.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-99.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-100.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-100.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-101.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-101.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-102.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-102.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-103.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-103.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-104.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-104.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-105.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-105.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-106.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-106.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-107.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-107.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-108.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-108.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-109.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-109.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-110.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-110.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-111.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-111.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-112.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-112.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-113.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-113.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-114.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-114.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-115.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-115.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-116.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-116.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-117.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-117.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-118.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-118.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-119.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-119.c"
+    },
+    {
+        "arguments": [
+            "/usr/bin/gcc",
+            "-c",
+            "-I",
+            "./include/",
+            "case-safe-120.c"
+        ],
+        "directory": "./tests/safe/",
+        "file": "./tests/safe/case-safe-120.c"
+    }
+]

@@ -34,10 +34,10 @@ impl<'mir> MirCtx<'mir> {
 
                 Rvalue::Call(operand, arguments)
             }
-            hir::ExprKind::Cast(expr, ty) => {
+            hir::ExprKind::Cast(expr, ty_kind) => {
                 let operand = self.lower_to_operand(expr, bb, stmt_span);
 
-                Rvalue::Cast(operand, ty.clone())
+                Rvalue::Cast(operand, ty_kind.clone())
             }
             hir::ExprKind::Comma(exprs) => {
                 let (first_expr, exprs) = exprs.split_first().unwrap();

@@ -409,8 +409,20 @@ impl LinearCtx<'_> {
             },
         };
 
-        if params.len() != func_sig.params.len() {
-            bail!("Invalid number of arguments for the function call.");
+        if func_sig.variadic_param {
+            if params.len() < func_sig.params.len() {
+                bail!("Invalid number of arguments for the function call.");
+            }
+        } else if params.len() != func_sig.params.len() {
+            // TODO: Receiving one void parameter should be fixed.
+            if func_sig.params.len() != 1
+                || !matches!(
+                    func_sig.params.first().unwrap().ty.kind,
+                    repr::hir::TyKind::PrimTy(repr::hir::PrimTyKind::Void)
+                )
+            {
+                bail!("Invalid number of arguments for the function call.");
+            }
         }
 
         for (param_operand, func_param_decl) in params.iter().zip(func_sig.params.iter()) {

@@ -92,7 +92,7 @@ impl HirCtx<'_> {
             }
         }
 
-        let mut kind = self.lower_to_ty_kind(node, decl_node)?;
+        let mut kind = self.lower_to_ty_kind(node, Some(decl_node))?;
 
         if node.kind() == constants::FUNCTION_DEFINITION {
             return Ok(Ty {
@@ -180,7 +180,11 @@ impl HirCtx<'_> {
         })
     }
 
-    fn lower_to_ty_kind(&mut self, node: Node, mut decl_node: Node) -> anyhow::Result<TyKind> {
+    pub(crate) fn lower_to_ty_kind(
+        &mut self,
+        node: Node,
+        decl_node: Option<Node>,
+    ) -> anyhow::Result<TyKind> {
         trace!("[HIR/TyKind] Lowering '{}'", node.kind());
 
         let mut ty_node = node.child_by_field_name("type").unwrap();
@@ -188,12 +192,6 @@ impl HirCtx<'_> {
         while let Some(child) = ty_node.child_by_field_name("type") {
             ty_node = child;
         }
-
-        // trace!("BINGO '{}'", ty_node.kind());
-        // if ty_node.kind() == "sized_type_specifier" {
-        //     ty_node = ty_node.child(ty_node.child_count() - 1).unwrap();
-        // }
-        // trace!("BINGO '{}'", ty_node.kind());
 
         let mut ty_kind = match ty_node.kind() {
             constants::TYPE_DESCRIPTOR => {
@@ -226,6 +224,10 @@ impl HirCtx<'_> {
                 TyKind::Enum(self.lower_to_ident(ty_node.child(1).unwrap())?)
             }
             kind => bail!("Cannot lower '{kind}' to 'TyKind'."),
+        };
+
+        let Some(mut decl_node) = decl_node else {
+            return Ok(ty_kind);
         };
 
         loop {

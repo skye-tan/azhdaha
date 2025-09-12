@@ -102,7 +102,7 @@ impl<'mir> MirCtx<'mir> {
 
                 Operand::Place(result_place)
             }
-            hir::ExprKind::Call(..) => {
+            hir::ExprKind::Call(..) | hir::ExprKind::Cast(..) => {
                 let rvalue = self.lower_to_rvalue(expr, bb, span);
                 let place = self.store_in_temp_place(rvalue, bb, stmt_span);
 

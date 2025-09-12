@@ -23,7 +23,7 @@ pub enum ExprKind {
     Assign(Box<Expr>, Box<Expr>),
     Field(Box<Expr>, Ident),
     Index(Box<Expr>, Box<Expr>),
-    Cast(Box<Expr>, Ty),
+    Cast(Box<Expr>, TyKind),
     Array(Vec<Expr>),
     Comma(Vec<Expr>),
     Sizeof(Sizeof),
@@ -233,14 +233,11 @@ impl HirCtx<'_> {
             constants::CAST_EXPRESSION => {
                 let cast_node = node.child(1).unwrap();
 
-                let ty = self.lower_to_ty(
-                    cast_node,
-                    cast_node.child_by_field_name("declarator").unwrap(),
-                )?;
+                let ty_kind = self.lower_to_ty_kind(cast_node, None)?;
 
                 let target = self.lower_to_expr(node.child(3).unwrap())?;
 
-                ExprKind::Cast(Box::new(target), ty)
+                ExprKind::Cast(Box::new(target), ty_kind)
             }
             constants::INITIALIZER_LIST => {
                 let mut elements = vec![];

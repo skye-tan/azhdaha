@@ -3,7 +3,7 @@
 use la_arena::{Arena, Idx};
 
 use crate::hir::{
-    BinOp, Ident, Lit, Span, Storage, Ty, UnOp,
+    BinOp, Ident, Lit, Span, Storage, Ty, TyKind, UnOp,
     resolver::{Resolver, Symbol, SymbolKind},
 };
 
@@ -110,7 +110,7 @@ pub enum Rvalue {
     BinaryOp(BinOp, Operand, Operand),
     UnaryOp(UnOp, Operand),
     Call(Operand, Vec<Operand>),
-    Cast(Operand, Ty),
+    Cast(Operand, TyKind),
     List(Vec<Operand>),
     Empty,
 }

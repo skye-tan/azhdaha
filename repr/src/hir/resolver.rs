@@ -1,6 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug};
 
 use la_arena::{Arena, Idx};
 
@@ -23,7 +23,7 @@ pub struct Resolver<T> {
     pub map: HashMap<String, Idx<T>>,
 }
 
-impl<T> Resolver<T> {
+impl<T: Debug> Resolver<T> {
     pub fn new() -> Self {
         Self {
             arena: Arena::new(),
@@ -48,7 +48,7 @@ impl<T> Resolver<T> {
     }
 }
 
-impl<T> Default for Resolver<T> {
+impl<T: Debug> Default for Resolver<T> {
     fn default() -> Self {
         Self::new()
     }

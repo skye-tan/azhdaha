@@ -14,6 +14,13 @@ build-debug:
 run *CMD:
     cargo run --release -- {{CMD}}
 
+# prepare the tool and deploy the assets
+deploy:
+    sudo cp annotations/azhdaha.h /usr/include/
+    
+    mkdir -p ~/.local/include/azhdaha/
+    cp -r annotations/include/* ~/.local/include/azhdaha/
+
 # run with examples as input
 run-examples:
     cargo run --release -- ./examples/compile_commands.json
@@ -27,18 +34,15 @@ custom-test:
 convert-dot-graphs PATH=".":
     @ for file in {{PATH}}/*.dot; do dot -Tsvg $file > {{PATH}}/${file%.dot}.svg; done
 
-# check clippy lints
+# check code style
 check-lints:
+    cargo fmt --check
     cargo clippy -- --deny warnings
 
 # clean target directory and other unwanted files
 clean:
     rm -f *.dot *.svg
     cargo clean
-
-# check code format
-check-format:
-    cargo fmt --check
 
 # print help
 help:

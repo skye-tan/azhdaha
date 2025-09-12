@@ -4,7 +4,7 @@
             "/usr/bin/gcc",
             "-c",
             "-I",
-            "include/",
+            "./annotations/include/",
             "main.c"
         ],
         "directory": "./examples/dangling-pointer/",
@@ -15,7 +15,7 @@
             "/usr/bin/gcc",
             "-c",
             "-I",
-            "include/",
+            "./annotations/include/",
             "main.c"
         ],
         "directory": "./examples/double-free/",
@@ -26,7 +26,7 @@
             "/usr/bin/gcc",
             "-c",
             "-I",
-            "include/",
+            "./annotations/include/",
             "main.c"
         ],
         "directory": "./examples/memory-leak/",
@@ -37,7 +37,7 @@
             "/usr/bin/gcc",
             "-c",
             "-I",
-            "include/",
+            "./annotations/include/",
             "main.c"
         ],
         "directory": "./examples/use-after-free/",

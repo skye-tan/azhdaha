@@ -34,7 +34,4 @@ jobs:
       run: just build-release
 
     - name: Check code style
-      run: just check-format
-
-    - name: Check clippy lints
       run: just check-lints

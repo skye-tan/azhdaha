@@ -1,6 +1,6 @@
 import subprocess
 
-# Run safe tests
+# Run the safe tests
 
 output_safe = (
     subprocess.run(
@@ -18,7 +18,7 @@ false_positives = len(problematic_safe)
 successful_safe = list(filter(lambda entry: "successfully" in entry, output_safe))
 true_negative = len(successful_safe)
 
-# Run unsafe tests
+# Run the unsafe tests
 
 output_unsafe = (
     subprocess.run(

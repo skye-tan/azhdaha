@@ -18,8 +18,10 @@ impl LinearCtx<'_> {
         linear_local: LinearLocal,
         bb: mir::BasicBlock,
     ) -> Option<Report<'_, ReportSpan>> {
-        let report_builder = Report::build(ReportKind::Error, ReportSpan::new(body.span))
-            .with_label(
+        let mut report_builder = Report::build(ReportKind::Error, ReportSpan::new(body.span));
+
+        if linear_local.local.into_raw().into_u32() != u32::MAX {
+            report_builder.add_label(
                 Label::new(ReportSpan::new(linear_local.span))
                     .with_message(format!(
                         "Variable {} is defined in here as linear",
@@ -27,6 +29,7 @@ impl LinearCtx<'_> {
                     ))
                     .with_color(DIAGNOSIS_REPORT_COLOR),
             );
+        }
 
         let node_count = body.basic_blocks.len();
         let mut visited_edges = vec![vec![false; node_count]; node_count];

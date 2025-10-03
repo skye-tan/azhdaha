@@ -21,16 +21,14 @@ pub type Local = Idx<LocalDecl>;
 
 #[derive(Debug, Clone)]
 pub struct LocalDecl {
+    pub ty: Ty,
     pub kind: LocalKind,
     pub span: Span,
 }
 
 impl LocalDecl {
     pub fn is_linear(&self) -> bool {
-        match &self.kind {
-            LocalKind::Real { ty, .. } => ty.is_linear,
-            LocalKind::Temp => false,
-        }
+        self.ty.is_linear
     }
 }
 
@@ -38,7 +36,6 @@ impl LocalDecl {
 pub enum LocalKind {
     Real {
         storage: Option<Storage>,
-        ty: Ty,
         ident: Ident,
         is_arg: bool,
     },

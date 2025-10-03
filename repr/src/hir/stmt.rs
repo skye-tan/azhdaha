@@ -166,6 +166,12 @@ impl HirCtx<'_> {
                         StmtKind::If(
                             Expr {
                                 span: case_expr.span,
+                                ty: Ty {
+                                    kind: TyKind::PrimTy(PrimTyKind::Bool),
+                                    is_linear: false,
+                                    quals: vec![],
+                                    span: case_expr.span,
+                                },
                                 kind: ExprKind::Binary(
                                     BinOp::Eq,
                                     Box::new(switch_cond),
@@ -238,6 +244,7 @@ impl HirCtx<'_> {
                             kind: StmtKind::If(
                                 Expr {
                                     span: cond_expr.span,
+                                    ty: cond_expr.ty.clone(),
                                     kind: ExprKind::Unary(UnOp::Not, Box::new(cond_expr)),
                                 },
                                 Box::new(Stmt {
@@ -362,6 +369,7 @@ impl HirCtx<'_> {
                             kind: StmtKind::If(
                                 Expr {
                                     span: cond_expr.span,
+                                    ty: cond_expr.ty.clone(),
                                     kind: ExprKind::Unary(UnOp::Not, Box::new(cond_expr)),
                                 },
                                 Box::new(Stmt {

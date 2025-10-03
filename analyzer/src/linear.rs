@@ -65,10 +65,8 @@ impl<'linear> LinearCtx<'linear> {
             .local_decls
             .iter()
             .filter_map(|(local, local_decl)| match &local_decl.kind {
-                mir::LocalKind::Real {
-                    ty, ident, is_arg, ..
-                } => {
-                    if !ty.is_linear {
+                mir::LocalKind::Real { ident, is_arg, .. } => {
+                    if !local_decl.ty.is_linear {
                         return None;
                     }
 

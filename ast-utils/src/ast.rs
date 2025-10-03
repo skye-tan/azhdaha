@@ -1,6 +1,6 @@
 use std::{fs::File, os::fd::AsRawFd};
 
-use anyhow::Context;
+use anyhow::{Context, bail};
 use compile_commands::CompilationDatabase;
 use log::error;
 use tree_sitter::{Parser, Tree};
@@ -21,6 +21,23 @@ impl AstRepr {
         self.tree.print_dot_graph(&file.as_raw_fd());
 
         Ok(())
+    }
+
+    pub fn new_single_file(text: &str) -> anyhow::Result<Self> {
+        let source_info = SourceInfo {
+            path: "main.c".to_owned(),
+            code: text.as_bytes().to_vec(),
+        };
+
+        let mut parser = Parser::new();
+        parser
+            .set_language(&tree_sitter_c::LANGUAGE.into())
+            .context("Failed to load C grammar.")?;
+
+        let Some(tree) = parser.parse(&source_info.code, None) else {
+            bail!("Failed to parse using tree-sitter.");
+        };
+        Ok(AstRepr { source_info, tree })
     }
 
     pub fn construct(compile_commands: &CompilationDatabase) -> anyhow::Result<Vec<Self>> {

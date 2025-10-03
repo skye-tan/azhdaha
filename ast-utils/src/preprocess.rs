@@ -13,7 +13,7 @@ const INHABIT_LINEMARKS_FLAG: &str = "-P";
 const INCLUDE_FLAG: &str = "-I";
 
 /// The directory which contains the annotated headers.
-const INCLUDE_PATH: &str = "/home/skye/.local/include/azhdaha/";
+const ANNOTATED_LIB_PATH: &str = "include/azhdaha/";
 
 /// Prevents predefining any system-specific or GCC-specific macros.
 #[allow(dead_code)]
@@ -82,13 +82,15 @@ pub(crate) fn preprocess(
             }
         };
 
+        let dirs = directories::ProjectDirs::from("ir", "skye-tan", "azhdaha").unwrap();
+
         results.push(SourceInfo {
             path,
             code: Command::new(command)
                 .arg(PREPROCESS_ONLY_FLAG)
                 .arg(INHABIT_LINEMARKS_FLAG)
                 .arg(INCLUDE_FLAG)
-                .arg(INCLUDE_PATH)
+                .arg(dirs.data_dir().join(ANNOTATED_LIB_PATH))
                 .args(args)
                 .current_dir(directory)
                 .output()?

@@ -21,7 +21,6 @@ impl Display for Body<'_> {
             match &local_decl.kind {
                 LocalKind::Real {
                     storage,
-                    ty,
                     ident,
                     is_arg,
                 } => {
@@ -37,10 +36,15 @@ impl Display for Body<'_> {
                         write!(f, " {}", storage.mir_display(self))?;
                     }
 
-                    writeln!(f, " {};", ty.mir_display(self))?;
+                    writeln!(f, " {};", local_decl.ty.mir_display(self))?;
                 }
                 LocalKind::Temp => {
-                    writeln!(f, "let {}: temp;", local.mir_display(self),)?;
+                    writeln!(
+                        f,
+                        "let {}: {};",
+                        local.mir_display(self),
+                        local_decl.ty.mir_display(self)
+                    )?;
                 }
             }
         }

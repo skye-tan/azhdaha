@@ -26,9 +26,9 @@ impl MirCtx<'_> {
         span: Span,
     ) -> Local {
         self.body.local_decls.alloc(LocalDecl {
+            ty,
             kind: LocalKind::Real {
                 storage,
-                ty,
                 ident,
                 is_arg,
             },
@@ -36,8 +36,9 @@ impl MirCtx<'_> {
         })
     }
 
-    pub(crate) fn alloc_temp_local(&mut self, span: Span) -> Local {
+    pub(crate) fn alloc_temp_local(&mut self, span: Span, ty: Ty) -> Local {
         self.body.local_decls.alloc(LocalDecl {
+            ty,
             kind: LocalKind::Temp,
             span,
         })

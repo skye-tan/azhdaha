@@ -17,6 +17,24 @@ pub enum SymbolKind {
     TyDef(Ty),
 }
 
+impl SymbolKind {
+    pub(crate) fn ty(&self) -> Ty {
+        match self {
+            SymbolKind::Var(var_decl) => var_decl.ty.clone(),
+            SymbolKind::Func(func_decl) => Ty {
+                kind: TyKind::Func {
+                    sig: Box::new(func_decl.sig.clone()),
+                },
+                is_linear: false,
+                quals: vec![],
+                span: func_decl.span,
+            },
+            SymbolKind::Param(param_decl) => param_decl.ty.clone(),
+            SymbolKind::TyDef(_) => panic!("Symbol is not a expression position symbol."),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Resolver<T> {
     pub arena: Arena<T>,

@@ -41,8 +41,12 @@ impl<'mir> MirCtx<'mir> {
             hir::ExprKind::Unary(un_op, expr) => {
                 let operand = self.lower_to_operand(expr, bb, stmt_span);
 
-                let place =
-                    self.store_in_temp_place(Rvalue::UnaryOp(*un_op, operand), bb, stmt_span);
+                let place = self.store_in_temp_place(
+                    Rvalue::UnaryOp(*un_op, operand),
+                    bb,
+                    stmt_span,
+                    expr.ty.clone(),
+                );
 
                 Operand::Place(place)
             }
@@ -54,13 +58,15 @@ impl<'mir> MirCtx<'mir> {
                     Rvalue::BinaryOp(*bin_op, left_operand, right_operand),
                     bb,
                     stmt_span,
+                    expr.ty.clone(),
                 );
 
                 Operand::Place(place)
             }
             hir::ExprKind::Cond(cond_expr, body_expr, else_expr) => {
                 let cond_rvalue = self.lower_to_rvalue(cond_expr, bb, span);
-                let cond_place = self.store_in_temp_place(cond_rvalue, bb, stmt_span);
+                let cond_place =
+                    self.store_in_temp_place(cond_rvalue, bb, stmt_span, cond_expr.ty.clone());
 
                 let mut body_bb = self.alloc_bb();
                 let body_rvalue = self.lower_to_rvalue(body_expr, &mut body_bb, stmt_span);
@@ -70,7 +76,7 @@ impl<'mir> MirCtx<'mir> {
                 let mut else_bb = self.alloc_bb();
                 let else_rvalue = self.lower_to_rvalue(else_expr, &mut else_bb, stmt_span);
 
-                let result_place = self.alloc_temp_place(stmt_span);
+                let result_place = self.alloc_temp_place(stmt_span, expr.ty.clone());
 
                 self.retrieve_bb(body_bb).statements.push(Statement {
                     kind: StatementKind::Assign(result_place.clone(), body_rvalue),
@@ -104,7 +110,7 @@ impl<'mir> MirCtx<'mir> {
             }
             hir::ExprKind::Call(..) | hir::ExprKind::Cast(..) => {
                 let rvalue = self.lower_to_rvalue(expr, bb, span);
-                let place = self.store_in_temp_place(rvalue, bb, stmt_span);
+                let place = self.store_in_temp_place(rvalue, bb, stmt_span, expr.ty.clone());
 
                 Operand::Place(place)
             }

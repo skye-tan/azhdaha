@@ -9,6 +9,7 @@ workspace = true
 [dependencies]
 anyhow.workspace = true
 compile_commands.workspace = true
+directories = "6.0.0"
 log.workspace = true
 tree-sitter.workspace = true
 tree-sitter-c.workspace = true

@@ -18,8 +18,8 @@ run *CMD:
 deploy:
     sudo cp annotations/azhdaha.h /usr/include/
     
-    mkdir -p ~/.local/include/azhdaha/
-    cp -r annotations/include/* ~/.local/include/azhdaha/
+    mkdir -p ~/.local/share/azhdaha/include/azhdaha/
+    cp -r annotations/include/* ~/.local/share/azhdaha/include/azhdaha/
 
 # run with examples as input
 run-examples:

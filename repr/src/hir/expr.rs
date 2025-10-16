@@ -10,6 +10,7 @@ use super::{constants, resolver::Symbol};
 #[derive(Debug, Clone)]
 pub struct Expr {
     pub kind: ExprKind,
+    pub ty: Ty,
     pub span: Span,
 }
 
@@ -99,13 +100,12 @@ impl HirCtx<'_> {
             hi: node.end_byte(),
         };
 
-        Ok(Expr {
-            kind: self.lower_to_expr_kind(node)?,
-            span,
-        })
+        let (kind, ty) = self.lower_to_expr_kind(node)?;
+
+        Ok(Expr { kind, ty, span })
     }
 
-    fn lower_to_expr_kind(&mut self, node: Node) -> anyhow::Result<ExprKind> {
+    fn lower_to_expr_kind(&mut self, node: Node) -> anyhow::Result<(ExprKind, Ty)> {
         trace!("[HIR/ExprKind] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -122,7 +122,9 @@ impl HirCtx<'_> {
                     .get_res_by_name(&ident.name)
                     .context(format!("Use of undefined identifier '{}'.", &ident.name))?;
 
-                ExprKind::Local(symbol)
+                let ty = self.symbol_resolver.arena[symbol].ty();
+
+                (ExprKind::Local(symbol), ty)
             }
             constants::CALL_EXPRESSION => {
                 let mut cursor = node.walk();
@@ -143,7 +145,9 @@ impl HirCtx<'_> {
                     cursor.goto_next_sibling();
                 }
 
-                ExprKind::Call(Box::new(path), arguments)
+                let ty = path.ty.clone(); // TODO: wrong
+
+                (ExprKind::Call(Box::new(path), arguments), ty)
             }
             constants::BINARY_EXPRESSION => {
                 let lhs = self.lower_to_expr(node.child(0).unwrap())?;
@@ -152,7 +156,9 @@ impl HirCtx<'_> {
 
                 let rhs = self.lower_to_expr(node.child(2).unwrap())?;
 
-                ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs))
+                let ty = lhs.ty.clone(); // TODO: Care about casts
+
+                (ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)), ty)
             }
             constants::UPDATE_EXPRESSION => {
                 let (lhs, bin_op) = if let Ok(bin_op) = self.lower_to_bin_op(node.child(1).unwrap())
@@ -174,14 +180,21 @@ impl HirCtx<'_> {
                         span,
                     }),
                     span,
+                    ty: lhs.ty.clone(), // TODO: probably wrong
                 };
 
-                ExprKind::Assign(
-                    Box::new(lhs.clone()),
-                    Box::new(Expr {
-                        kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
-                        span,
-                    }),
+                let ty = lhs.ty.clone();
+
+                (
+                    ExprKind::Assign(
+                        Box::new(lhs.clone()),
+                        Box::new(Expr {
+                            kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
+                            span,
+                            ty: ty.clone(),
+                        }),
+                    ),
+                    ty,
                 )
             }
             constants::UNARY_EXPRESSION | constants::POINTER_EXPRESSION => {
@@ -189,10 +202,12 @@ impl HirCtx<'_> {
 
                 let expr = self.lower_to_expr(node.child(1).unwrap())?;
 
+                let ty = expr.ty.clone(); // TODO: wrong for deref and such
+
                 // Ignore [`UnOp::Pos`] because it has no effects.
                 match un_op {
-                    UnOp::Pos => expr.kind,
-                    _ => ExprKind::Unary(un_op, Box::new(expr)),
+                    UnOp::Pos => (expr.kind, expr.ty),
+                    _ => (ExprKind::Unary(un_op, Box::new(expr)), ty),
                 }
             }
             constants::PARENTHESIZED_EXPRESSION => {
@@ -205,30 +220,40 @@ impl HirCtx<'_> {
 
                 let rhs = self.lower_to_expr(node.child(2).unwrap())?;
 
-                match bin_op {
-                    BinOp::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
-                    _ => ExprKind::Assign(
-                        Box::new(lhs.clone()),
-                        Box::new(Expr {
-                            kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
-                            span,
-                        }),
-                    ),
-                }
+                let ty = rhs.ty.clone();
+
+                (
+                    match bin_op {
+                        BinOp::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
+                        _ => ExprKind::Assign(
+                            Box::new(lhs.clone()),
+                            Box::new(Expr {
+                                kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
+                                span,
+                                ty: ty.clone(),
+                            }),
+                        ),
+                    },
+                    ty,
+                )
             }
             constants::FIELD_EXPRESSION => {
                 let target = self.lower_to_expr(node.child(0).unwrap())?;
 
                 let field = self.lower_to_ident(node.child(2).unwrap())?;
 
-                ExprKind::Field(Box::new(target), field)
+                let ty = target.ty.clone(); // TODO: pure garbage
+
+                (ExprKind::Field(Box::new(target), field), ty)
             }
             constants::SUBSCRIPT_EXPRESSION => {
                 let target = self.lower_to_expr(node.child(0).unwrap())?;
 
                 let index = self.lower_to_expr(node.child(2).unwrap())?;
 
-                ExprKind::Index(Box::new(target), Box::new(index))
+                let ty = target.ty.clone(); // TODO: handle deref
+
+                (ExprKind::Index(Box::new(target), Box::new(index)), ty)
             }
             constants::CAST_EXPRESSION => {
                 let cast_node = node.child(1).unwrap();
@@ -237,7 +262,14 @@ impl HirCtx<'_> {
 
                 let target = self.lower_to_expr(node.child(3).unwrap())?;
 
-                ExprKind::Cast(Box::new(target), ty_kind)
+                let ty = Ty {
+                    kind: ty_kind.clone(),
+                    is_linear: false, // TODO: who knows?
+                    quals: vec![],
+                    span,
+                };
+
+                (ExprKind::Cast(Box::new(target), ty_kind), ty)
             }
             constants::INITIALIZER_LIST => {
                 let mut elements = vec![];
@@ -255,7 +287,17 @@ impl HirCtx<'_> {
                     }
                 }
 
-                ExprKind::Array(elements)
+                let ty = Ty {
+                    kind: TyKind::Array {
+                        kind: Box::new(TyKind::PrimTy(PrimTyKind::Void)), // TODO: non sense
+                        size: None, // TODO: Why this has type Expr?
+                    },
+                    is_linear: false,
+                    quals: vec![],
+                    span,
+                };
+
+                (ExprKind::Array(elements), ty)
             }
             constants::COMMA_EXPRESSION => {
                 let mut exprs = vec![];
@@ -272,7 +314,9 @@ impl HirCtx<'_> {
                     }
                 }
 
-                ExprKind::Comma(exprs)
+                let ty = exprs.last().unwrap().ty.clone();
+
+                (ExprKind::Comma(exprs), ty)
             }
             constants::CONDITIONAL_EXPRESSION => {
                 let cond_expr = self.lower_to_expr(node.child(0).unwrap())?;
@@ -281,15 +325,44 @@ impl HirCtx<'_> {
 
                 let else_expr = self.lower_to_expr(node.child(4).unwrap())?;
 
-                ExprKind::Cond(
-                    Box::new(cond_expr),
-                    Box::new(body_expr),
-                    Box::new(else_expr),
+                let ty = body_expr.ty.clone(); // TODO: handle casts
+
+                (
+                    ExprKind::Cond(
+                        Box::new(cond_expr),
+                        Box::new(body_expr),
+                        Box::new(else_expr),
+                    ),
+                    ty,
                 )
             }
-            constants::SIZEOF_EXPRESSION => ExprKind::Sizeof(self.lower_to_sizeof(node)?),
-            constants::SEMICOLON_EXPRESSION => ExprKind::Empty,
-            kind if kind.contains(constants::LITERAL) => ExprKind::Lit(self.lower_to_lit(node)?),
+            constants::SIZEOF_EXPRESSION => (
+                ExprKind::Sizeof(self.lower_to_sizeof(node)?),
+                Ty {
+                    kind: TyKind::PrimTy(PrimTyKind::Int),
+                    is_linear: false,
+                    quals: vec![],
+                    span,
+                },
+            ),
+            constants::SEMICOLON_EXPRESSION => (
+                ExprKind::Empty,
+                Ty {
+                    kind: TyKind::PrimTy(PrimTyKind::Void),
+                    is_linear: false,
+                    quals: vec![],
+                    span,
+                },
+            ),
+            kind if kind.contains(constants::LITERAL) => (
+                ExprKind::Lit(self.lower_to_lit(node)?),
+                Ty {
+                    kind: TyKind::PrimTy(PrimTyKind::Int), // TODO: handle other literals
+                    is_linear: false,
+                    quals: vec![],
+                    span,
+                },
+            ),
             kind => bail!("Cannot lower '{kind}' to 'ExprKind'."),
         })
     }

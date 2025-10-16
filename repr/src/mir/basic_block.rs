@@ -148,7 +148,8 @@ impl<'mir> MirCtx<'mir> {
             }
             hir::StmtKind::If(cond_expr, body_stmt, else_stmt) => {
                 let cond_rvalue = self.lower_to_rvalue(cond_expr, bb, span);
-                let cond_place = self.store_in_temp_place(cond_rvalue, bb, span);
+                let cond_place =
+                    self.store_in_temp_place(cond_rvalue, bb, span, cond_expr.ty.clone());
 
                 let body_bb = self.alloc_bb();
                 let mut body_last_bb = body_bb;

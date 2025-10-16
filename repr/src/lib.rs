@@ -6,3 +6,5 @@ mod display;
 pub mod hir;
 /// Contains MIR's implementation.
 pub mod mir;
+
+pub use la_arena;

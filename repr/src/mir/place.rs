@@ -1,7 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use crate::{
-    hir::{self, Span, Ty},
+    hir::{self, Span, StmtKind, Ty},
     mir::{MirCtx, datatypes::*},
 };
 
@@ -46,6 +46,27 @@ impl<'mir> MirCtx<'mir> {
                 let mut place = self.lower_to_place(expr, bb, stmt_span);
 
                 place.projections.push(PlaceElem::Deref);
+
+                place
+            }
+            hir::ExprKind::GnuBlock(block) => {
+                let Some((last, base)) = block.stmts.split_last() else {
+                    panic!("Invalid gnu block expression");
+                };
+                let StmtKind::Expr(last) = &last.kind else {
+                    panic!("Invalid gnu block last statement");
+                };
+
+                let saved_symbol_resolver = self.body.symbol_resolver;
+                self.body.symbol_resolver = &block.symbol_resolver;
+
+                for stmt in base {
+                    self.lower_to_bb(stmt, bb);
+                }
+
+                let place = self.lower_to_place(last, bb, stmt_span);
+
+                self.body.symbol_resolver = saved_symbol_resolver;
 
                 place
             }

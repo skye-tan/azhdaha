@@ -38,8 +38,8 @@ impl<'mir> MirCtx<'mir> {
 
                 Operand::Place(place)
             }
-            hir::ExprKind::Unary(un_op, expr) => {
-                let operand = self.lower_to_operand(expr, bb, stmt_span);
+            hir::ExprKind::Unary(un_op, inner_expr) => {
+                let operand = self.lower_to_operand(inner_expr, bb, stmt_span);
 
                 let place = self.store_in_temp_place(
                     Rvalue::UnaryOp(*un_op, operand),

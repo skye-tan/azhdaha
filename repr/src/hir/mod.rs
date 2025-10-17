@@ -2,7 +2,7 @@
 //! abstract syntax tree (AST) that is generated after parsing, macro expansion, and name resolution.
 //!
 
-use log::trace;
+use log::error;
 use tree_sitter::Node;
 
 use ast_utils::AstRepr;
@@ -75,7 +75,7 @@ impl<'hir> HirCtx<'hir> {
                     self.items.push(item);
                 }
                 Err(error) => {
-                    trace!("Failed to construct 'HIR' - {error:?}");
+                    error!("Failed to construct 'HIR' - {error:?}");
                 }
             }
         }

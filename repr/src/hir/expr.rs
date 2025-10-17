@@ -202,7 +202,29 @@ impl HirCtx<'_> {
 
                 let expr = self.lower_to_expr(node.child(1).unwrap())?;
 
-                let ty = expr.ty.clone(); // TODO: wrong for deref and such
+                let ty = match un_op {
+                    UnOp::Not | UnOp::Neg | UnOp::Com | UnOp::Pos => expr.ty.clone(),
+                    UnOp::AddrOf => Ty {
+                        kind: TyKind::Ptr {
+                            kind: Box::new(expr.ty.kind.clone()),
+                            quals: vec![],
+                        },
+                        is_linear: false,
+                        quals: vec![],
+                        span,
+                    },
+                    UnOp::Deref => {
+                        let TyKind::Ptr { kind, quals: _ } = &expr.ty.kind else {
+                            bail!("Type error: dereference of non-ptr type");
+                        };
+                        Ty {
+                            kind: *kind.clone(),
+                            is_linear: false,
+                            quals: vec![],
+                            span,
+                        }
+                    }
+                };
 
                 // Ignore [`UnOp::Pos`] because it has no effects.
                 match un_op {
@@ -409,7 +431,12 @@ impl HirCtx<'_> {
         };
 
         Ok(Lit {
-            kind: self.lower_to_lit_kind(node)?,
+            kind: self.lower_to_lit_kind(node).with_context(|| {
+                format!(
+                    "In lowering {:?} to literal",
+                    node.utf8_text(self.source_code)
+                )
+            })?,
             span,
         })
     }
@@ -443,6 +470,10 @@ impl HirCtx<'_> {
                     LitKind::Int(value)
                 } else if let Some(stripped_literal) = literal.strip_prefix("0x")
                     && let Ok(value) = i64::from_str_radix(stripped_literal, 16)
+                {
+                    LitKind::Int(value)
+                } else if let Some(stripped_literal) = literal.strip_prefix("0b")
+                    && let Ok(value) = i64::from_str_radix(stripped_literal, 2)
                 {
                     LitKind::Int(value)
                 } else {

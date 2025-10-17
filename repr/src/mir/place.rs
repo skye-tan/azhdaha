@@ -25,16 +25,14 @@ impl<'mir> MirCtx<'mir> {
                 }
             }
             hir::ExprKind::Field(expr, ident) => {
-                let rvalue = self.lower_to_rvalue(expr, bb, stmt_span);
-                let mut place = self.store_in_temp_place(rvalue, bb, stmt_span, expr.ty.clone());
+                let mut place = self.lower_to_place(expr, bb, stmt_span);
 
                 place.projections.push(PlaceElem::Field(ident.name.clone()));
 
                 place
             }
             hir::ExprKind::Index(expr, index_expr) => {
-                let rvalue = self.lower_to_rvalue(expr, bb, stmt_span);
-                let mut place = self.store_in_temp_place(rvalue, bb, stmt_span, expr.ty.clone());
+                let mut place = self.lower_to_place(expr, bb, stmt_span);
 
                 let index_rvalue = self.lower_to_rvalue(index_expr, bb, stmt_span);
                 let index_place =
@@ -45,14 +43,16 @@ impl<'mir> MirCtx<'mir> {
                 place
             }
             hir::ExprKind::Unary(hir::UnOp::Deref, expr) => {
-                let rvalue = self.lower_to_rvalue(expr, bb, stmt_span);
-                let mut place = self.store_in_temp_place(rvalue, bb, stmt_span, expr.ty.clone());
+                let mut place = self.lower_to_place(expr, bb, stmt_span);
 
                 place.projections.push(PlaceElem::Deref);
 
                 place
             }
-            kind => panic!("Cannot construct [Place] from: {kind:#?}"),
+            _ => {
+                let rvalue = self.lower_to_rvalue(expr, bb, stmt_span);
+                self.store_in_temp_place(rvalue, bb, stmt_span, expr.ty.clone())
+            }
         }
     }
 

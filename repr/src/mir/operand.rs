@@ -116,7 +116,7 @@ impl<'mir> MirCtx<'mir> {
             }
             // TODO: Inner value must be evaluated and then saved.
             hir::ExprKind::Sizeof(_) => Operand::Const(Const::Sizeof),
-            hir::ExprKind::Field(..) | hir::ExprKind::Index(..) => {
+            hir::ExprKind::Field(..) | hir::ExprKind::Index(..) | hir::ExprKind::GnuBlock(_) => {
                 Operand::Place(self.lower_to_place(expr, bb, stmt_span))
             }
             kind => panic!("Cannot construct [Operand] from: {kind:#?}"),

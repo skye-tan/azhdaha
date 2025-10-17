@@ -29,6 +29,7 @@ pub enum ExprKind {
     Comma(Vec<Expr>),
     Sizeof(Sizeof),
     Cond(Box<Expr>, Box<Expr>, Box<Expr>),
+    GnuBlock(Block),
     Empty,
 }
 
@@ -233,7 +234,17 @@ impl HirCtx<'_> {
                 }
             }
             constants::PARENTHESIZED_EXPRESSION => {
-                self.lower_to_expr_kind(node.child(1).unwrap())?
+                let child = node.child(1).unwrap();
+                if child.kind() == constants::COMPOUND_STATEMENT {
+                    let block = self.lower_to_block(child)?;
+                    let StmtKind::Expr(last_expr) = &block.stmts.last().unwrap().kind else {
+                        bail!("Invalid gnu statement block");
+                    };
+                    let ty = last_expr.ty.clone();
+                    (ExprKind::GnuBlock(block), ty)
+                } else {
+                    self.lower_to_expr_kind(child)?
+                }
             }
             constants::ASSIGNMENT_EXPRESSION => {
                 let lhs = self.lower_to_expr(node.child(0).unwrap())?;

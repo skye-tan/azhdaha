@@ -60,7 +60,8 @@ impl<'mir> MirCtx<'mir> {
                 Rvalue::List(operands)
             }
             hir::ExprKind::Empty => Rvalue::Empty,
-            hir::ExprKind::Lit(..)
+            hir::ExprKind::GnuBlock(_)
+            | hir::ExprKind::Lit(..)
             | hir::ExprKind::Local(..)
             | hir::ExprKind::Assign(..)
             | hir::ExprKind::Cond(..)

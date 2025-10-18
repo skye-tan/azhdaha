@@ -23,7 +23,9 @@ pub enum ExprKind {
     Unary(UnOp, Box<Expr>),
     Assign(Box<Expr>, Box<Expr>),
     Field(Box<Expr>, Ident),
-    Index(Box<Expr>, Box<Expr>),
+    PtrOffset(Box<Expr>, Box<Expr>),
+    PtrDiff(Box<Expr>, Box<Expr>),
+    Index(Box<Expr>, Box<Expr>), // TODO: retire Index in favor of PtrOffset
     Cast(Box<Expr>, TyKind),
     Array(Vec<Expr>),
     Comma(Vec<Expr>),
@@ -59,7 +61,7 @@ pub enum LitKind {
     Float(f64),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinOp {
     Add,
     Sub,
@@ -79,7 +81,6 @@ pub enum BinOp {
     Gt,
     Shl,
     Shr,
-    Assign,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -151,11 +152,63 @@ impl HirCtx<'_> {
                 (ExprKind::Call(Box::new(path), arguments), ty)
             }
             constants::BINARY_EXPRESSION => {
-                let lhs = self.lower_to_expr(node.child(0).unwrap())?;
+                let mut lhs = self.lower_to_expr(node.child(0).unwrap())?;
 
-                let bin_op = self.lower_to_bin_op(node.child(1).unwrap())?;
+                let bin_op = self
+                    .lower_to_bin_op(node.child(1).unwrap())?
+                    .expect("Assignment isn't valid here");
 
-                let rhs = self.lower_to_expr(node.child(2).unwrap())?;
+                let mut rhs = self.lower_to_expr(node.child(2).unwrap())?;
+
+                'check_pointers: {
+                    if bin_op == BinOp::Add {
+                        let lhs_is_ptr = lhs.ty.kind.is_ptr();
+                        let rhs_is_ptr = rhs.ty.kind.is_ptr();
+
+                        match (lhs_is_ptr, rhs_is_ptr) {
+                            (true, true) => bail!("Type error: adding two pointers"),
+                            (true, false) => (),
+                            (false, true) => {
+                                std::mem::swap(&mut lhs, &mut rhs);
+                            }
+                            (false, false) => break 'check_pointers,
+                        }
+
+                        let ty = lhs.ty.clone();
+                        return Ok((ExprKind::PtrOffset(Box::new(lhs), Box::new(rhs)), ty));
+                    }
+                    if bin_op == BinOp::Sub {
+                        let lhs_is_ptr = lhs.ty.kind.is_ptr();
+                        let rhs_is_ptr = rhs.ty.kind.is_ptr();
+
+                        match (lhs_is_ptr, rhs_is_ptr) {
+                            (true, true) => {
+                                let ty = Ty {
+                                    kind: TyKind::PrimTy(PrimTyKind::Int),
+                                    is_linear: false,
+                                    quals: vec![],
+                                    span,
+                                };
+                                return Ok((ExprKind::PtrDiff(Box::new(lhs), Box::new(rhs)), ty));
+                            }
+                            (true, false) => lhs.ty.clone(),
+                            (false, true) => {
+                                std::mem::swap(&mut lhs, &mut rhs);
+                                lhs.ty.clone()
+                            }
+                            (false, false) => break 'check_pointers,
+                        };
+
+                        let ty = lhs.ty.clone();
+                        let rhs = Expr {
+                            ty: rhs.ty.clone(),
+                            span: rhs.span,
+                            kind: ExprKind::Unary(UnOp::Neg, Box::new(rhs)),
+                        };
+
+                        return Ok((ExprKind::PtrOffset(Box::new(lhs), Box::new(rhs)), ty));
+                    }
+                }
 
                 let ty = lhs.ty.clone(); // TODO: Care about casts
 
@@ -185,6 +238,7 @@ impl HirCtx<'_> {
                 };
 
                 let ty = lhs.ty.clone();
+                let bin_op = bin_op.expect("Assignment isn't valid operator for update?");
 
                 (
                     ExprKind::Assign(
@@ -257,8 +311,8 @@ impl HirCtx<'_> {
 
                 (
                     match bin_op {
-                        BinOp::Assign => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
-                        _ => ExprKind::Assign(
+                        None => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
+                        Some(bin_op) => ExprKind::Assign(
                             Box::new(lhs.clone()),
                             Box::new(Expr {
                                 kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
@@ -495,10 +549,11 @@ impl HirCtx<'_> {
         })
     }
 
-    fn lower_to_bin_op(&mut self, node: Node) -> anyhow::Result<BinOp> {
+    // TODO: this function is garbage. Break it into two. One for assignments and one for normal operators.
+    fn lower_to_bin_op(&mut self, node: Node) -> anyhow::Result<Option<BinOp>> {
         trace!("[HIR/BinOp] Lowering '{}'", node.kind());
 
-        Ok(match node.kind() {
+        Ok(Some(match node.kind() {
             constants::ADD | constants::ASSIGN_ADD | constants::INC => BinOp::Add,
             constants::SUB | constants::ASSIGN_SUB | constants::DEC => BinOp::Sub,
             constants::MUL | constants::ASSIGN_MUL => BinOp::Mul,
@@ -517,9 +572,9 @@ impl HirCtx<'_> {
             constants::NE => BinOp::Ne,
             constants::GE => BinOp::Ge,
             constants::GT => BinOp::Gt,
-            constants::ASSIGN => BinOp::Assign,
+            constants::ASSIGN => return Ok(None),
             kind => bail!("Cannot lower '{kind}' to 'BinOp'."),
-        })
+        }))
     }
 
     fn lower_to_un_op(&mut self, node: Node) -> anyhow::Result<UnOp> {

@@ -18,11 +18,29 @@ impl<'mir> MirCtx<'mir> {
 
                 Rvalue::UnaryOp(*un_op, operand)
             }
+            hir::ExprKind::PtrDiff(left_expr, right_expr) => {
+                let left_operand = self.lower_to_operand(left_expr, bb, stmt_span);
+                let right_operand = self.lower_to_operand(right_expr, bb, stmt_span);
+
+                Rvalue::PtrDiff(left_operand, right_operand)
+            }
             hir::ExprKind::Binary(bin_op, left_expr, right_expr) => {
                 let left_operand = self.lower_to_operand(left_expr, bb, stmt_span);
                 let right_operand = self.lower_to_operand(right_expr, bb, stmt_span);
 
-                Rvalue::BinaryOp(*bin_op, left_operand, right_operand)
+                match MirBinOp::from_hir(*bin_op) {
+                    MirBinOp::IntBinOp(int_bin_op) => {
+                        Rvalue::BinaryOp(int_bin_op, left_operand, right_operand)
+                    }
+                    MirBinOp::ShortCircuitBinOp(short_circuit_bin_op) => {
+                        // TODO: make these actually short circuit
+                        let op = match short_circuit_bin_op {
+                            ShortCircuitBinOp::And => IntBinOp::BitAnd,
+                            ShortCircuitBinOp::Or => IntBinOp::BitOr,
+                        };
+                        Rvalue::BinaryOp(op, left_operand, right_operand)
+                    }
+                }
             }
             hir::ExprKind::Call(expr, exprs) => {
                 let operand = self.lower_to_operand(expr, bb, stmt_span);
@@ -61,6 +79,7 @@ impl<'mir> MirCtx<'mir> {
             }
             hir::ExprKind::Empty => Rvalue::Empty,
             hir::ExprKind::GnuBlock(_)
+            | hir::ExprKind::PtrOffset(..)
             | hir::ExprKind::Lit(..)
             | hir::ExprKind::Local(..)
             | hir::ExprKind::Assign(..)

@@ -48,7 +48,8 @@ impl LinearCtx<'_> {
                             rhs_is_linear = body.local_decls[place.local].is_linear();
                         }
                     }
-                    mir::Rvalue::BinaryOp(_, left_operand, right_operand) => {
+                    mir::Rvalue::BinaryOp(_, left_operand, right_operand)
+                    | mir::Rvalue::PtrDiff(left_operand, right_operand) => {
                         if self.process_operand(
                             report_builder,
                             linear_local,

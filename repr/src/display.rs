@@ -5,10 +5,10 @@ use std::fmt::Display;
 use itertools::Itertools;
 
 use crate::hir::resolver::SymbolKind;
-use crate::hir::{BinOp, Lit, LitKind, PrimTyKind, Storage, Ty, TyKind, TyQual, UnOp};
+use crate::hir::{Lit, LitKind, PrimTyKind, Storage, Ty, TyKind, TyQual, UnOp};
 use crate::mir::{
-    Body, Const, Local, LocalKind, Operand, Place, PlaceElem, Rvalue, Statement, StatementKind,
-    Terminator, TerminatorKind,
+    Body, Const, IntBinOp, Local, LocalKind, Operand, Place, PlaceElem, Rvalue, Statement,
+    StatementKind, Terminator, TerminatorKind,
 };
 
 trait MirDisplay {
@@ -117,6 +117,14 @@ impl MirDisplay for Rvalue {
                     right_operand.mir_display(body)
                 )
             }
+            Rvalue::PtrDiff(left_operand, right_operand) => {
+                format!(
+                    "{} - {} // (ptr diff)",
+                    left_operand.mir_display(body),
+                    right_operand.mir_display(body)
+                )
+            }
+
             Rvalue::UnaryOp(un_op, operand) => {
                 format!("{}{}", un_op.mir_display(body), operand.mir_display(body))
             }
@@ -321,28 +329,25 @@ impl MirDisplay for Lit {
     }
 }
 
-impl MirDisplay for BinOp {
+impl MirDisplay for IntBinOp {
     fn mir_display(&self, _body: &Body) -> String {
         match self {
-            BinOp::Add => "+".to_owned(),
-            BinOp::Sub => "-".to_owned(),
-            BinOp::Mul => "*".to_owned(),
-            BinOp::Div => "/".to_owned(),
-            BinOp::Rem => "%".to_owned(),
-            BinOp::And => "&&".to_owned(),
-            BinOp::Or => "||".to_owned(),
-            BinOp::BitXor => "^".to_owned(),
-            BinOp::BitAnd => "&".to_owned(),
-            BinOp::BitOr => "|".to_owned(),
-            BinOp::Shl => "<<".to_owned(),
-            BinOp::Shr => ">>".to_owned(),
-            BinOp::Eq => "==".to_owned(),
-            BinOp::Lt => "<".to_owned(),
-            BinOp::Le => "<=".to_owned(),
-            BinOp::Ne => "!=".to_owned(),
-            BinOp::Ge => ">=".to_owned(),
-            BinOp::Gt => ">".to_owned(),
-            BinOp::Assign => unreachable!(),
+            IntBinOp::Add => "+".to_owned(),
+            IntBinOp::Sub => "-".to_owned(),
+            IntBinOp::Mul => "*".to_owned(),
+            IntBinOp::Div => "/".to_owned(),
+            IntBinOp::Rem => "%".to_owned(),
+            IntBinOp::BitXor => "^".to_owned(),
+            IntBinOp::BitAnd => "&".to_owned(),
+            IntBinOp::BitOr => "|".to_owned(),
+            IntBinOp::Shl => "<<".to_owned(),
+            IntBinOp::Shr => ">>".to_owned(),
+            IntBinOp::Eq => "==".to_owned(),
+            IntBinOp::Lt => "<".to_owned(),
+            IntBinOp::Le => "<=".to_owned(),
+            IntBinOp::Ne => "!=".to_owned(),
+            IntBinOp::Ge => ">=".to_owned(),
+            IntBinOp::Gt => ">".to_owned(),
         }
     }
 }

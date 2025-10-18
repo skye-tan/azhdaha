@@ -61,6 +61,7 @@ impl<T: Debug> Resolver<T> {
         self.map.get(name).cloned()
     }
 
+    #[track_caller]
     pub fn get_data_by_res(&self, res: &Idx<T>) -> &T {
         &self.arena[*res]
     }

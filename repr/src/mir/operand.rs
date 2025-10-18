@@ -50,16 +50,9 @@ impl<'mir> MirCtx<'mir> {
 
                 Operand::Place(place)
             }
-            hir::ExprKind::Binary(bin_op, left_expr, right_expr) => {
-                let left_operand = self.lower_to_operand(left_expr, bb, stmt_span);
-                let right_operand = self.lower_to_operand(right_expr, bb, stmt_span);
-
-                let place = self.store_in_temp_place(
-                    Rvalue::BinaryOp(*bin_op, left_operand, right_operand),
-                    bb,
-                    stmt_span,
-                    expr.ty.clone(),
-                );
+            hir::ExprKind::Binary(..) => {
+                let rvalue = self.lower_to_rvalue(expr, bb, span);
+                let place = self.store_in_temp_place(rvalue, bb, stmt_span, expr.ty.clone());
 
                 Operand::Place(place)
             }
@@ -108,7 +101,7 @@ impl<'mir> MirCtx<'mir> {
 
                 Operand::Place(result_place)
             }
-            hir::ExprKind::Call(..) | hir::ExprKind::Cast(..) => {
+            hir::ExprKind::Call(..) | hir::ExprKind::Cast(..) | hir::ExprKind::PtrDiff(..) => {
                 let rvalue = self.lower_to_rvalue(expr, bb, span);
                 let place = self.store_in_temp_place(rvalue, bb, stmt_span, expr.ty.clone());
 
@@ -116,7 +109,10 @@ impl<'mir> MirCtx<'mir> {
             }
             // TODO: Inner value must be evaluated and then saved.
             hir::ExprKind::Sizeof(_) => Operand::Const(Const::Sizeof),
-            hir::ExprKind::Field(..) | hir::ExprKind::Index(..) | hir::ExprKind::GnuBlock(_) => {
+            hir::ExprKind::PtrOffset(..)
+            | hir::ExprKind::Field(..)
+            | hir::ExprKind::Index(..)
+            | hir::ExprKind::GnuBlock(_) => {
                 Operand::Place(self.lower_to_place(expr, bb, stmt_span))
             }
             kind => panic!("Cannot construct [Operand] from: {kind:#?}"),

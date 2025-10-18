@@ -38,6 +38,12 @@ pub enum TyKind {
     },
 }
 
+impl TyKind {
+    pub fn is_ptr(&self) -> bool {
+        matches!(self, TyKind::Ptr { .. })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum PrimTyKind {
     Bool,

@@ -34,7 +34,7 @@ impl LinearCtx<'_> {
                 let mut rhs_is_linear = false;
 
                 match rhs {
-                    mir::Rvalue::Use(operand) | mir::Rvalue::Cast(operand, _) => {
+                    mir::Rvalue::Use(operand) | mir::Rvalue::Cast { value: operand, .. } => {
                         if let mir::Operand::Place(place) = operand {
                             // TODO: Projections are ignored for the time being.
                             // if !place.projections.is_empty() {

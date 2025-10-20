@@ -111,7 +111,6 @@ impl<'mir> MirCtx<'mir> {
             hir::ExprKind::Sizeof(_) => Operand::Const(Const::Sizeof),
             hir::ExprKind::PtrOffset(..)
             | hir::ExprKind::Field(..)
-            | hir::ExprKind::Index(..)
             | hir::ExprKind::GnuBlock(_) => {
                 Operand::Place(self.lower_to_place(expr, bb, stmt_span))
             }

@@ -138,8 +138,17 @@ impl MirDisplay for Rvalue {
                         .join(", ")
                 )
             }
-            Rvalue::Cast(operand, ty) => {
-                format!("({}) {}", ty.mir_display(body), operand.mir_display(body),)
+            Rvalue::Cast {
+                value,
+                from_type,
+                to_type,
+            } => {
+                format!(
+                    "({} -> {}) {}",
+                    from_type.mir_display(body),
+                    to_type.mir_display(body),
+                    value.mir_display(body),
+                )
             }
             Rvalue::List(operands) => {
                 let mut result = "{".to_owned();

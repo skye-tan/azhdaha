@@ -165,7 +165,11 @@ pub enum Rvalue {
     PtrDiff(Operand, Operand),
     UnaryOp(UnOp, Operand),
     Call(Operand, Vec<Operand>),
-    Cast(Operand, TyKind),
+    Cast {
+        value: Operand,
+        from_type: TyKind,
+        to_type: TyKind,
+    },
     List(Vec<Operand>),
     Empty,
 }

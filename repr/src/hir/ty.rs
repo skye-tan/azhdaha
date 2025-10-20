@@ -42,6 +42,10 @@ impl TyKind {
     pub fn is_ptr(&self) -> bool {
         matches!(self, TyKind::Ptr { .. })
     }
+
+    pub fn is_array(&self) -> bool {
+        matches!(self, TyKind::Array { .. })
+    }
 }
 
 #[derive(Debug, Clone)]

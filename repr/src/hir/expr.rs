@@ -25,8 +25,7 @@ pub enum ExprKind {
     Field(Box<Expr>, Ident),
     PtrOffset(Box<Expr>, Box<Expr>),
     PtrDiff(Box<Expr>, Box<Expr>),
-    Index(Box<Expr>, Box<Expr>), // TODO: retire Index in favor of PtrOffset
-    Cast(Box<Expr>, TyKind),
+    Cast(Box<Expr>),
     Array(Vec<Expr>),
     Comma(Vec<Expr>),
     Sizeof(Sizeof),
@@ -107,6 +106,137 @@ impl HirCtx<'_> {
         Ok(Expr { kind, ty, span })
     }
 
+    fn lower_un_op(
+        &mut self,
+        expr: Expr,
+        un_op: UnOp,
+        span: Span,
+    ) -> anyhow::Result<(ExprKind, Ty)> {
+        let ty = match un_op {
+            UnOp::Not | UnOp::Neg | UnOp::Com | UnOp::Pos => expr.ty.clone(),
+            UnOp::AddrOf => Ty {
+                kind: TyKind::Ptr {
+                    kind: Box::new(expr.ty.kind.clone()),
+                    quals: vec![],
+                },
+                is_linear: false,
+                quals: vec![],
+                span,
+            },
+            UnOp::Deref => {
+                let TyKind::Ptr { kind, quals: _ } = &expr.ty.kind else {
+                    bail!("Type error: dereference of non-ptr type");
+                };
+                Ty {
+                    kind: *kind.clone(),
+                    is_linear: false,
+                    quals: vec![],
+                    span,
+                }
+            }
+        };
+
+        // Ignore [`UnOp::Pos`] because it has no effects.
+        Ok(match un_op {
+            UnOp::Pos => (expr.kind, expr.ty),
+            _ => (ExprKind::Unary(un_op, Box::new(expr)), ty),
+        })
+    }
+
+    fn lower_bin_op(
+        &mut self,
+        mut lhs: Expr,
+        mut rhs: Expr,
+        bin_op: BinOp,
+        span: Span,
+    ) -> anyhow::Result<(ExprKind, Ty)> {
+        self.array_to_pointer_decay_if_array(&mut lhs);
+        self.array_to_pointer_decay_if_array(&mut rhs);
+
+        'check_pointers: {
+            if bin_op == BinOp::Add {
+                let lhs_is_ptr = lhs.ty.kind.is_ptr();
+                let rhs_is_ptr = rhs.ty.kind.is_ptr();
+
+                match (lhs_is_ptr, rhs_is_ptr) {
+                    (true, true) => bail!("Type error: adding two pointers"),
+                    (true, false) => (),
+                    (false, true) => {
+                        std::mem::swap(&mut lhs, &mut rhs);
+                    }
+                    (false, false) => break 'check_pointers,
+                }
+
+                let ty = lhs.ty.clone();
+                return Ok((ExprKind::PtrOffset(Box::new(lhs), Box::new(rhs)), ty));
+            }
+            if bin_op == BinOp::Sub {
+                let lhs_is_ptr = lhs.ty.kind.is_ptr();
+                let rhs_is_ptr = rhs.ty.kind.is_ptr();
+
+                match (lhs_is_ptr, rhs_is_ptr) {
+                    (true, true) => {
+                        let ty = Ty {
+                            kind: TyKind::PrimTy(PrimTyKind::Int),
+                            is_linear: false,
+                            quals: vec![],
+                            span,
+                        };
+                        return Ok((ExprKind::PtrDiff(Box::new(lhs), Box::new(rhs)), ty));
+                    }
+                    (true, false) => lhs.ty.clone(),
+                    (false, true) => {
+                        std::mem::swap(&mut lhs, &mut rhs);
+                        lhs.ty.clone()
+                    }
+                    (false, false) => break 'check_pointers,
+                };
+
+                let ty = lhs.ty.clone();
+                let rhs = Expr {
+                    ty: rhs.ty.clone(),
+                    span: rhs.span,
+                    kind: ExprKind::Unary(UnOp::Neg, Box::new(rhs)),
+                };
+
+                return Ok((ExprKind::PtrOffset(Box::new(lhs), Box::new(rhs)), ty));
+            }
+        }
+
+        let ty = lhs.ty.clone(); // TODO: Care about casts
+
+        Ok((ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)), ty))
+    }
+
+    fn array_to_pointer_decay_if_array(&mut self, expr: &mut Expr) {
+        if !expr.ty.kind.is_array() {
+            return;
+        }
+        *expr = self.array_to_pointer_decay(expr.clone());
+    }
+
+    fn array_to_pointer_decay(&mut self, expr: Expr) -> Expr {
+        let TyKind::Array { kind, size: _ } = &expr.ty.kind else {
+            panic!("Expr is not array");
+        };
+
+        let ty = Ty {
+            kind: TyKind::Ptr {
+                kind: kind.clone(),
+                quals: vec![],
+            },
+            is_linear: false,
+            quals: vec![],
+            span: expr.span,
+        };
+
+        Expr {
+            span: expr.span,
+            kind: ExprKind::Cast(Box::new(expr)),
+            ty,
+        }
+    }
+
     fn lower_to_expr_kind(&mut self, node: Node) -> anyhow::Result<(ExprKind, Ty)> {
         trace!("[HIR/ExprKind] Lowering '{}'", node.kind());
 
@@ -152,67 +282,15 @@ impl HirCtx<'_> {
                 (ExprKind::Call(Box::new(path), arguments), ty)
             }
             constants::BINARY_EXPRESSION => {
-                let mut lhs = self.lower_to_expr(node.child(0).unwrap())?;
+                let lhs = self.lower_to_expr(node.child(0).unwrap())?;
 
                 let bin_op = self
                     .lower_to_bin_op(node.child(1).unwrap())?
                     .expect("Assignment isn't valid here");
 
-                let mut rhs = self.lower_to_expr(node.child(2).unwrap())?;
+                let rhs = self.lower_to_expr(node.child(2).unwrap())?;
 
-                'check_pointers: {
-                    if bin_op == BinOp::Add {
-                        let lhs_is_ptr = lhs.ty.kind.is_ptr();
-                        let rhs_is_ptr = rhs.ty.kind.is_ptr();
-
-                        match (lhs_is_ptr, rhs_is_ptr) {
-                            (true, true) => bail!("Type error: adding two pointers"),
-                            (true, false) => (),
-                            (false, true) => {
-                                std::mem::swap(&mut lhs, &mut rhs);
-                            }
-                            (false, false) => break 'check_pointers,
-                        }
-
-                        let ty = lhs.ty.clone();
-                        return Ok((ExprKind::PtrOffset(Box::new(lhs), Box::new(rhs)), ty));
-                    }
-                    if bin_op == BinOp::Sub {
-                        let lhs_is_ptr = lhs.ty.kind.is_ptr();
-                        let rhs_is_ptr = rhs.ty.kind.is_ptr();
-
-                        match (lhs_is_ptr, rhs_is_ptr) {
-                            (true, true) => {
-                                let ty = Ty {
-                                    kind: TyKind::PrimTy(PrimTyKind::Int),
-                                    is_linear: false,
-                                    quals: vec![],
-                                    span,
-                                };
-                                return Ok((ExprKind::PtrDiff(Box::new(lhs), Box::new(rhs)), ty));
-                            }
-                            (true, false) => lhs.ty.clone(),
-                            (false, true) => {
-                                std::mem::swap(&mut lhs, &mut rhs);
-                                lhs.ty.clone()
-                            }
-                            (false, false) => break 'check_pointers,
-                        };
-
-                        let ty = lhs.ty.clone();
-                        let rhs = Expr {
-                            ty: rhs.ty.clone(),
-                            span: rhs.span,
-                            kind: ExprKind::Unary(UnOp::Neg, Box::new(rhs)),
-                        };
-
-                        return Ok((ExprKind::PtrOffset(Box::new(lhs), Box::new(rhs)), ty));
-                    }
-                }
-
-                let ty = lhs.ty.clone(); // TODO: Care about casts
-
-                (ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)), ty)
+                self.lower_bin_op(lhs, rhs, bin_op, span)?
             }
             constants::UPDATE_EXPRESSION => {
                 let (lhs, bin_op) = if let Ok(bin_op) = self.lower_to_bin_op(node.child(1).unwrap())
@@ -254,38 +332,9 @@ impl HirCtx<'_> {
             }
             constants::UNARY_EXPRESSION | constants::POINTER_EXPRESSION => {
                 let un_op = self.lower_to_un_op(node.child(0).unwrap())?;
-
                 let expr = self.lower_to_expr(node.child(1).unwrap())?;
 
-                let ty = match un_op {
-                    UnOp::Not | UnOp::Neg | UnOp::Com | UnOp::Pos => expr.ty.clone(),
-                    UnOp::AddrOf => Ty {
-                        kind: TyKind::Ptr {
-                            kind: Box::new(expr.ty.kind.clone()),
-                            quals: vec![],
-                        },
-                        is_linear: false,
-                        quals: vec![],
-                        span,
-                    },
-                    UnOp::Deref => {
-                        let TyKind::Ptr { kind, quals: _ } = &expr.ty.kind else {
-                            bail!("Type error: dereference of non-ptr type");
-                        };
-                        Ty {
-                            kind: *kind.clone(),
-                            is_linear: false,
-                            quals: vec![],
-                            span,
-                        }
-                    }
-                };
-
-                // Ignore [`UnOp::Pos`] because it has no effects.
-                match un_op {
-                    UnOp::Pos => (expr.kind, expr.ty),
-                    _ => (ExprKind::Unary(un_op, Box::new(expr)), ty),
-                }
+                self.lower_un_op(expr, un_op, span)?
             }
             constants::PARENTHESIZED_EXPRESSION => {
                 let child = node.child(1).unwrap();
@@ -338,9 +387,11 @@ impl HirCtx<'_> {
 
                 let index = self.lower_to_expr(node.child(2).unwrap())?;
 
-                let ty = target.ty.clone(); // TODO: handle deref
-
-                (ExprKind::Index(Box::new(target), Box::new(index)), ty)
+                let a_plus_i = {
+                    let (kind, ty) = self.lower_bin_op(target, index, BinOp::Add, span)?;
+                    Expr { kind, ty, span }
+                };
+                self.lower_un_op(a_plus_i, UnOp::Deref, span)?
             }
             constants::CAST_EXPRESSION => {
                 let cast_node = node.child(1).unwrap();
@@ -356,7 +407,7 @@ impl HirCtx<'_> {
                     span,
                 };
 
-                (ExprKind::Cast(Box::new(target), ty_kind), ty)
+                (ExprKind::Cast(Box::new(target)), ty)
             }
             constants::INITIALIZER_LIST => {
                 let mut elements = vec![];

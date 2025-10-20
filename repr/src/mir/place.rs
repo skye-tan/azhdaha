@@ -31,17 +31,6 @@ impl<'mir> MirCtx<'mir> {
 
                 place
             }
-            hir::ExprKind::Index(expr, index_expr) => {
-                let mut place = self.lower_to_place(expr, bb, stmt_span);
-
-                let index_rvalue = self.lower_to_rvalue(index_expr, bb, stmt_span);
-                let index_place =
-                    self.store_in_temp_place(index_rvalue, bb, stmt_span, index_expr.ty.clone());
-
-                place.projections.push(PlaceElem::Index(index_place));
-
-                place
-            }
             hir::ExprKind::PtrOffset(expr, index_expr) => {
                 let mut place = self.lower_to_place(expr, bb, stmt_span);
 

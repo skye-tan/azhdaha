@@ -52,10 +52,14 @@ impl<'mir> MirCtx<'mir> {
 
                 Rvalue::Call(operand, arguments)
             }
-            hir::ExprKind::Cast(expr, ty_kind) => {
-                let operand = self.lower_to_operand(expr, bb, stmt_span);
+            hir::ExprKind::Cast(inner_expr) => {
+                let operand = self.lower_to_operand(inner_expr, bb, stmt_span);
 
-                Rvalue::Cast(operand, ty_kind.clone())
+                Rvalue::Cast {
+                    value: operand,
+                    from_type: inner_expr.ty.kind.clone(),
+                    to_type: expr.ty.kind.clone(),
+                }
             }
             hir::ExprKind::Comma(exprs) => {
                 let (first_expr, exprs) = exprs.split_first().unwrap();
@@ -85,8 +89,7 @@ impl<'mir> MirCtx<'mir> {
             | hir::ExprKind::Assign(..)
             | hir::ExprKind::Cond(..)
             | hir::ExprKind::Sizeof(..)
-            | hir::ExprKind::Field(..)
-            | hir::ExprKind::Index(..) => Rvalue::Use(self.lower_to_operand(expr, bb, stmt_span)),
+            | hir::ExprKind::Field(..) => Rvalue::Use(self.lower_to_operand(expr, bb, stmt_span)),
         }
     }
 }

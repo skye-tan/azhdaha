@@ -56,7 +56,7 @@ pub struct Lit {
 pub enum LitKind {
     Str(String),
     Char(char),
-    Int(i64),
+    Int(i128),
     Float(f64),
 }
 
@@ -584,14 +584,10 @@ impl HirCtx<'_> {
 
                 if let Ok(value) = literal.parse() {
                     LitKind::Int(value)
-                } else if let Some(stripped_literal) = literal.strip_prefix("0x")
-                    && let Ok(value) = i64::from_str_radix(stripped_literal, 16)
-                {
-                    LitKind::Int(value)
-                } else if let Some(stripped_literal) = literal.strip_prefix("0b")
-                    && let Ok(value) = i64::from_str_radix(stripped_literal, 2)
-                {
-                    LitKind::Int(value)
+                } else if let Some(stripped_literal) = literal.strip_prefix("0x") {
+                    LitKind::Int(i128::from_str_radix(stripped_literal, 16)?)
+                } else if let Some(stripped_literal) = literal.strip_prefix("0b") {
+                    LitKind::Int(i128::from_str_radix(stripped_literal, 2)?)
                 } else {
                     LitKind::Float(literal.parse()?)
                 }

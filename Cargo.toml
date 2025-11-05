@@ -1,18 +1,13 @@
 [workspace]
-members = [
-    "azhdaha",
-    "cli-utils",
-    "ast-utils",
-    "repr"
-]
-resolver = "2"
+members = ["ast-utils", "azhdaha", "cli-utils", "repr"]
+resolver = "3"
 
 [workspace.package]
 edition = "2024"
 
 [workspace.dependencies]
 anyhow = "1.0.98"
-ariadne = { git = "https://github.com/skye-tan/ariadne.git", branch = "derive-clone-for-report-builder"}
+ariadne = { git = "https://github.com/skye-tan/ariadne.git", branch = "derive-clone-for-report-builder" }
 compile_commands = "0.3.0"
 env_logger = "0.11.8"
 itertools = "0.14.0"

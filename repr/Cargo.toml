@@ -3,9 +3,6 @@ name = "repr"
 version = "0.1.0"
 edition.workspace = true
 
-[lints]
-workspace = true
-
 [dependencies]
 anyhow.workspace = true
 ast-utils = { version = "0.1.0", path = "../ast-utils" }
@@ -13,3 +10,6 @@ itertools.workspace = true
 la-arena.workspace = true
 log.workspace = true
 tree-sitter.workspace = true
+
+[lints]
+workspace = true

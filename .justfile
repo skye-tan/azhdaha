@@ -34,10 +34,16 @@ custom-test *CMD:
 convert-dot-graphs PATH=".":
     @ for file in {{PATH}}/*.dot; do dot -Tsvg $file > {{PATH}}/${file%.dot}.svg; done
 
-# check code style
+# check code style and lints
 check-lints:
     cargo fmt --check
     cargo clippy -- --deny warnings
+    cargo sort --workspace --check
+
+# install dependencies
+install-deps:
+    cargo install cargo-sort
+
 
 # clean target directory and other unwanted files
 clean:

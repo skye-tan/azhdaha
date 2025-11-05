@@ -3,9 +3,6 @@ name = "azhdaha"
 version = "0.1.0"
 edition.workspace = true
 
-[lints]
-workspace = true
-
 [dependencies]
 analyzer = { version = "0.1.0", path = "../analyzer" }
 anyhow.workspace = true
@@ -15,3 +12,6 @@ env_logger.workspace = true
 log.workspace = true
 rayon.workspace = true
 repr = { version = "0.1.0", path = "../repr" }
+
+[lints]
+workspace = true

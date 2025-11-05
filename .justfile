@@ -26,8 +26,8 @@ run-examples:
     cargo run --release -- ./examples/compile_commands.json
 
 # custom test used for debugging
-custom-test:
-    RUST_LOG=trace cargo run -- ./temp/compile_commands.json --dot-graph
+custom-test *CMD:
+    RUST_LOG=trace cargo run -- ./temp/compile_commands.json --dot-graph {{CMD}}
     @ just convert-dot-graphs
 
 # convert each created dot-graph file into its associated svg image

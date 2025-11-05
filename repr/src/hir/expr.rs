@@ -396,7 +396,9 @@ impl HirCtx<'_> {
             constants::CAST_EXPRESSION => {
                 let cast_node = node.child(1).unwrap();
 
-                let ty_kind = self.lower_to_ty_kind(cast_node, None)?;
+                let decl_node = cast_node.child_by_field_name("declarator").unwrap();
+
+                let ty_kind = self.lower_to_ty_kind(cast_node, Some(decl_node))?;
 
                 let target = self.lower_to_expr(node.child(3).unwrap())?;
 

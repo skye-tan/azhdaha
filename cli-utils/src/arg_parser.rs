@@ -20,6 +20,9 @@ pub struct Args {
     /// Determines whether the reports should be printed or not.
     #[arg(long)]
     pub do_not_report: bool,
+    /// Determines whether the generated MIRs should be printed or not.
+    #[arg(long)]
+    pub show_mir: bool,
 }
 
 /// Parse compile-commands into a [`CompilationDatabase`].

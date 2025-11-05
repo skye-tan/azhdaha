@@ -11,7 +11,7 @@ use log::error;
 use env_logger::Env;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use repr::{
-    hir::{HirCtx, ItemKind},
+    hir::{self, HirCtx},
     mir::MirCtx,
 };
 
@@ -37,36 +37,44 @@ fn main() -> anyhow::Result<()> {
 
     for ast_repr in ast_reprs {
         let hir_ctx = HirCtx::new(&ast_repr);
-
         let items = hir_ctx.lower_to_hir();
 
         let linear_ctx = LinearCtx::new(&ast_repr.source_info.path, &ast_repr.source_info.code)?;
 
-        let reports: Vec<Vec<u8>> = items
-            .into_par_iter()
-            .filter_map(|item| {
-                let ItemKind::Func(func_def) = item.kind else {
-                    return None;
-                };
+        let analyze = |item: hir::Item| {
+            let hir::ItemKind::Func(func_def) = item.kind else {
+                return None;
+            };
 
-                let mir_ctx = MirCtx::new(
-                    &func_def.symbol_resolver,
-                    &func_def.label_resolver,
-                    func_def.body.span,
-                );
+            let mir_ctx = MirCtx::new(
+                &func_def.symbol_resolver,
+                &func_def.label_resolver,
+                func_def.body.span,
+            );
 
-                let mir_body = mir_ctx.lower_to_mir(&func_def);
+            let mir_body = mir_ctx.lower_to_mir(&func_def);
 
-                match mir_body {
-                    Ok(mir_body) => linear_ctx.analyze(&mir_body),
-                    Err(error) => {
-                        error!("Failed to construct MIR - {error:?}");
-
-                        None
+            match mir_body {
+                Ok(mir_body) => {
+                    if args.show_mir {
+                        println!("{mir_body}");
                     }
+
+                    linear_ctx.analyze(&mir_body)
                 }
-            })
-            .collect();
+                Err(error) => {
+                    error!("Failed to construct MIR - {error:?}");
+
+                    None
+                }
+            }
+        };
+
+        let reports: Vec<Vec<_>> = if args.show_mir {
+            items.into_iter().filter_map(analyze).collect()
+        } else {
+            items.into_par_iter().filter_map(analyze).collect()
+        };
 
         if reports.is_empty() {
             println!(

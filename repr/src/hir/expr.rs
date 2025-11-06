@@ -108,22 +108,29 @@ impl HirCtx<'_> {
 
     fn lower_un_op(
         &mut self,
-        expr: Expr,
+        mut expr: Expr,
         un_op: UnOp,
         span: Span,
     ) -> anyhow::Result<(ExprKind, Ty)> {
         let ty = match un_op {
             UnOp::Not | UnOp::Neg | UnOp::Com | UnOp::Pos => expr.ty.clone(),
-            UnOp::AddrOf => Ty {
-                kind: TyKind::Ptr {
-                    kind: Box::new(expr.ty.kind.clone()),
+            UnOp::AddrOf => {
+                if expr.ty.kind.is_array() {
+                    let it = self.array_to_pointer_decay(expr);
+                    return Ok((it.kind, it.ty));
+                }
+                Ty {
+                    kind: TyKind::Ptr {
+                        kind: Box::new(expr.ty.kind.clone()),
+                        quals: vec![],
+                    },
+                    is_linear: false,
                     quals: vec![],
-                },
-                is_linear: false,
-                quals: vec![],
-                span,
-            },
+                    span,
+                }
+            }
             UnOp::Deref => {
+                self.array_to_pointer_decay_if_array(&mut expr);
                 let TyKind::Ptr { kind, quals: _ } = &expr.ty.kind else {
                     bail!("Type error: dereference of non-ptr type");
                 };
@@ -494,15 +501,27 @@ impl HirCtx<'_> {
                     span,
                 },
             ),
-            kind if kind.contains(constants::LITERAL) => (
-                ExprKind::Lit(self.lower_to_lit(node)?),
-                Ty {
-                    kind: TyKind::PrimTy(PrimTyKind::Int), // TODO: handle other literals
-                    is_linear: false,
-                    quals: vec![],
-                    span,
-                },
-            ),
+            kind if kind.contains(constants::LITERAL) => {
+                let lit = self.lower_to_lit(node)?;
+                let kind = match lit.kind {
+                    LitKind::Str(_) => TyKind::Ptr {
+                        kind: Box::new(TyKind::PrimTy(PrimTyKind::Char)),
+                        quals: vec![],
+                    },
+                    LitKind::Char(_) => TyKind::PrimTy(PrimTyKind::Char),
+                    LitKind::Int(_) => TyKind::PrimTy(PrimTyKind::Int),
+                    LitKind::Float(_) => TyKind::PrimTy(PrimTyKind::Float),
+                };
+                (
+                    ExprKind::Lit(lit),
+                    Ty {
+                        kind,
+                        is_linear: false,
+                        quals: vec![],
+                        span,
+                    },
+                )
+            }
             kind => bail!("Cannot lower '{kind}' to 'ExprKind'."),
         })
     }
@@ -588,7 +607,11 @@ impl HirCtx<'_> {
                     LitKind::Int(value)
                 } else if let Some(stripped_literal) = literal.strip_prefix("0x") {
                     LitKind::Int(i128::from_str_radix(stripped_literal, 16)?)
+                } else if let Some(stripped_literal) = literal.strip_prefix("0X") {
+                    LitKind::Int(i128::from_str_radix(stripped_literal, 16)?)
                 } else if let Some(stripped_literal) = literal.strip_prefix("0b") {
+                    LitKind::Int(i128::from_str_radix(stripped_literal, 2)?)
+                } else if let Some(stripped_literal) = literal.strip_prefix("0B") {
                     LitKind::Int(i128::from_str_radix(stripped_literal, 2)?)
                 } else {
                     LitKind::Float(literal.parse()?)

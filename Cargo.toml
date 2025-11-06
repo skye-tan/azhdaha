@@ -18,7 +18,8 @@ tree-sitter = "0.25.8"
 tree-sitter-c = { git = "https://github.com/skye-tan/tree-sitter-c.git", version = "0.23.5" }
 
 [workspace.lints.clippy]
+many_single_char_names = "deny"
+missing_panics_doc = "deny"
+missing_docs_in_private_items = "deny"
 print_stdout = "deny"
 print_stderr = "deny"
-missing_panics_doc = "deny"
-missing_docs_in_private_items = "warn"

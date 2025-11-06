@@ -16,7 +16,7 @@ trait MirDisplay {
 }
 
 impl Display for Body<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (local, local_decl) in self.local_decls.iter() {
             match &local_decl.kind {
                 LocalKind::Real {
@@ -24,23 +24,23 @@ impl Display for Body<'_> {
                     ident,
                     is_arg,
                 } => {
-                    write!(f, "let {}_{}", ident.name, local.into_raw())?;
+                    write!(formatter, "let {}_{}", ident.name, local.into_raw())?;
 
                     if *is_arg {
-                        write!(f, "(arg)")?;
+                        write!(formatter, "(arg)")?;
                     }
 
-                    write!(f, ":")?;
+                    write!(formatter, ":")?;
 
                     if let Some(storage) = storage {
-                        write!(f, " {}", storage.mir_display(self))?;
+                        write!(formatter, " {}", storage.mir_display(self))?;
                     }
 
-                    writeln!(f, " {};", local_decl.ty.mir_display(self))?;
+                    writeln!(formatter, " {};", local_decl.ty.mir_display(self))?;
                 }
                 LocalKind::Temp => {
                     writeln!(
-                        f,
+                        formatter,
                         "let {}: {};",
                         local.mir_display(self),
                         local_decl.ty.mir_display(self)
@@ -50,17 +50,17 @@ impl Display for Body<'_> {
         }
 
         for (bb, bb_data) in self.basic_blocks.iter() {
-            writeln!(f, "\n'bb_{}: {{", bb.into_raw())?;
+            writeln!(formatter, "\n'bb_{}: {{", bb.into_raw())?;
 
             for stmt in &bb_data.statements {
-                writeln!(f, "\t{};", stmt.mir_display(self))?;
+                writeln!(formatter, "\t{};", stmt.mir_display(self))?;
             }
 
             if let Some(terminator) = &bb_data.terminator {
-                writeln!(f, "\t{}", terminator.mir_display(self))?;
+                writeln!(formatter, "\t{}", terminator.mir_display(self))?;
             }
 
-            writeln!(f, "}}")?;
+            writeln!(formatter, "}}")?;
         }
 
         Ok(())

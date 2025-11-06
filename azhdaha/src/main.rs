@@ -37,7 +37,7 @@ fn main() -> anyhow::Result<()> {
 
     for ast_repr in ast_reprs {
         let hir_ctx = HirCtx::new(&ast_repr);
-        let items = hir_ctx.lower_to_hir();
+        let (items, _) = hir_ctx.lower_to_hir();
 
         let linear_ctx = LinearCtx::new(&ast_repr.source_info.path, &ast_repr.source_info.code)?;
 

@@ -284,7 +284,13 @@ impl HirCtx<'_> {
                     cursor.goto_next_sibling();
                 }
 
-                let ty = path.ty.clone(); // TODO: wrong
+                let TyKind::Func { sig } = &path.ty.kind else {
+                    bail!("Type error: invalid call to non function type");
+                };
+
+                // TODO: type check args and emit implicit casts
+
+                let ty = sig.ret_ty.clone();
 
                 (ExprKind::Call(Box::new(path), arguments), ty)
             }

@@ -21,6 +21,10 @@ impl<'mir> MirCtx<'mir> {
 
                 for stmt in &block.stmts {
                     self.lower_to_bb(stmt, bb);
+
+                    if self.retrieve_bb(*bb).terminator.is_some() {
+                        break;
+                    }
                 }
 
                 self.body.symbol_resolver = saved_symbol_resolver;
@@ -157,20 +161,24 @@ impl<'mir> MirCtx<'mir> {
 
                 let next_bb = self.alloc_bb();
 
-                self.retrieve_bb(body_last_bb).terminator = Some(Terminator {
-                    kind: TerminatorKind::Goto { bb: next_bb },
-                    span,
-                });
+                if self.retrieve_bb(body_last_bb).terminator.is_none() {
+                    self.retrieve_bb(body_last_bb).terminator = Some(Terminator {
+                        kind: TerminatorKind::Goto { bb: next_bb },
+                        span,
+                    });
+                }
 
                 let else_bb = if let Some(else_stmt) = else_stmt {
                     let else_bb = self.alloc_bb();
                     let mut else_last_bb = else_bb;
                     self.lower_to_bb(else_stmt, &mut else_last_bb);
 
-                    self.retrieve_bb(else_last_bb).terminator = Some(Terminator {
-                        kind: TerminatorKind::Goto { bb: next_bb },
-                        span,
-                    });
+                    if self.retrieve_bb(else_last_bb).terminator.is_none() {
+                        self.retrieve_bb(else_last_bb).terminator = Some(Terminator {
+                            kind: TerminatorKind::Goto { bb: next_bb },
+                            span,
+                        });
+                    }
 
                     else_bb
                 } else {

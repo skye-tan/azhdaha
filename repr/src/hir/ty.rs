@@ -46,6 +46,10 @@ impl TyKind {
     pub fn is_array(&self) -> bool {
         matches!(self, TyKind::Array { .. })
     }
+
+    pub fn is_fn(&self) -> bool {
+        matches!(self, TyKind::Func { .. })
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -66,7 +66,7 @@ impl<'hir> HirCtx<'hir> {
         }
     }
 
-    pub fn lower_to_hir(mut self) -> Vec<Item> {
+    pub fn lower_to_hir(mut self) -> (Vec<Item>, resolver::Resolver<resolver::SymbolKind>) {
         let mut cursor = self.root.walk();
 
         for child in self.root.children(&mut cursor) {
@@ -80,6 +80,6 @@ impl<'hir> HirCtx<'hir> {
             }
         }
 
-        self.items
+        (self.items, self.symbol_resolver)
     }
 }

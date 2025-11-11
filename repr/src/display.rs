@@ -266,7 +266,7 @@ impl MirDisplay for TyKind {
                     _ => unreachable!(),
                 }
             }
-            TyKind::Struct(ident) => format!("struct {}", ident.name),
+            TyKind::Struct(ident) => format!("struct /*todo {ident:?}*/"),
             TyKind::Union(ident) => format!("union {}", ident.name),
             TyKind::Enum(ident) => format!("enum {}", ident.name),
             TyKind::Ptr { kind, quals } => {

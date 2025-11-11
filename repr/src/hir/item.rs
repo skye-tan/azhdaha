@@ -3,6 +3,7 @@
 use std::mem;
 
 use anyhow::bail;
+use la_arena::Idx;
 use log::trace;
 
 use crate::hir::*;
@@ -23,6 +24,7 @@ pub enum ItemKind {
     Func(Box<FuncDef>),
     Decl(Vec<Symbol>),
     TyDef(Symbol),
+    TaggedTypeSpecifier(Idx<resolver::CompoundTypeData>),
 }
 
 #[derive(Debug, Clone)]
@@ -88,10 +90,35 @@ impl HirCtx<'_> {
 
                 ItemKind::TyDef(symbol)
             }
+            constants::STRUCT_SPECIFIER => {
+                let name = self.lower_to_ident(node.child_by_field_name("name").unwrap())?;
+                let body = node.child_by_field_name("body").unwrap();
+                let fields = self.lower_fields_in_specifier(body);
+                let idx = self.type_tag_resolver.insert_symbol(
+                    name.name.clone(),
+                    resolver::CompoundTypeData::Struct { fields },
+                );
+                ItemKind::TaggedTypeSpecifier(idx)
+            }
             kind => {
                 bail!("Cannot lower '{kind}' to 'ItemKind'.");
             }
         })
+    }
+
+    pub(crate) fn lower_fields_in_specifier(&mut self, body: Node<'_>) -> Vec<(Ident, Ty)> {
+        body.children(&mut body.walk())
+            .filter_map(|x| {
+                if x.kind() == "{" || x.kind() == "}" {
+                    return None;
+                }
+                let ty = self.lower_to_ty(x, None).unwrap();
+                let name = self
+                    .lower_to_ident(x.child_by_field_name("declarator").unwrap())
+                    .unwrap();
+                Some((name, ty))
+            })
+            .collect()
     }
 
     pub(crate) fn lower_to_func_def(&mut self, node: Node) -> anyhow::Result<FuncDef> {

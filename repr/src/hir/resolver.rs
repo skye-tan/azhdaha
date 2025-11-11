@@ -17,6 +17,11 @@ pub enum SymbolKind {
     TyDef(Ty),
 }
 
+#[derive(Debug, Clone)]
+pub enum CompoundTypeData {
+    Struct { fields: Vec<(Ident, Ty)> },
+}
+
 impl SymbolKind {
     pub(crate) fn ty(&self) -> Ty {
         match self {
@@ -55,6 +60,11 @@ impl<T: Debug> Resolver<T> {
         self.map.insert(name, res);
 
         res
+    }
+
+    /// Insert a symbol that is not resolvable by name (is only equal to self).
+    pub fn insert_unnamed_symbol(&mut self, data: T) -> Idx<T> {
+        self.arena.alloc(data)
     }
 
     pub fn get_res_by_name(&self, name: &str) -> Option<Idx<T>> {

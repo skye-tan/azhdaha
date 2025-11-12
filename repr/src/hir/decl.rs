@@ -69,7 +69,7 @@ impl HirCtx<'_> {
         let mut cursor = node.walk();
 
         for mut decl_node in node.children_by_field_name("declarator", &mut cursor) {
-            let ty = self.lower_to_ty(node, decl_node)?;
+            let ty = self.lower_to_ty(node, Some(decl_node))?;
 
             let init = if decl_node.kind() == constants::INIT_DECLARATOR {
                 let init =
@@ -126,7 +126,7 @@ impl HirCtx<'_> {
 
         let mut decl_node = node.child_by_field_name("declarator").unwrap();
 
-        let ty = self.lower_to_ty(node, decl_node)?;
+        let ty = self.lower_to_ty(node, Some(decl_node))?;
 
         let init = if decl_node.kind() == constants::INIT_DECLARATOR {
             let init = self.lower_to_expr(decl_node.child(decl_node.child_count() - 1).unwrap())?;
@@ -179,7 +179,7 @@ impl HirCtx<'_> {
 
         let mut decl_node = node.child_by_field_name("declarator").unwrap();
 
-        let ty = self.lower_to_ty(node, decl_node)?;
+        let ty = self.lower_to_ty(node, Some(decl_node))?;
 
         while decl_node.kind() != constants::FUNCTION_DECLARATOR {
             decl_node = decl_node.child_by_field_name("declarator").unwrap();
@@ -254,7 +254,7 @@ impl HirCtx<'_> {
 
         let mut decl_node = node;
 
-        let ty = self.lower_to_ty(node, decl_node)?;
+        let ty = self.lower_to_ty(node, Some(decl_node))?;
 
         let mut ident = None;
 

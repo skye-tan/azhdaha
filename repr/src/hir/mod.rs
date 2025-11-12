@@ -37,6 +37,7 @@ pub struct Span {
 
 pub struct HirCtx<'hir> {
     pub symbol_resolver: resolver::Resolver<resolver::SymbolKind>,
+    pub type_tag_resolver: resolver::Resolver<resolver::CompoundTypeData>,
     pub label_resolver: resolver::Resolver<()>,
 
     pub items: Vec<Item>,
@@ -53,6 +54,7 @@ impl<'hir> HirCtx<'hir> {
     pub fn new(ast_repr: &'hir AstRepr) -> Self {
         Self {
             symbol_resolver: resolver::Resolver::new(),
+            type_tag_resolver: resolver::Resolver::new(),
             label_resolver: resolver::Resolver::new(),
 
             items: vec![],
@@ -66,7 +68,13 @@ impl<'hir> HirCtx<'hir> {
         }
     }
 
-    pub fn lower_to_hir(mut self) -> (Vec<Item>, resolver::Resolver<resolver::SymbolKind>) {
+    pub fn lower_to_hir(
+        mut self,
+    ) -> (
+        Vec<Item>,
+        resolver::Resolver<resolver::SymbolKind>,
+        resolver::Resolver<resolver::CompoundTypeData>,
+    ) {
         let mut cursor = self.root.walk();
 
         for child in self.root.children(&mut cursor) {
@@ -80,6 +88,6 @@ impl<'hir> HirCtx<'hir> {
             }
         }
 
-        (self.items, self.symbol_resolver)
+        (self.items, self.symbol_resolver, self.type_tag_resolver)
     }
 }

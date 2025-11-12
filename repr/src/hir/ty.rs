@@ -1,10 +1,11 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use anyhow::{Context, bail};
+use la_arena::Idx;
 use log::trace;
 
 use crate::hir::{
-    resolver::{Symbol, SymbolKind},
+    resolver::{CompoundTypeData, Symbol, SymbolKind},
     *,
 };
 
@@ -22,7 +23,7 @@ pub struct Ty {
 pub enum TyKind {
     PrimTy(PrimTyKind),
     TyDef(Symbol),
-    Struct(Ident),
+    Struct(Idx<CompoundTypeData>),
     Union(Ident),
     Enum(Ident),
     Ptr {
@@ -83,7 +84,11 @@ pub enum Storage {
 }
 
 impl HirCtx<'_> {
-    pub(crate) fn lower_to_ty(&mut self, node: Node, mut decl_node: Node) -> anyhow::Result<Ty> {
+    pub(crate) fn lower_to_ty(
+        &mut self,
+        node: Node,
+        decl_node: Option<Node>,
+    ) -> anyhow::Result<Ty> {
         trace!("[HIR/Ty] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -106,7 +111,16 @@ impl HirCtx<'_> {
             }
         }
 
-        let mut kind = self.lower_to_ty_kind(node, Some(decl_node))?;
+        let mut kind = self.lower_to_ty_kind(node, decl_node)?;
+
+        let Some(mut decl_node) = decl_node else {
+            return Ok(Ty {
+                kind,
+                is_linear,
+                quals,
+                span,
+            });
+        };
 
         if node.kind() == constants::FUNCTION_DEFINITION {
             return Ok(Ty {
@@ -228,9 +242,20 @@ impl HirCtx<'_> {
             }
             constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_to_prim_ty_kind(ty_node)?),
             constants::SIZED_TYPE_SPECIFIER => TyKind::PrimTy(PrimTyKind::Int),
-            constants::STRUCT_SPECIFIER => {
-                TyKind::Struct(self.lower_to_ident(ty_node.child(1).unwrap())?)
-            }
+            constants::STRUCT_SPECIFIER => TyKind::Struct({
+                if let Some(name) = ty_node.child_by_field_name("name") {
+                    let ident = self.lower_to_ident(name)?;
+                    self.type_tag_resolver
+                        .get_res_by_name(&ident.name)
+                        .context("Failed to resolve struct tag")?
+                } else if let Some(body) = ty_node.child_by_field_name("body") {
+                    let fields = self.lower_fields_in_specifier(body);
+                    let data = CompoundTypeData::Struct { fields };
+                    self.type_tag_resolver.insert_unnamed_symbol(data)
+                } else {
+                    todo!()
+                }
+            }),
             constants::UNION_SPECIFIER => {
                 TyKind::Union(self.lower_to_ident(ty_node.child(1).unwrap())?)
             }

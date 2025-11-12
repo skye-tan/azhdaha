@@ -556,7 +556,7 @@ impl HirCtx<'_> {
 
             let child = node.child(2).unwrap();
             if child.kind() == constants::TYPE_DESCRIPTOR {
-                break 'size_of SizeofKind::Ty(self.lower_to_ty(child, child.child(0).unwrap())?);
+                break 'size_of SizeofKind::Ty(self.lower_to_ty(child, child.child(0))?);
             }
 
             bail!("Cannot lower '{}' to 'SizeofKind'.", node.kind());

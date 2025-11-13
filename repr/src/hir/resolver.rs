@@ -20,6 +20,7 @@ pub enum SymbolKind {
 #[derive(Debug, Clone)]
 pub enum CompoundTypeData {
     Struct { fields: Vec<(Ident, Ty)> },
+    Union,
 }
 
 impl SymbolKind {

@@ -15,15 +15,33 @@ impl<'mir> MirCtx<'mir> {
         let span = expr.span;
 
         match &expr.kind {
-            hir::ExprKind::Local(symbol) => {
-                let local = self.local_map.get(symbol).unwrap();
-
-                Place {
+            hir::ExprKind::Local(symbol) => match self.local_map.get(symbol) {
+                Some(local) => Place {
                     local: *local,
                     projections: vec![],
                     span,
+                },
+                None => {
+                    // statics
+                    let st = self.lower_to_operand(expr, bb, stmt_span);
+                    let mut addr_place = self.store_in_temp_place(
+                        Rvalue::UnaryOp(hir::UnOp::AddrOf, st),
+                        bb,
+                        stmt_span,
+                        Ty {
+                            kind: hir::TyKind::Ptr {
+                                kind: Box::new(expr.ty.kind.clone()),
+                                quals: vec![],
+                            },
+                            is_linear: false,
+                            quals: vec![],
+                            span,
+                        },
+                    );
+                    addr_place.projections.push(PlaceElem::Deref);
+                    addr_place
                 }
-            }
+            },
             hir::ExprKind::Field(expr, ident) => {
                 let mut place = self.lower_to_place(expr, bb, stmt_span);
 

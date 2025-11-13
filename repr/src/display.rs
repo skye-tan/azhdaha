@@ -5,9 +5,9 @@ use std::fmt::Display;
 use itertools::Itertools;
 
 use crate::hir::resolver::SymbolKind;
-use crate::hir::{Lit, LitKind, PrimTyKind, Storage, Ty, TyKind, TyQual, UnOp};
+use crate::hir::{Lit, LitKind, PrimTyKind, Storage, Ty, TyKind, TyQual};
 use crate::mir::{
-    Body, Const, IntBinOp, Local, LocalKind, Operand, Place, PlaceElem, Rvalue, Statement,
+    Body, Const, IntBinOp, IntUnOp, Local, LocalKind, Operand, Place, PlaceElem, Rvalue, Statement,
     StatementKind, Terminator, TerminatorKind,
 };
 
@@ -127,6 +127,12 @@ impl MirDisplay for Rvalue {
 
             Rvalue::UnaryOp(un_op, operand) => {
                 format!("{}{}", un_op.mir_display(body), operand.mir_display(body))
+            }
+            Rvalue::AddrOf(place) => {
+                format!("&{}", place.mir_display(body))
+            }
+            Rvalue::AddrOfStatic(symbol) => {
+                format!("&<todo {symbol:?}>")
             }
             Rvalue::Call(operand, operands) => {
                 format!(
@@ -353,15 +359,13 @@ impl MirDisplay for IntBinOp {
     }
 }
 
-impl MirDisplay for UnOp {
+impl MirDisplay for IntUnOp {
     fn mir_display(&self, _body: &Body) -> String {
         match self {
-            UnOp::Not => "!".to_owned(),
-            UnOp::Neg => "-".to_owned(),
-            UnOp::Com => "~".to_owned(),
-            UnOp::Pos => "+".to_owned(),
-            UnOp::AddrOf => "&".to_owned(),
-            UnOp::Deref => "*".to_owned(),
+            IntUnOp::Not => "!".to_owned(),
+            IntUnOp::Neg => "-".to_owned(),
+            IntUnOp::Com => "~".to_owned(),
+            IntUnOp::Pos => "+".to_owned(),
         }
     }
 }

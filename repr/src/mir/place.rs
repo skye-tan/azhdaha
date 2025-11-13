@@ -23,9 +23,8 @@ impl<'mir> MirCtx<'mir> {
                 },
                 None => {
                     // statics
-                    let st = self.lower_to_operand(expr, bb, stmt_span);
                     let mut addr_place = self.store_in_temp_place(
-                        Rvalue::UnaryOp(hir::UnOp::AddrOf, st),
+                        Rvalue::AddrOfStatic(*symbol),
                         bb,
                         stmt_span,
                         Ty {

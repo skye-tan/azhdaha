@@ -82,7 +82,7 @@ pub enum BinOp {
     Shr,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnOp {
     Not,
     Neg,

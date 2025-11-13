@@ -13,11 +13,19 @@ impl<'mir> MirCtx<'mir> {
         stmt_span: Span,
     ) -> Rvalue {
         match &expr.kind {
-            hir::ExprKind::Unary(un_op, expr) => {
-                let operand = self.lower_to_operand(expr, bb, stmt_span);
+            hir::ExprKind::Unary(un_op, inner_expr) => match MirUnOp::from_hir(*un_op) {
+                MirUnOp::IntUnOp(un_op) => {
+                    let operand = self.lower_to_operand(inner_expr, bb, stmt_span);
 
-                Rvalue::UnaryOp(*un_op, operand)
-            }
+                    Rvalue::UnaryOp(un_op, operand)
+                }
+                MirUnOp::AddrOf => {
+                    let place = self.lower_to_place(inner_expr, bb, stmt_span);
+
+                    Rvalue::AddrOf(place)
+                }
+                MirUnOp::Deref => Rvalue::Use(self.lower_to_operand(expr, bb, stmt_span)),
+            },
             hir::ExprKind::PtrDiff(left_expr, right_expr) => {
                 let left_operand = self.lower_to_operand(left_expr, bb, stmt_span);
                 let right_operand = self.lower_to_operand(right_expr, bb, stmt_span);

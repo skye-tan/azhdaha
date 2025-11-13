@@ -158,12 +158,42 @@ impl MirBinOp {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum IntUnOp {
+    Not,
+    Neg,
+    Com,
+    Pos,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum MirUnOp {
+    IntUnOp(IntUnOp),
+    AddrOf,
+    Deref,
+}
+
+impl MirUnOp {
+    pub fn from_hir(un_op: UnOp) -> MirUnOp {
+        match un_op {
+            UnOp::Not => MirUnOp::IntUnOp(IntUnOp::Not),
+            UnOp::Neg => MirUnOp::IntUnOp(IntUnOp::Neg),
+            UnOp::Com => MirUnOp::IntUnOp(IntUnOp::Com),
+            UnOp::Pos => MirUnOp::IntUnOp(IntUnOp::Pos),
+            UnOp::AddrOf => MirUnOp::AddrOf,
+            UnOp::Deref => MirUnOp::Deref,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Rvalue {
     Use(Operand),
     BinaryOp(IntBinOp, Operand, Operand),
     PtrDiff(Operand, Operand),
-    UnaryOp(UnOp, Operand),
+    UnaryOp(IntUnOp, Operand),
+    AddrOf(Place),
+    AddrOfStatic(Symbol),
     Call(Operand, Vec<Operand>),
     Cast {
         value: Operand,

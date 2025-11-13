@@ -253,15 +253,22 @@ impl HirCtx<'_> {
             constants::STRUCT_SPECIFIER => TyKind::Struct({
                 if let Some(name) = ty_node.child_by_field_name("name") {
                     let ident = self.lower_to_ident(name)?;
-                    self.type_tag_resolver
-                        .get_res_by_name(&ident.name)
-                        .context("Failed to resolve struct tag")?
+                    if let Some(body) = ty_node.child_by_field_name("body") {
+                        let fields = self.lower_fields_in_specifier(body);
+                        let data = CompoundTypeData::Struct { fields };
+                        self.type_tag_resolver
+                            .insert_symbol(ident.name.clone(), data)
+                    } else {
+                        self.type_tag_resolver
+                            .get_res_by_name(&ident.name)
+                            .context("Failed to resolve struct tag")?
+                    }
                 } else if let Some(body) = ty_node.child_by_field_name("body") {
                     let fields = self.lower_fields_in_specifier(body);
                     let data = CompoundTypeData::Struct { fields };
                     self.type_tag_resolver.insert_unnamed_symbol(data)
                 } else {
-                    todo!()
+                    bail!("Invalid struct type without name and body")
                 }
             }),
             constants::UNION_SPECIFIER => {

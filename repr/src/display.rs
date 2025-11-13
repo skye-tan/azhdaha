@@ -156,7 +156,7 @@ impl MirDisplay for Rvalue {
                     value.mir_display(body),
                 )
             }
-            Rvalue::List(operands) => {
+            Rvalue::List(operands) | Rvalue::StructInitializing(_, operands) => {
                 let mut result = "{".to_owned();
 
                 for operand in operands {

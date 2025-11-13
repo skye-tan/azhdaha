@@ -646,7 +646,7 @@ impl HirCtx<'_> {
         Ok(sizeof_kind)
     }
 
-    pub(crate) fn lower_to_lit(&mut self, node: Node) -> anyhow::Result<Lit> {
+    pub(crate) fn lower_to_lit(&self, node: Node) -> anyhow::Result<Lit> {
         trace!("[HIR/Lit] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -665,7 +665,7 @@ impl HirCtx<'_> {
         })
     }
 
-    fn lower_to_lit_kind(&mut self, node: Node) -> anyhow::Result<LitKind> {
+    fn lower_to_lit_kind(&self, node: Node) -> anyhow::Result<LitKind> {
         trace!("[HIR/LitKind] Lowering '{}'", node.kind());
 
         Ok(match node.kind() {

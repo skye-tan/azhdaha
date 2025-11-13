@@ -444,31 +444,35 @@ impl HirCtx<'_> {
                     target = Expr { kind, ty, span };
                 }
 
-                let ty = match target.ty.kind {
+                let fields = match target.ty.kind {
                     TyKind::Struct(idx) => {
-                        let CompoundTypeData::Struct { fields } =
-                            self.type_tag_resolver.get_data_by_res(&idx)
-                        else {
-                            bail!("Invalid struct");
+                        let data = self.type_tag_resolver.get_data_by_res(&idx);
+                        let CompoundTypeData::Struct { fields } = data else {
+                            bail!("Invalid struct {data:?}");
                         };
-
-                        let Some(field_data) = fields.iter().find(|f| f.ident.name == field.name)
-                        else {
-                            bail!(
-                                "Unresolved field {}. Available fields are {:?}.",
-                                field.name,
-                                fields
-                            );
-                        };
-                        field_data.ty.clone()
+                        fields
                     }
-                    TyKind::Union(_) => todo!(),
+                    TyKind::Union(idx) => {
+                        let data = self.type_tag_resolver.get_data_by_res(&idx);
+                        let CompoundTypeData::Union { fields } = data else {
+                            bail!("Invalid union {data:?}");
+                        };
+                        fields
+                    }
                     _ => bail!(
                         "Type error: field expression on type {} is invalid.",
                         target.ty
                     ),
                 };
 
+                let Some(field_data) = fields.iter().find(|f| f.ident.name == field.name) else {
+                    bail!(
+                        "Unresolved field {}. Available fields are {:?}.",
+                        field.name,
+                        fields
+                    );
+                };
+                let ty = field_data.ty.clone();
                 (ExprKind::Field(Box::new(target), field), ty)
             }
             constants::SUBSCRIPT_EXPRESSION => {

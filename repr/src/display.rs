@@ -265,7 +265,7 @@ impl MirDisplay for TyKind {
         match &self {
             TyKind::PrimTy(prim_ty_kind) => prim_ty_kind.mir_display(body),
             TyKind::Struct(ident) => format!("struct /*todo {ident:?}*/"),
-            TyKind::Union(ident) => format!("union {}", ident.name),
+            TyKind::Union(ident) => format!("union /*todo {ident:?}*/"),
             TyKind::Enum(ident) => format!("enum {}", ident.name),
             TyKind::Ptr { kind, quals } => {
                 let mut result = String::new();

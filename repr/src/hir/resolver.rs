@@ -20,7 +20,7 @@ pub enum SymbolKind {
 #[derive(Debug, Clone)]
 pub enum CompoundTypeData {
     Struct { fields: Vec<VarDecl> },
-    Union,
+    Union { fields: Vec<VarDecl> },
     DeclaredOnly,
 }
 

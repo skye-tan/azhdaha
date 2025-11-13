@@ -336,6 +336,9 @@ impl HirCtx<'_> {
                     continue;
                 }
                 let ident = self.lower_to_ident(child.child_by_field_name("name").unwrap())?;
+                if let Some(value_node) = child.child_by_field_name("value") {
+                    value = self.const_eval_enum_value(value_node)?;
+                }
                 self.symbol_resolver.insert_symbol(
                     ident.name.clone(),
                     SymbolKind::EnumVariant {
@@ -347,6 +350,19 @@ impl HirCtx<'_> {
             }
         }
         Ok(idx)
+    }
+
+    fn const_eval_enum_value(&self, node: Node<'_>) -> anyhow::Result<i32> {
+        match node.kind() {
+            constants::NUMBER_LITERAL => {
+                let lit = self.lower_to_lit(node)?;
+                let LitKind::Int(value) = lit.kind else {
+                    bail!("Invalid literal {lit:?} for enum value.");
+                };
+                Ok(value as i32)
+            }
+            kind => bail!("Cannot const eval node of type '{kind}'"),
+        }
     }
 
     pub(crate) fn lower_struct_or_union_or_enum(

@@ -1,7 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use crate::{
-    hir::{self, Span},
+    hir::{self, Span, UnOp},
     mir::{MirCtx, datatypes::*},
 };
 
@@ -38,17 +38,16 @@ impl<'mir> MirCtx<'mir> {
 
                 Operand::Place(place)
             }
-            hir::ExprKind::Unary(un_op, inner_expr) => {
-                let operand = self.lower_to_operand(inner_expr, bb, stmt_span);
+            hir::ExprKind::Unary(un_op, _) => {
+                if *un_op == UnOp::Deref {
+                    Operand::Place(self.lower_to_place(expr, bb, stmt_span))
+                } else {
+                    let rvalue = self.lower_to_rvalue(expr, bb, stmt_span);
 
-                let place = self.store_in_temp_place(
-                    Rvalue::UnaryOp(*un_op, operand),
-                    bb,
-                    stmt_span,
-                    expr.ty.clone(),
-                );
+                    let place = self.store_in_temp_place(rvalue, bb, stmt_span, expr.ty.clone());
 
-                Operand::Place(place)
+                    Operand::Place(place)
+                }
             }
             hir::ExprKind::Binary(..) => {
                 let rvalue = self.lower_to_rvalue(expr, bb, span);

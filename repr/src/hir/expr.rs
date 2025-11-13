@@ -387,9 +387,15 @@ impl HirCtx<'_> {
                 )
             }
             constants::FIELD_EXPRESSION => {
-                let target = self.lower_to_expr(node.child(0).unwrap())?;
+                let mut target =
+                    self.lower_to_expr(node.child_by_field_name("argument").unwrap())?;
 
-                let field = self.lower_to_ident(node.child(2).unwrap())?;
+                let field = self.lower_to_ident(node.child_by_field_name("field").unwrap())?;
+
+                if node.child(1).unwrap().kind() == "->" {
+                    let (kind, ty) = self.lower_un_op(target, UnOp::Deref, span)?;
+                    target = Expr { kind, ty, span };
+                }
 
                 let ty = match target.ty.kind {
                     TyKind::Struct(idx) => {

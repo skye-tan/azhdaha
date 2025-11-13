@@ -90,14 +90,8 @@ impl HirCtx<'_> {
 
                 ItemKind::TyDef(symbol)
             }
-            constants::STRUCT_SPECIFIER => {
-                let name = self.lower_to_ident(node.child_by_field_name("name").unwrap())?;
-                let body = node.child_by_field_name("body").unwrap();
-                let fields = self.lower_fields_in_specifier(body);
-                let idx = self.type_tag_resolver.insert_symbol(
-                    name.name.clone(),
-                    resolver::CompoundTypeData::Struct { fields },
-                );
+            constants::STRUCT_SPECIFIER | constants::UNION_SPECIFIER => {
+                let idx = self.lower_struct_or_union(node)?;
                 ItemKind::TaggedTypeSpecifier(idx)
             }
             kind => {

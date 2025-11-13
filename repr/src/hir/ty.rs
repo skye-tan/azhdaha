@@ -31,7 +31,7 @@ impl Display for Ty {
 pub enum TyKind {
     PrimTy(PrimTyKind),
     Struct(Idx<CompoundTypeData>),
-    Union(Ident),
+    Union(Idx<CompoundTypeData>),
     Enum(Ident),
     Ptr {
         kind: Box<TyKind>,
@@ -249,35 +249,13 @@ impl HirCtx<'_> {
             }
             constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_to_prim_ty_kind(ty_node)?),
             constants::SIZED_TYPE_SPECIFIER => TyKind::PrimTy(PrimTyKind::Int),
-            constants::STRUCT_SPECIFIER => TyKind::Struct({
-                if let Some(name) = ty_node.child_by_field_name("name") {
-                    let ident = self.lower_to_ident(name)?;
-                    let idx = match self.type_tag_resolver.get_res_by_name(&ident.name) {
-                        Some(idx) => idx,
-                        None => self
-                            .type_tag_resolver
-                            .insert_symbol(ident.name.clone(), CompoundTypeData::DeclaredOnly),
-                    };
-                    if let Some(body) = ty_node.child_by_field_name("body") {
-                        let fields = self.lower_fields_in_specifier(body);
-                        let data = CompoundTypeData::Struct { fields };
-                        let value = self.type_tag_resolver.get_data_by_res_mut(&idx);
-                        if !matches!(*value, CompoundTypeData::DeclaredOnly) {
-                            panic!("Redeclaration of struct");
-                        }
-                        *value = data;
-                    }
-                    idx
-                } else if let Some(body) = ty_node.child_by_field_name("body") {
-                    let fields = self.lower_fields_in_specifier(body);
-                    let data = CompoundTypeData::Struct { fields };
-                    self.type_tag_resolver.insert_unnamed_symbol(data)
-                } else {
-                    bail!("Invalid struct type without name and body")
+            constants::UNION_SPECIFIER | constants::STRUCT_SPECIFIER => {
+                let idx = self.lower_struct_or_union(ty_node)?;
+                match ty_node.kind() {
+                    constants::STRUCT_SPECIFIER => TyKind::Struct(idx),
+                    constants::UNION_SPECIFIER => TyKind::Union(idx),
+                    _ => unreachable!(),
                 }
-            }),
-            constants::UNION_SPECIFIER => {
-                TyKind::Union(self.lower_to_ident(ty_node.child(1).unwrap())?)
             }
             constants::ENUM_SPECIFIER => {
                 TyKind::Enum(self.lower_to_ident(ty_node.child(1).unwrap())?)
@@ -337,6 +315,44 @@ impl HirCtx<'_> {
         }
 
         Ok(ty_kind)
+    }
+
+    pub(crate) fn lower_struct_or_union(
+        &mut self,
+        ty_node: Node<'_>,
+    ) -> anyhow::Result<Idx<CompoundTypeData>> {
+        let data = if let Some(body) = ty_node.child_by_field_name("body") {
+            let fields = self.lower_fields_in_specifier(body);
+            Some(match ty_node.kind() {
+                constants::STRUCT_SPECIFIER => CompoundTypeData::Struct { fields },
+                constants::UNION_SPECIFIER => CompoundTypeData::Union { fields },
+                _ => unreachable!(),
+            })
+        } else {
+            None
+        };
+        let idx = if let Some(name) = ty_node.child_by_field_name("name") {
+            let ident = self.lower_to_ident(name)?;
+            let idx = match self.type_tag_resolver.get_res_by_name(&ident.name) {
+                Some(idx) => idx,
+                None => self
+                    .type_tag_resolver
+                    .insert_symbol(ident.name.clone(), CompoundTypeData::DeclaredOnly),
+            };
+            if let Some(data) = data {
+                let value = self.type_tag_resolver.get_data_by_res_mut(&idx);
+                if !matches!(*value, CompoundTypeData::DeclaredOnly) {
+                    panic!("Redeclaration of struct");
+                }
+                *value = data;
+            }
+            idx
+        } else if let Some(data) = data {
+            self.type_tag_resolver.insert_unnamed_symbol(data)
+        } else {
+            bail!("Invalid struct type without name and body")
+        };
+        Ok(idx)
     }
 
     fn lower_to_prim_ty_kind(&mut self, node: Node) -> anyhow::Result<PrimTyKind> {

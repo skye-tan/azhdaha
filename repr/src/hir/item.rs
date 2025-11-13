@@ -25,6 +25,7 @@ pub enum ItemKind {
     Decl(Vec<Symbol>),
     TyDef(Symbol),
     TaggedTypeSpecifier(Idx<resolver::CompoundTypeData>),
+    Empty,
 }
 
 #[derive(Debug, Clone)]
@@ -94,6 +95,7 @@ impl HirCtx<'_> {
                 let idx = self.lower_struct_or_union(node)?;
                 ItemKind::TaggedTypeSpecifier(idx)
             }
+            constants::SEMICOLON => ItemKind::Empty,
             kind => {
                 bail!("Cannot lower '{kind}' to 'ItemKind'.");
             }

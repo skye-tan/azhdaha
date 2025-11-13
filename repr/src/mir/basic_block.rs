@@ -202,7 +202,7 @@ impl<'mir> MirCtx<'mir> {
 
                 bb.set(next_bb);
             }
-            hir::StmtKind::TyDef(..) => (),
+            hir::StmtKind::Noop => (),
         }
     }
 }

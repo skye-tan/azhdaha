@@ -4,7 +4,7 @@ use la_arena::{Arena, Idx};
 
 use crate::hir::{
     BinOp, Ident, Lit, Span, Storage, Ty, TyKind, UnOp,
-    resolver::{Resolver, Symbol, SymbolKind},
+    resolver::{CompoundTypeData, Resolver, Symbol, SymbolKind},
 };
 
 #[derive(Debug, Clone)]
@@ -200,6 +200,7 @@ pub enum Rvalue {
         from_type: TyKind,
         to_type: TyKind,
     },
+    StructInitializing(Idx<CompoundTypeData>, Vec<Operand>),
     List(Vec<Operand>),
     Empty,
 }

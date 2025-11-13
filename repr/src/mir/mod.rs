@@ -9,7 +9,7 @@ use la_arena::{Arena, RawIdx};
 
 use crate::hir::{
     self, Span,
-    resolver::{Label, Resolver, Symbol, SymbolKind},
+    resolver::{CompoundTypeData, Label, Resolver, Symbol, SymbolKind},
 };
 
 /// Contains methods needed to manage arenas and resolvers.
@@ -33,6 +33,7 @@ pub const RETURN_LOCAL: Local = Local::from_raw(RawIdx::from_u32(0));
 #[derive(Debug, Clone)]
 pub struct MirCtx<'mir> {
     pub label_resolver: &'mir Resolver<()>,
+    pub type_tag_resolver: &'mir Resolver<CompoundTypeData>,
 
     pub body: Body<'mir>,
     pub has_inner_symbol_resolver: bool,
@@ -45,10 +46,12 @@ impl<'mir> MirCtx<'mir> {
     pub fn new(
         symbol_resolver: &'mir Resolver<SymbolKind>,
         label_resolver: &'mir Resolver<()>,
+        type_tag_resolver: &'mir Resolver<CompoundTypeData>,
         span: Span,
     ) -> Self {
         Self {
             label_resolver,
+            type_tag_resolver,
 
             body: Body {
                 symbol_resolver,

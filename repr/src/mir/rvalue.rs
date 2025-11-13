@@ -61,12 +61,25 @@ impl<'mir> MirCtx<'mir> {
                 Rvalue::Call(operand, arguments)
             }
             hir::ExprKind::Cast(inner_expr) => {
-                let operand = self.lower_to_operand(inner_expr, bb, stmt_span);
+                if let hir::ExprKind::Array(array) = &inner_expr.kind {
+                    match &expr.ty.kind {
+                        hir::TyKind::Struct(idx) => {
+                            let mut ops = vec![];
+                            for elem in array {
+                                ops.push(self.lower_to_operand(elem, bb, stmt_span));
+                            }
+                            Rvalue::StructInitializing(*idx, ops)
+                        }
+                        _ => panic!("Invalid cast from initializer list to {}", expr.ty),
+                    }
+                } else {
+                    let operand = self.lower_to_operand(inner_expr, bb, stmt_span);
 
-                Rvalue::Cast {
-                    value: operand,
-                    from_type: inner_expr.ty.kind.clone(),
-                    to_type: expr.ty.kind.clone(),
+                    Rvalue::Cast {
+                        value: operand,
+                        from_type: inner_expr.ty.kind.clone(),
+                        to_type: expr.ty.kind.clone(),
+                    }
                 }
             }
             hir::ExprKind::Comma(exprs) => {

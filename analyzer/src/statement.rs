@@ -154,7 +154,10 @@ impl LinearCtx<'_> {
                             statement,
                         );
                     }
-                    mir::Rvalue::AddrOf(_) | mir::Rvalue::AddrOfStatic(_) | mir::Rvalue::Empty => {}
+                    mir::Rvalue::StructInitializing(..)
+                    | mir::Rvalue::AddrOf(_)
+                    | mir::Rvalue::AddrOfStatic(_)
+                    | mir::Rvalue::Empty => {}
                 }
 
                 if is_accessed {

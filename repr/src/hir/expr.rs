@@ -1,9 +1,13 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use anyhow::{Context, bail};
+use itertools::Either;
 use log::trace;
 
-use crate::hir::{resolver::CompoundTypeData, *};
+use crate::hir::{
+    resolver::{CompoundTypeData, SymbolKind},
+    *,
+};
 
 use super::{constants, resolver::Symbol};
 
@@ -118,6 +122,31 @@ impl HirCtx<'_> {
         let (kind, ty) = self.lower_to_expr_kind(node)?;
 
         Ok(Expr { kind, ty, span })
+    }
+
+    /// This function is for sizeof when it didn't detect type at parse level, e.g. for typedefs.
+    pub(crate) fn lower_to_expr_or_type(&mut self, node: Node) -> anyhow::Result<Either<Expr, Ty>> {
+        Ok(match node.kind() {
+            constants::IDENTIFIER => {
+                let ident = self.lower_to_ident(node)?;
+
+                let symbol = self
+                    .symbol_resolver
+                    .get_res_by_name(&ident.name)
+                    .context(format!("Use of undefined identifier '{}'.", &ident.name))?;
+
+                if let SymbolKind::TyDef(ty) = &self.symbol_resolver.arena[symbol] {
+                    Either::Right(ty.clone())
+                } else {
+                    Either::Left(self.lower_to_expr(node)?)
+                }
+            }
+            constants::PARENTHESIZED_EXPRESSION => {
+                let child = node.child(1).unwrap();
+                self.lower_to_expr_or_type(child)?
+            }
+            _ => Either::Left(self.lower_to_expr(node)?),
+        })
     }
 
     fn lower_un_op(
@@ -597,7 +626,10 @@ impl HirCtx<'_> {
 
         let sizeof_kind = 'size_of: {
             if let Some(child) = node.child_by_field_name("value") {
-                break 'size_of SizeofKind::Expr(Box::new(self.lower_to_expr(child)?));
+                break 'size_of match self.lower_to_expr_or_type(child)? {
+                    Either::Left(expr) => SizeofKind::Expr(Box::new(expr)),
+                    Either::Right(ty) => SizeofKind::Ty(ty),
+                };
             }
 
             if let Some(child) = node.child_by_field_name("type") {

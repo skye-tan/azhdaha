@@ -253,16 +253,22 @@ impl HirCtx<'_> {
             constants::STRUCT_SPECIFIER => TyKind::Struct({
                 if let Some(name) = ty_node.child_by_field_name("name") {
                     let ident = self.lower_to_ident(name)?;
+                    let idx = match self.type_tag_resolver.get_res_by_name(&ident.name) {
+                        Some(idx) => idx,
+                        None => self
+                            .type_tag_resolver
+                            .insert_symbol(ident.name.clone(), CompoundTypeData::DeclaredOnly),
+                    };
                     if let Some(body) = ty_node.child_by_field_name("body") {
                         let fields = self.lower_fields_in_specifier(body);
                         let data = CompoundTypeData::Struct { fields };
-                        self.type_tag_resolver
-                            .insert_symbol(ident.name.clone(), data)
-                    } else {
-                        self.type_tag_resolver
-                            .get_res_by_name(&ident.name)
-                            .context("Failed to resolve struct tag")?
+                        let value = self.type_tag_resolver.get_data_by_res_mut(&idx);
+                        if !matches!(*value, CompoundTypeData::DeclaredOnly) {
+                            panic!("Redeclaration of struct");
+                        }
+                        *value = data;
                     }
+                    idx
                 } else if let Some(body) = ty_node.child_by_field_name("body") {
                     let fields = self.lower_fields_in_specifier(body);
                     let data = CompoundTypeData::Struct { fields };
@@ -316,6 +322,7 @@ impl HirCtx<'_> {
                 }
                 constants::FUNCTION_DECLARATOR
                 | constants::PARAMETER_DECLARATION
+                | constants::FIELD_IDENTIFIER
                 | constants::TYPE_IDENTIFIER
                 | constants::IDENTIFIER => {
                     break;

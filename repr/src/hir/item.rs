@@ -106,17 +106,13 @@ impl HirCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_fields_in_specifier(&mut self, body: Node<'_>) -> Vec<(Ident, Ty)> {
+    pub(crate) fn lower_fields_in_specifier(&mut self, body: Node<'_>) -> Vec<VarDecl> {
         body.children(&mut body.walk())
-            .filter_map(|x| {
+            .flat_map(|x| {
                 if x.kind() == "{" || x.kind() == "}" {
-                    return None;
+                    return vec![];
                 }
-                let ty = self.lower_to_ty(x, None).unwrap();
-                let name = self
-                    .lower_to_ident(x.child_by_field_name("declarator").unwrap())
-                    .unwrap();
-                Some((name, ty))
+                self.lower_to_var_decl_list(x).unwrap()
             })
             .collect()
     }

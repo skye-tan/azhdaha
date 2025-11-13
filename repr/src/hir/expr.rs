@@ -384,7 +384,8 @@ impl HirCtx<'_> {
 
                 let bin_op = self.lower_to_bin_op(node.child(1).unwrap())?;
 
-                let rhs = self.lower_to_expr(node.child(2).unwrap())?;
+                let rhs =
+                    self.lower_to_expr_with_expected_type(node.child(2).unwrap(), lhs.ty.clone())?;
 
                 let ty = rhs.ty.clone();
 

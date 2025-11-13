@@ -93,6 +93,20 @@ pub enum UnOp {
 }
 
 impl HirCtx<'_> {
+    pub(crate) fn lower_to_expr_with_expected_type(
+        &mut self,
+        node: Node,
+        ty: Ty,
+    ) -> anyhow::Result<Expr> {
+        let expr = self.lower_to_expr(node)?;
+
+        Ok(Expr {
+            span: expr.span,
+            kind: ExprKind::Cast(Box::new(expr)),
+            ty,
+        })
+    }
+
     pub(crate) fn lower_to_expr(&mut self, node: Node) -> anyhow::Result<Expr> {
         trace!("[HIR/Expr] Lowering '{}'", node.kind());
 
@@ -271,6 +285,10 @@ impl HirCtx<'_> {
 
                 let path = self.lower_to_expr(cursor.node())?;
 
+                let TyKind::Func { sig } = &path.ty.kind else {
+                    bail!("Type error: invalid call to non function type");
+                };
+
                 let mut arguments = vec![];
 
                 cursor.goto_next_sibling();
@@ -278,17 +296,16 @@ impl HirCtx<'_> {
                 cursor.goto_next_sibling();
 
                 while cursor.node().kind() != ")" {
-                    arguments.push(self.lower_to_expr(cursor.node())?);
-
+                    if let Some(param) = sig.params.get(arguments.len()) {
+                        arguments.push(
+                            self.lower_to_expr_with_expected_type(cursor.node(), param.ty.clone())?,
+                        );
+                    } else {
+                        bail!("Type error - too many arguments to call {sig:?}");
+                    }
                     cursor.goto_next_sibling();
                     cursor.goto_next_sibling();
                 }
-
-                let TyKind::Func { sig } = &path.ty.kind else {
-                    bail!("Type error: invalid call to non function type");
-                };
-
-                // TODO: type check args and emit implicit casts
 
                 let ty = sig.ret_ty.clone();
 

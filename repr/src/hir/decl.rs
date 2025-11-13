@@ -72,8 +72,10 @@ impl HirCtx<'_> {
             let ty = self.lower_to_ty(node, Some(decl_node))?;
 
             let init = if decl_node.kind() == constants::INIT_DECLARATOR {
-                let init =
-                    self.lower_to_expr(decl_node.child(decl_node.child_count() - 1).unwrap())?;
+                let init = self.lower_to_expr_with_expected_type(
+                    decl_node.child(decl_node.child_count() - 1).unwrap(),
+                    ty.clone(),
+                )?;
 
                 Some(init)
             } else {

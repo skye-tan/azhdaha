@@ -77,7 +77,14 @@ impl HirCtx<'_> {
             }
             constants::RETURN_STATEMENT => {
                 let ret_expr = if node.child_count() == 3 {
-                    Some(self.lower_to_expr(node.child(1).unwrap())?)
+                    Some(
+                        self.lower_to_expr_with_expected_type(
+                            node.child(1).unwrap(),
+                            self.return_ty
+                                .clone()
+                                .expect("Return type is not filled at the start"),
+                        )?,
+                    )
                 } else {
                     None
                 };

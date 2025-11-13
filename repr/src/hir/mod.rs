@@ -46,6 +46,8 @@ pub struct HirCtx<'hir> {
     pub start_label: Option<resolver::Label>,
     pub end_label: Option<resolver::Label>,
 
+    pub return_ty: Option<Ty>,
+
     pub root: Node<'hir>,
     pub source_code: &'hir [u8],
 }
@@ -62,6 +64,8 @@ impl<'hir> HirCtx<'hir> {
             switch_cond: None,
             start_label: None,
             end_label: None,
+
+            return_ty: None,
 
             root: ast_repr.tree.root_node(),
             source_code: &ast_repr.source_info.code,

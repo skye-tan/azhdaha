@@ -129,6 +129,9 @@ impl HirCtx<'_> {
 
         let func_decl = self.lower_to_func_decl(node)?;
 
+        assert!(self.return_ty.is_none());
+        self.return_ty = Some(func_decl.sig.ret_ty.clone());
+
         _ = self.symbol_resolver.insert_symbol(
             func_decl.ident.name.clone(),
             SymbolKind::Func(func_decl.clone()),
@@ -145,10 +148,14 @@ impl HirCtx<'_> {
         let symbol = saved_symbol_resolver
             .insert_symbol(func_decl.ident.name.clone(), SymbolKind::Func(func_decl));
 
-        let body = self.lower_to_stmt(node.child(node.child_count() - 1).unwrap())?;
+        let body = self.lower_to_stmt(node.child(node.child_count() - 1).unwrap());
 
         let symbol_resolver = mem::replace(&mut self.symbol_resolver, saved_symbol_resolver);
         let label_resolver = mem::take(&mut self.label_resolver);
+        self.return_ty = None;
+
+        // Restore resolvers and bail later to not break subsequent functions in case of failure.
+        let body = body?;
 
         Ok(FuncDef {
             symbol_resolver,

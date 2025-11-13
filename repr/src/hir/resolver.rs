@@ -15,12 +15,14 @@ pub enum SymbolKind {
     Func(FuncDecl),
     Param(ParamDecl),
     TyDef(Ty),
+    EnumVariant { value: i32, span: Span },
 }
 
 #[derive(Debug, Clone)]
 pub enum CompoundTypeData {
     Struct { fields: Vec<VarDecl> },
     Union { fields: Vec<VarDecl> },
+    Enum,
     DeclaredOnly,
 }
 
@@ -38,6 +40,12 @@ impl SymbolKind {
             },
             SymbolKind::Param(param_decl) => param_decl.ty.clone(),
             SymbolKind::TyDef(_) => panic!("Symbol is not a expression position symbol."),
+            &SymbolKind::EnumVariant { value: _, span } => Ty {
+                kind: TyKind::PrimTy(PrimTyKind::Int),
+                is_linear: false,
+                quals: vec![],
+                span,
+            },
         }
     }
 }

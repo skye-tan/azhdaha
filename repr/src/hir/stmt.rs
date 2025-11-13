@@ -420,8 +420,10 @@ impl HirCtx<'_> {
 
                 StmtKind::Noop
             }
-            constants::STRUCT_SPECIFIER | constants::UNION_SPECIFIER => {
-                self.lower_struct_or_union(node)?;
+            constants::STRUCT_SPECIFIER
+            | constants::UNION_SPECIFIER
+            | constants::ENUM_SPECIFIER => {
+                self.lower_struct_or_union_or_enum(node)?;
 
                 StmtKind::Noop
             }

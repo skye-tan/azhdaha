@@ -193,6 +193,7 @@ impl MirDisplay for Operand {
                             None => "unknown".to_owned(),
                         },
                         SymbolKind::TyDef(ty) => ty.mir_display(body),
+                        SymbolKind::EnumVariant { value, span: _ } => format!("Enum({value})"),
                     }
                 }
                 Const::Sizeof => "sizeof".to_owned(),
@@ -266,7 +267,6 @@ impl MirDisplay for TyKind {
             TyKind::PrimTy(prim_ty_kind) => prim_ty_kind.mir_display(body),
             TyKind::Struct(ident) => format!("struct /*todo {ident:?}*/"),
             TyKind::Union(ident) => format!("union /*todo {ident:?}*/"),
-            TyKind::Enum(ident) => format!("enum {}", ident.name),
             TyKind::Ptr { kind, quals } => {
                 let mut result = String::new();
 

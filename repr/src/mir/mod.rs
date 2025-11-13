@@ -111,6 +111,8 @@ impl<'mir> MirCtx<'mir> {
         Ok(self.body)
     }
 
+    /// # Panics
+    /// Initializer of the [`hir::VarDecl`] should not be empty.
     pub fn lower_static_to_mir(mut self, decl: &'mir hir::VarDecl) -> anyhow::Result<Body<'mir>> {
         let ret = self.alloc_real_local(
             decl.storage.clone(),
@@ -128,7 +130,10 @@ impl<'mir> MirCtx<'mir> {
 
         let mut bb = self.alloc_bb();
 
-        let init = decl.init.as_ref().unwrap();
+        let init = decl
+            .init
+            .as_ref()
+            .expect("Initializer should not be empty.");
 
         let rvalue = self.lower_to_rvalue(init, &mut bb, decl.span);
         self.retrieve_bb(bb).statements.push(Statement {

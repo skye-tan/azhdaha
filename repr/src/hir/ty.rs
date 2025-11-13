@@ -32,7 +32,6 @@ pub enum TyKind {
     PrimTy(PrimTyKind),
     Struct(Idx<CompoundTypeData>),
     Union(Idx<CompoundTypeData>),
-    Enum(Ident),
     Ptr {
         kind: Box<TyKind>,
         quals: Vec<TyQual>,
@@ -249,16 +248,16 @@ impl HirCtx<'_> {
             }
             constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_to_prim_ty_kind(ty_node)?),
             constants::SIZED_TYPE_SPECIFIER => TyKind::PrimTy(PrimTyKind::Int),
-            constants::UNION_SPECIFIER | constants::STRUCT_SPECIFIER => {
-                let idx = self.lower_struct_or_union(ty_node)?;
+            constants::UNION_SPECIFIER
+            | constants::STRUCT_SPECIFIER
+            | constants::ENUM_SPECIFIER => {
+                let idx = self.lower_struct_or_union_or_enum(ty_node)?;
                 match ty_node.kind() {
                     constants::STRUCT_SPECIFIER => TyKind::Struct(idx),
                     constants::UNION_SPECIFIER => TyKind::Union(idx),
+                    constants::ENUM_SPECIFIER => TyKind::PrimTy(PrimTyKind::Int),
                     _ => unreachable!(),
                 }
-            }
-            constants::ENUM_SPECIFIER => {
-                TyKind::Enum(self.lower_to_ident(ty_node.child(1).unwrap())?)
             }
             kind => bail!("Cannot lower '{kind}' to 'TyKind'."),
         };
@@ -317,10 +316,46 @@ impl HirCtx<'_> {
         Ok(ty_kind)
     }
 
-    pub(crate) fn lower_struct_or_union(
+    pub(crate) fn lower_enum(&mut self, node: Node<'_>) -> anyhow::Result<Idx<CompoundTypeData>> {
+        let idx = if let Some(name) = node.child_by_field_name("name") {
+            let ident = self.lower_to_ident(name)?;
+            match self.type_tag_resolver.get_res_by_name(&ident.name) {
+                Some(idx) => idx,
+                None => self
+                    .type_tag_resolver
+                    .insert_symbol(ident.name.clone(), CompoundTypeData::Enum),
+            }
+        } else {
+            self.type_tag_resolver
+                .insert_unnamed_symbol(CompoundTypeData::Enum)
+        };
+        if let Some(body) = node.child_by_field_name("body") {
+            let mut value = 0;
+            for child in body.children(&mut body.walk()) {
+                if child.kind() == "{" || child.kind() == "}" || child.kind() == "," {
+                    continue;
+                }
+                let ident = self.lower_to_ident(child.child_by_field_name("name").unwrap())?;
+                self.symbol_resolver.insert_symbol(
+                    ident.name.clone(),
+                    SymbolKind::EnumVariant {
+                        value,
+                        span: ident.span,
+                    },
+                );
+                value += 1;
+            }
+        }
+        Ok(idx)
+    }
+
+    pub(crate) fn lower_struct_or_union_or_enum(
         &mut self,
         ty_node: Node<'_>,
     ) -> anyhow::Result<Idx<CompoundTypeData>> {
+        if ty_node.kind() == constants::ENUM_SPECIFIER {
+            return self.lower_enum(ty_node);
+        }
         let (mut idx, ident) = if let Some(name) = ty_node.child_by_field_name("name") {
             let ident = self.lower_to_ident(name)?;
             let idx = match self.type_tag_resolver.get_res_by_name(&ident.name) {

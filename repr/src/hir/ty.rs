@@ -327,7 +327,7 @@ impl HirCtx<'_> {
                     break;
                 }
                 constants::INIT_DECLARATOR => (),
-                kind => bail!("Cannot lower '{kind}' to 'TyKind'."),
+                kind => bail!("Cannot lower '{kind}' to 'TyKind' <todo: wrong message>."),
             }
 
             match decl_node.child_by_field_name("declarator") {

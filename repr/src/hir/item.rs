@@ -91,8 +91,10 @@ impl HirCtx<'_> {
 
                 ItemKind::TyDef(symbol)
             }
-            constants::STRUCT_SPECIFIER | constants::UNION_SPECIFIER => {
-                let idx = self.lower_struct_or_union(node)?;
+            constants::STRUCT_SPECIFIER
+            | constants::UNION_SPECIFIER
+            | constants::ENUM_SPECIFIER => {
+                let idx = self.lower_struct_or_union_or_enum(node)?;
                 ItemKind::TaggedTypeSpecifier(idx)
             }
             constants::SEMICOLON => ItemKind::Empty,

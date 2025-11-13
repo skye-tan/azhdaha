@@ -107,4 +107,37 @@ impl<'mir> MirCtx<'mir> {
 
         Ok(self.body)
     }
+
+    pub fn lower_static_to_mir(mut self, decl: &'mir hir::VarDecl) -> anyhow::Result<Body<'mir>> {
+        let ret = self.alloc_real_local(
+            decl.storage.clone(),
+            decl.ty.clone(),
+            decl.ident.clone(),
+            false,
+            decl.span,
+        );
+
+        let ret = Place {
+            local: ret,
+            projections: vec![],
+            span: decl.span,
+        };
+
+        let mut bb = self.alloc_bb();
+
+        let init = decl.init.as_ref().unwrap();
+
+        let rvalue = self.lower_to_rvalue(init, &mut bb, decl.span);
+        self.retrieve_bb(bb).statements.push(Statement {
+            kind: StatementKind::Assign(ret, rvalue),
+            span: decl.span,
+        });
+
+        self.retrieve_bb(bb).terminator = Some(Terminator {
+            kind: TerminatorKind::Return,
+            span: decl.span,
+        });
+
+        Ok(self.body)
+    }
 }

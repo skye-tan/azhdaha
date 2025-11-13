@@ -23,7 +23,9 @@ impl<'mir> MirCtx<'mir> {
                     self.lower_to_bb(stmt, bb);
 
                     if self.retrieve_bb(*bb).terminator.is_some() {
-                        break;
+                        panic!(
+                            "We messed up terminators. The working bb's terminator should be none."
+                        );
                     }
                 }
 
@@ -104,6 +106,11 @@ impl<'mir> MirCtx<'mir> {
                     kind: TerminatorKind::Return,
                     span,
                 });
+
+                // Currently a new basic block is created after each "goto" statement which may
+                // contain unreachable code. I might want to consider generating a warning for
+                // the non-empty variant of these basic-blocks in the future or ignore them.
+                bb.set(self.alloc_bb());
             }
             hir::StmtKind::Label(label_idx, stmt) => {
                 let mut next_bb = match self.bb_map.get(label_idx) {

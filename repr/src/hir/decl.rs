@@ -82,7 +82,9 @@ impl HirCtx<'_> {
 
             let ident = loop {
                 match decl_node.kind() {
-                    constants::IDENTIFIER | constants::TYPE_IDENTIFIER => {
+                    constants::IDENTIFIER
+                    | constants::TYPE_IDENTIFIER
+                    | constants::FIELD_IDENTIFIER => {
                         break self.lower_to_ident(decl_node)?;
                     }
                     _ => {

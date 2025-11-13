@@ -19,8 +19,9 @@ pub enum SymbolKind {
 
 #[derive(Debug, Clone)]
 pub enum CompoundTypeData {
-    Struct { fields: Vec<(Ident, Ty)> },
+    Struct { fields: Vec<VarDecl> },
     Union,
+    DeclaredOnly,
 }
 
 impl SymbolKind {
@@ -75,6 +76,11 @@ impl<T: Debug> Resolver<T> {
     #[track_caller]
     pub fn get_data_by_res(&self, res: &Idx<T>) -> &T {
         &self.arena[*res]
+    }
+
+    #[track_caller]
+    pub fn get_data_by_res_mut(&mut self, res: &Idx<T>) -> &mut T {
+        &mut self.arena[*res]
     }
 }
 

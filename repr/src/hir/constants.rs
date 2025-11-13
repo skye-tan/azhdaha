@@ -131,6 +131,8 @@ pub(crate) const THREAD_LOCAL: &str = "thread_local";
 
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Local`].  
 pub(crate) const IDENTIFIER: &str = "identifier";
+/// An identifiers used for fields in structs and unions.
+pub(crate) const FIELD_IDENTIFIER: &str = "field_identifier";
 
 /// An identifiers used for [`TyKind`]'s construction.
 pub(crate) const TYPE_DESCRIPTOR: &str = "type_descriptor";

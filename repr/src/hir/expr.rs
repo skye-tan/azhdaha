@@ -405,7 +405,7 @@ impl HirCtx<'_> {
                             bail!("Invalid struct");
                         };
 
-                        let Some(field_data) = fields.iter().find(|f| f.0.name == field.name)
+                        let Some(field_data) = fields.iter().find(|f| f.ident.name == field.name)
                         else {
                             bail!(
                                 "Unresolved field {}. Available fields are {:?}.",
@@ -413,7 +413,7 @@ impl HirCtx<'_> {
                                 fields
                             );
                         };
-                        field_data.1.clone()
+                        field_data.ty.clone()
                     }
                     TyKind::Union(_) => todo!(),
                     _ => bail!(

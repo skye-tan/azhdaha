@@ -7,7 +7,7 @@ use la_arena::Idx;
 use log::trace;
 
 use crate::hir::{
-    resolver::{CompoundTypeData, Symbol, SymbolKind},
+    resolver::{CompoundTypeData, SymbolKind},
     *,
 };
 
@@ -30,7 +30,6 @@ impl Display for Ty {
 #[derive(Debug, Clone)]
 pub enum TyKind {
     PrimTy(PrimTyKind),
-    TyDef(Symbol),
     Struct(Idx<CompoundTypeData>),
     Union(Ident),
     Enum(Ident),
@@ -244,7 +243,7 @@ impl HirCtx<'_> {
                 let symbol_kind = self.symbol_resolver.get_data_by_res(&symbol);
 
                 match symbol_kind {
-                    SymbolKind::TyDef(..) => TyKind::TyDef(symbol),
+                    SymbolKind::TyDef(ty) => ty.kind.clone(),
                     _ => bail!("Use of invalid type identifier '{}'.", &ident.name),
                 }
             }

@@ -258,14 +258,6 @@ impl MirDisplay for TyKind {
     fn mir_display(&self, body: &Body) -> String {
         match &self {
             TyKind::PrimTy(prim_ty_kind) => prim_ty_kind.mir_display(body),
-            TyKind::TyDef(symbol) => {
-                let symbol_kind = body.symbol_resolver.get_data_by_res(symbol);
-
-                match symbol_kind {
-                    SymbolKind::TyDef(ty) => ty.kind.mir_display(body),
-                    _ => unreachable!(),
-                }
-            }
             TyKind::Struct(ident) => format!("struct /*todo {ident:?}*/"),
             TyKind::Union(ident) => format!("union {}", ident.name),
             TyKind::Enum(ident) => format!("enum {}", ident.name),

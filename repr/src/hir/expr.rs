@@ -595,17 +595,15 @@ impl HirCtx<'_> {
         trace!("[HIR/SizeofKind] Lowering '{}'", node.kind());
 
         let sizeof_kind = 'size_of: {
-            let child = node.child(1).unwrap();
-            if child.kind() == constants::PARENTHESIZED_EXPRESSION {
+            if let Some(child) = node.child_by_field_name("value") {
                 break 'size_of SizeofKind::Expr(Box::new(self.lower_to_expr(child)?));
             }
 
-            let child = node.child(2).unwrap();
-            if child.kind() == constants::TYPE_DESCRIPTOR {
-                break 'size_of SizeofKind::Ty(self.lower_to_ty(child, child.child(0))?);
+            if let Some(child) = node.child_by_field_name("type") {
+                break 'size_of SizeofKind::Ty(self.lower_to_ty(child, None)?);
             }
 
-            bail!("Cannot lower '{}' to 'SizeofKind'.", node.kind());
+            bail!("Cannot lower '{}' to 'SizeofKind'.", node.to_sexp());
         };
 
         Ok(sizeof_kind)

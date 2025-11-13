@@ -321,6 +321,22 @@ impl HirCtx<'_> {
         &mut self,
         ty_node: Node<'_>,
     ) -> anyhow::Result<Idx<CompoundTypeData>> {
+        let (mut idx, ident) = if let Some(name) = ty_node.child_by_field_name("name") {
+            let ident = self.lower_to_ident(name)?;
+            let idx = match self.type_tag_resolver.get_res_by_name(&ident.name) {
+                Some(idx) => idx,
+                None => self
+                    .type_tag_resolver
+                    .insert_symbol(ident.name.clone(), CompoundTypeData::DeclaredOnly),
+            };
+            (idx, Some(ident))
+        } else {
+            (
+                self.type_tag_resolver
+                    .insert_unnamed_symbol(CompoundTypeData::DeclaredOnly),
+                None,
+            )
+        };
         let data = if let Some(body) = ty_node.child_by_field_name("body") {
             let fields = self.lower_fields_in_specifier(body);
             Some(match ty_node.kind() {
@@ -331,27 +347,18 @@ impl HirCtx<'_> {
         } else {
             None
         };
-        let idx = if let Some(name) = ty_node.child_by_field_name("name") {
-            let ident = self.lower_to_ident(name)?;
-            let idx = match self.type_tag_resolver.get_res_by_name(&ident.name) {
-                Some(idx) => idx,
-                None => self
+
+        if let Some(data) = data {
+            let value = self.type_tag_resolver.get_data_by_res_mut(&idx);
+            if !matches!(*value, CompoundTypeData::DeclaredOnly) {
+                idx = self
                     .type_tag_resolver
-                    .insert_symbol(ident.name.clone(), CompoundTypeData::DeclaredOnly),
-            };
-            if let Some(data) = data {
-                let value = self.type_tag_resolver.get_data_by_res_mut(&idx);
-                if !matches!(*value, CompoundTypeData::DeclaredOnly) {
-                    panic!("Redeclaration of struct");
-                }
+                    .insert_symbol(ident.unwrap().name, data);
+            } else {
                 *value = data;
             }
-            idx
-        } else if let Some(data) = data {
-            self.type_tag_resolver.insert_unnamed_symbol(data)
-        } else {
-            bail!("Invalid struct type without name and body")
-        };
+        }
+
         Ok(idx)
     }
 

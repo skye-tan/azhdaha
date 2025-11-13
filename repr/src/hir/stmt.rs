@@ -27,7 +27,7 @@ pub enum StmtKind {
     Label(Label, Option<Box<Stmt>>),
     Goto(Label),
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
-    TyDef(Symbol),
+    Noop,
 }
 
 impl HirCtx<'_> {
@@ -415,12 +415,17 @@ impl HirCtx<'_> {
             constants::TYPE_DEFINITION => {
                 let var_decl = self.lower_to_var_decl(node)?;
 
-                let symbol = self
-                    .symbol_resolver
+                self.symbol_resolver
                     .insert_symbol(var_decl.ident.name, SymbolKind::TyDef(var_decl.ty));
 
-                StmtKind::TyDef(symbol)
+                StmtKind::Noop
             }
+            constants::STRUCT_SPECIFIER | constants::UNION_SPECIFIER => {
+                self.lower_struct_or_union(node)?;
+
+                StmtKind::Noop
+            }
+            constants::SEMICOLON => StmtKind::Noop,
             kind => bail!("Cannot lower '{kind}' to 'StmtKind'."),
         })
     }

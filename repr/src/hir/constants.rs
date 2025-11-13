@@ -94,7 +94,7 @@ pub(crate) const CONDITIONAL_EXPRESSION: &str = "conditional_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::SizeOf`].  
 pub(crate) const SIZEOF_EXPRESSION: &str = "sizeof_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Empty`].  
-pub(crate) const SEMICOLON_EXPRESSION: &str = ";";
+pub(crate) const SEMICOLON: &str = ";";
 
 /// An identifiers used for [`Ty`]'s construction determining whether the type is linear or not.
 pub(crate) const LINEAR_TY_SPECIFIER: &str = "linear_type_specifier";

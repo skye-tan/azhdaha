@@ -578,7 +578,7 @@ impl HirCtx<'_> {
                     span,
                 },
             ),
-            constants::SEMICOLON_EXPRESSION => (
+            constants::SEMICOLON => (
                 ExprKind::Empty,
                 Ty {
                     kind: TyKind::PrimTy(PrimTyKind::Void),

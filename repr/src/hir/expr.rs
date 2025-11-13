@@ -3,7 +3,7 @@
 use anyhow::{Context, bail};
 use log::trace;
 
-use crate::hir::*;
+use crate::hir::{resolver::CompoundTypeData, *};
 
 use super::{constants, resolver::Symbol};
 
@@ -391,7 +391,30 @@ impl HirCtx<'_> {
 
                 let field = self.lower_to_ident(node.child(2).unwrap())?;
 
-                let ty = target.ty.clone(); // TODO: pure garbage
+                let ty = match target.ty.kind {
+                    TyKind::Struct(idx) => {
+                        let CompoundTypeData::Struct { fields } =
+                            self.type_tag_resolver.get_data_by_res(&idx)
+                        else {
+                            bail!("Invalid struct");
+                        };
+
+                        let Some(field_data) = fields.iter().find(|f| f.0.name == field.name)
+                        else {
+                            bail!(
+                                "Unresolved field {}. Available fields are {:?}.",
+                                field.name,
+                                fields
+                            );
+                        };
+                        field_data.1.clone()
+                    }
+                    TyKind::Union(_) => todo!(),
+                    _ => bail!(
+                        "Type error: field expression on type {} is invalid.",
+                        target.ty
+                    ),
+                };
 
                 (ExprKind::Field(Box::new(target), field), ty)
             }

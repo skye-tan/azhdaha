@@ -1,5 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
+use std::fmt::Display;
+
 use anyhow::{Context, bail};
 use la_arena::Idx;
 use log::trace;
@@ -17,6 +19,12 @@ pub struct Ty {
     pub is_linear: bool,
     pub quals: Vec<TyQual>,
     pub span: Span,
+}
+
+impl Display for Ty {
+    fn fmt(&self, fm: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fm, "{:?}", self)
+    }
 }
 
 #[derive(Debug, Clone)]

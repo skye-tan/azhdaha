@@ -107,7 +107,11 @@ impl<'mir> MirCtx<'mir> {
                 Operand::Place(place)
             }
             // TODO: Inner value must be evaluated and then saved.
-            hir::ExprKind::Sizeof(_) => Operand::Const(Const::Sizeof),
+            hir::ExprKind::Sizeof(sizeof) => Operand::Const(Const::Sizeof(match &sizeof.kind {
+                hir::SizeofKind::Ty(ty) => ty.clone(),
+                hir::SizeofKind::Expr(expr) => expr.ty.clone(),
+            })),
+
             hir::ExprKind::PtrOffset(..)
             | hir::ExprKind::Field(..)
             | hir::ExprKind::GnuBlock(_) => {

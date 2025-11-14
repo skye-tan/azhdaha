@@ -56,6 +56,10 @@ impl<'mir> MirCtx<'mir> {
                         _ => unreachable!(),
                     };
 
+                    if ty.kind.is_fn() {
+                        continue;
+                    }
+
                     let init_rvalue = init
                         .as_ref()
                         .map(|init_expr| self.lower_to_rvalue(init_expr, bb, span));

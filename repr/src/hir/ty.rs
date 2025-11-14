@@ -61,6 +61,10 @@ impl TyKind {
     pub fn is_fn_ptr(&self) -> bool {
         matches!(self, TyKind::Ptr { kind, .. } if kind.is_fn())
     }
+
+    pub fn is_void(&self) -> bool {
+        matches!(self, TyKind::PrimTy(PrimTyKind::Void))
+    }
 }
 
 #[derive(Debug, Clone)]

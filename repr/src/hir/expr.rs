@@ -671,12 +671,16 @@ impl HirCtx<'_> {
         trace!("[HIR/LitKind] Lowering '{}'", node.kind());
 
         Ok(match node.kind() {
-            constants::STRING_LITERAL => LitKind::Str(
-                std::str::from_utf8(&self.source_code[node.start_byte() + 1..node.end_byte() - 1])?
-                    .to_owned(),
-            ),
+            constants::STRING_LITERAL => {
+                let text = &self.source_code[node.start_byte() + 1..node.end_byte() - 1];
+                let text = std::str::from_utf8(text)?;
+                LitKind::Str(unescaper::unescape(text)?)
+            }
             constants::CHAR_LITERAL => {
-                LitKind::Char(self.source_code[node.start_byte() + 1] as char)
+                let text = &self.source_code[node.start_byte() + 1..node.end_byte() - 1];
+                let text = std::str::from_utf8(text)?;
+                let text = unescaper::unescape(text)?;
+                LitKind::Char(text.as_bytes()[0] as char)
             }
             constants::NUMBER_LITERAL => {
                 let literal =

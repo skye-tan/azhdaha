@@ -258,7 +258,7 @@ impl HirCtx<'_> {
 
         let mut decl_node = node.child_by_field_name("declarator");
 
-        let ty = self.lower_to_ty(node, decl_node)?;
+        let mut ty = self.lower_to_ty(node, decl_node)?;
 
         let mut ident = None;
 
@@ -269,6 +269,14 @@ impl HirCtx<'_> {
             } else {
                 decl_node = node.child_by_field_name("declarator");
             }
+        }
+
+        // Function arguments are always decayed to pointer in C.
+        if let TyKind::Array { kind, size: _ } = ty.kind {
+            ty.kind = TyKind::Ptr {
+                kind,
+                quals: vec![],
+            };
         }
 
         Ok(ParamDecl {

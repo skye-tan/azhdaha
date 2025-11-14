@@ -33,7 +33,6 @@ pub const RETURN_LOCAL: Local = Local::from_raw(RawIdx::from_u32(0));
 #[derive(Debug, Clone)]
 pub struct MirCtx<'mir> {
     pub label_resolver: &'mir Resolver<()>,
-    pub type_tag_resolver: &'mir Resolver<CompoundTypeData>,
 
     pub body: Body<'mir>,
     pub has_inner_symbol_resolver: bool,
@@ -51,10 +50,10 @@ impl<'mir> MirCtx<'mir> {
     ) -> Self {
         Self {
             label_resolver,
-            type_tag_resolver,
 
             body: Body {
                 symbol_resolver,
+                type_tag_resolver,
                 local_decls: Arena::new(),
                 basic_blocks: Arena::new(),
                 span,

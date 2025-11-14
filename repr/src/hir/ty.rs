@@ -57,6 +57,10 @@ impl TyKind {
     pub fn is_fn(&self) -> bool {
         matches!(self, TyKind::Func { .. })
     }
+
+    pub fn is_fn_ptr(&self) -> bool {
+        matches!(self, TyKind::Ptr { kind, .. } if kind.is_fn())
+    }
 }
 
 #[derive(Debug, Clone)]

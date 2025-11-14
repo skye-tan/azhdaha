@@ -229,6 +229,10 @@ impl HirCtx<'_> {
             cursor.goto_next_sibling();
         }
 
+        if params.len() == 1 && params[0].ty.kind.is_void() {
+            params = vec![];
+        }
+
         Ok(FuncSig {
             ret_ty,
             params,

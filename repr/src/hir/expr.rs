@@ -639,7 +639,9 @@ impl HirCtx<'_> {
             }
 
             if let Some(child) = node.child_by_field_name("type") {
-                break 'size_of SizeofKind::Ty(self.lower_to_ty(child, None)?);
+                break 'size_of SizeofKind::Ty(
+                    self.lower_to_ty(child, child.child_by_field_name("declarator"))?,
+                );
             }
 
             bail!("Cannot lower '{}' to 'SizeofKind'.", node.to_sexp());

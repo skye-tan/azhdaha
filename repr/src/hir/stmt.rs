@@ -114,7 +114,7 @@ impl HirCtx<'_> {
                 StmtKind::Goto(label_res)
             }
             constants::IF_STATEMENT => {
-                let cond_expr = self.lower_to_expr(node.child(1).unwrap())?;
+                let cond_expr = self.lower_to_cond_expr(node.child(1).unwrap())?;
 
                 let body_stmt = self.lower_to_stmt(node.child(2).unwrap())?;
 
@@ -223,7 +223,7 @@ impl HirCtx<'_> {
                     loop_end:
                 */
 
-                let cond_expr = self.lower_to_expr(node.child(1).unwrap())?;
+                let cond_expr = self.lower_to_cond_expr(node.child(1).unwrap())?;
 
                 let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
                 let loop_start_label = self.label_resolver.insert_symbol(loop_start.clone(), ());
@@ -295,7 +295,7 @@ impl HirCtx<'_> {
                 let saved_end_label = self.end_label;
                 self.end_label = Some(loop_end_label);
 
-                let cond_expr = self.lower_to_expr(node.child(3).unwrap())?;
+                let cond_expr = self.lower_to_cond_expr(node.child(3).unwrap())?;
 
                 self.start_label = saved_start_label;
                 self.end_label = saved_end_label;
@@ -340,7 +340,7 @@ impl HirCtx<'_> {
 
                 let decl_stmt = self.lower_to_stmt(node.child(2).unwrap())?;
 
-                let cond_expr = self.lower_to_expr(node.child(3).unwrap())?;
+                let cond_expr = self.lower_to_cond_expr(node.child(3).unwrap())?;
 
                 let update_expr = self.lower_to_expr(node.child(5).unwrap())?;
 

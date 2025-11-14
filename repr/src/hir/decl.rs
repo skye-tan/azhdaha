@@ -256,18 +256,18 @@ impl HirCtx<'_> {
             }
         }
 
-        let mut decl_node = node;
+        let mut decl_node = node.child_by_field_name("declarator");
 
-        let ty = self.lower_to_ty(node, Some(decl_node))?;
+        let ty = self.lower_to_ty(node, decl_node)?;
 
         let mut ident = None;
 
-        while let Some(node) = decl_node.child_by_field_name("declarator") {
-            decl_node = node;
-
-            if decl_node.kind() == constants::IDENTIFIER {
-                ident = Some(self.lower_to_ident(decl_node)?);
+        while let Some(node) = decl_node {
+            if node.kind() == constants::IDENTIFIER {
+                ident = Some(self.lower_to_ident(node)?);
                 break;
+            } else {
+                decl_node = node.child_by_field_name("declarator");
             }
         }
 

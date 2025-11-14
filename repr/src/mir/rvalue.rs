@@ -1,7 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use crate::{
-    hir::{self, Span},
+    hir::{self, Lit, Span},
     mir::{MirCtx, datatypes::*},
 };
 
@@ -33,20 +33,87 @@ impl<'mir> MirCtx<'mir> {
                 Rvalue::PtrDiff(left_operand, right_operand)
             }
             hir::ExprKind::Binary(bin_op, left_expr, right_expr) => {
-                let left_operand = self.lower_to_operand(left_expr, bb, stmt_span);
-                let right_operand = self.lower_to_operand(right_expr, bb, stmt_span);
-
                 match MirBinOp::from_hir(*bin_op) {
                     MirBinOp::IntBinOp(int_bin_op) => {
+                        let left_operand = self.lower_to_operand(left_expr, bb, stmt_span);
+                        let right_operand = self.lower_to_operand(right_expr, bb, stmt_span);
                         Rvalue::BinaryOp(int_bin_op, left_operand, right_operand)
                     }
                     MirBinOp::ShortCircuitBinOp(short_circuit_bin_op) => {
-                        // TODO: make these actually short circuit
-                        let op = match short_circuit_bin_op {
-                            ShortCircuitBinOp::And => IntBinOp::BitAnd,
-                            ShortCircuitBinOp::Or => IntBinOp::BitOr,
+                        let span = expr.span;
+                        let result = self.alloc_temp_place(
+                            span,
+                            hir::Ty {
+                                kind: hir::TyKind::PrimTy(hir::PrimTyKind::Bool),
+                                is_linear: false,
+                                quals: vec![],
+                                span,
+                            },
+                        );
+
+                        let check_second = self.alloc_bb();
+                        let next_block = self.alloc_bb();
+                        let fail_path = self.alloc_bb();
+                        let happy_path = self.alloc_bb();
+
+                        let first_cond = self.lower_to_operand(left_expr, bb, stmt_span);
+
+                        let first_cond_targets = match short_circuit_bin_op {
+                            ShortCircuitBinOp::And => [check_second, fail_path],
+                            ShortCircuitBinOp::Or => [happy_path, check_second],
                         };
-                        Rvalue::BinaryOp(op, left_operand, right_operand)
+
+                        self.retrieve_bb(*bb).terminator = Some(Terminator {
+                            kind: TerminatorKind::SwitchInt {
+                                discr: first_cond,
+                                targets: first_cond_targets,
+                            },
+                            span,
+                        });
+
+                        bb.set(check_second);
+
+                        let second_cond = self.lower_to_operand(right_expr, bb, stmt_span);
+
+                        self.retrieve_bb(*bb).terminator = Some(Terminator {
+                            kind: TerminatorKind::SwitchInt {
+                                discr: second_cond,
+                                targets: [happy_path, fail_path],
+                            },
+                            span,
+                        });
+
+                        self.retrieve_bb(fail_path).statements.push(Statement {
+                            kind: StatementKind::Assign(
+                                result.clone(),
+                                Rvalue::Use(Operand::Const(Const::Lit(Lit {
+                                    kind: hir::LitKind::Int(0),
+                                    span,
+                                }))),
+                            ),
+                            span,
+                        });
+                        self.retrieve_bb(happy_path).statements.push(Statement {
+                            kind: StatementKind::Assign(
+                                result.clone(),
+                                Rvalue::Use(Operand::Const(Const::Lit(Lit {
+                                    kind: hir::LitKind::Int(1),
+                                    span,
+                                }))),
+                            ),
+                            span,
+                        });
+                        self.retrieve_bb(fail_path).terminator = Some(Terminator {
+                            kind: TerminatorKind::Goto { bb: next_block },
+                            span,
+                        });
+                        self.retrieve_bb(happy_path).terminator = Some(Terminator {
+                            kind: TerminatorKind::Goto { bb: next_block },
+                            span,
+                        });
+                        bb.set(next_block);
+
+                        Rvalue::Use(Operand::Place(result))
                     }
                 }
             }

@@ -86,6 +86,17 @@ pub enum BinOp {
     Shr,
 }
 
+impl BinOp {
+    const COMPARISONS: &[Self] = &[
+        BinOp::Eq,
+        BinOp::Le,
+        BinOp::Ge,
+        BinOp::Gt,
+        BinOp::Lt,
+        BinOp::Ne,
+    ];
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnOp {
     Not,
@@ -203,6 +214,11 @@ impl HirCtx<'_> {
         self.array_to_pointer_decay_if_array(&mut lhs);
         self.array_to_pointer_decay_if_array(&mut rhs);
 
+        if BinOp::COMPARISONS.contains(&bin_op) {
+            self.pointer_to_address_decay_if_pointer(&mut lhs);
+            self.pointer_to_address_decay_if_pointer(&mut rhs);
+        }
+
         'check_pointers: {
             if bin_op == BinOp::Add {
                 let lhs_is_ptr = lhs.ty.kind.is_ptr();
@@ -256,6 +272,25 @@ impl HirCtx<'_> {
         let ty = lhs.ty.clone(); // TODO: Care about casts
 
         Ok((ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)), ty))
+    }
+
+    fn pointer_to_address_decay_if_pointer(&mut self, expr: &mut Expr) {
+        if !expr.ty.kind.is_ptr() {
+            return;
+        }
+
+        let ty = Ty {
+            kind: TyKind::PrimTy(PrimTyKind::Int),
+            is_linear: false,
+            quals: vec![],
+            span: expr.span,
+        };
+
+        *expr = Expr {
+            span: expr.span,
+            kind: ExprKind::Cast(Box::new(expr.clone())),
+            ty,
+        };
     }
 
     fn array_to_pointer_decay_if_array(&mut self, expr: &mut Expr) {

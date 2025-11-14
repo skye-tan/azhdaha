@@ -692,9 +692,7 @@ impl HirCtx<'_> {
                     literal
                 };
 
-                if let Ok(value) = literal.parse() {
-                    LitKind::Int(value)
-                } else if let Some(stripped_literal) = literal.strip_prefix("0x") {
+                if let Some(stripped_literal) = literal.strip_prefix("0x") {
                     LitKind::Int(i128::from_str_radix(stripped_literal, 16)?)
                 } else if let Some(stripped_literal) = literal.strip_prefix("0X") {
                     LitKind::Int(i128::from_str_radix(stripped_literal, 16)?)
@@ -702,6 +700,14 @@ impl HirCtx<'_> {
                     LitKind::Int(i128::from_str_radix(stripped_literal, 2)?)
                 } else if let Some(stripped_literal) = literal.strip_prefix("0B") {
                     LitKind::Int(i128::from_str_radix(stripped_literal, 2)?)
+                } else if let Some(stripped_literal) = literal.strip_prefix("0") {
+                    if stripped_literal.is_empty() {
+                        LitKind::Int(0)
+                    } else {
+                        LitKind::Int(i128::from_str_radix(stripped_literal, 8)?)
+                    }
+                } else if let Ok(value) = literal.parse() {
+                    LitKind::Int(value)
                 } else {
                     LitKind::Float(literal.parse()?)
                 }

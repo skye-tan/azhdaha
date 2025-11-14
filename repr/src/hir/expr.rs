@@ -329,6 +329,8 @@ impl HirCtx<'_> {
                         arguments.push(
                             self.lower_to_expr_with_expected_type(cursor.node(), param.ty.clone())?,
                         );
+                    } else if sig.variadic_param {
+                        arguments.push(self.lower_to_expr(cursor.node())?);
                     } else {
                         bail!("Type error - too many arguments to call {sig:?}");
                     }

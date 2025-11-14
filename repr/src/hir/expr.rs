@@ -415,22 +415,22 @@ impl HirCtx<'_> {
 
                 let bin_op = self.lower_to_bin_op(node.child(1).unwrap())?;
 
-                let rhs =
-                    self.lower_to_expr_with_expected_type(node.child(2).unwrap(), lhs.ty.clone())?;
-
-                let ty = rhs.ty.clone();
+                let ty = lhs.ty.clone();
 
                 (
                     match bin_op {
-                        None => ExprKind::Assign(Box::new(lhs), Box::new(rhs)),
-                        Some(bin_op) => ExprKind::Assign(
-                            Box::new(lhs.clone()),
-                            Box::new(Expr {
-                                kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
-                                span,
-                                ty: ty.clone(),
-                            }),
-                        ),
+                        None => {
+                            let rhs = self.lower_to_expr_with_expected_type(
+                                node.child(2).unwrap(),
+                                lhs.ty.clone(),
+                            )?;
+                            ExprKind::Assign(Box::new(lhs), Box::new(rhs))
+                        }
+                        Some(bin_op) => {
+                            let rhs = self.lower_to_expr(node.child(2).unwrap())?;
+                            let (kind, ty) = self.lower_bin_op(lhs.clone(), rhs, bin_op, span)?;
+                            ExprKind::Assign(Box::new(lhs), Box::new(Expr { kind, span, ty }))
+                        }
                     },
                     ty,
                 )

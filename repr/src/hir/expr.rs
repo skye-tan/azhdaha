@@ -122,6 +122,23 @@ impl HirCtx<'_> {
         })
     }
 
+    pub(crate) fn lower_to_cond_expr(&mut self, node: Node) -> anyhow::Result<Expr> {
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
+        self.lower_to_expr_with_expected_type(
+            node,
+            Ty {
+                kind: TyKind::PrimTy(PrimTyKind::Bool),
+                is_linear: false,
+                quals: vec![],
+                span,
+            },
+        )
+    }
+
     pub(crate) fn lower_to_expr(&mut self, node: Node) -> anyhow::Result<Expr> {
         trace!("[HIR/Expr] Lowering '{}'", node.kind());
 
@@ -594,7 +611,7 @@ impl HirCtx<'_> {
                 (ExprKind::Comma(exprs), ty)
             }
             constants::CONDITIONAL_EXPRESSION => {
-                let cond_expr = self.lower_to_expr(node.child(0).unwrap())?;
+                let cond_expr = self.lower_to_cond_expr(node.child(0).unwrap())?;
 
                 let body_expr = self.lower_to_expr(node.child(2).unwrap())?;
 

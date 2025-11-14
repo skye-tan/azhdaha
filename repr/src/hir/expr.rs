@@ -314,8 +314,13 @@ impl HirCtx<'_> {
 
                 let path = self.lower_to_expr(cursor.node())?;
 
-                let TyKind::Func { sig } = &path.ty.kind else {
-                    bail!("Type error: invalid call to non function type");
+                let sig = match &path.ty.kind {
+                    TyKind::Func { sig } => sig,
+                    TyKind::Ptr { kind, quals: _ } => match &**kind {
+                        TyKind::Func { sig } => sig,
+                        _ => bail!("Type error: invalid call to pointer of non function type."),
+                    },
+                    _ => bail!("Type error: invalid call to non function type."),
                 };
 
                 let mut arguments = vec![];

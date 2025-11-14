@@ -10,11 +10,77 @@ use crate::hir::{
 #[derive(Debug, Clone)]
 pub struct Body<'mir> {
     pub symbol_resolver: &'mir Resolver<SymbolKind>,
+    pub type_tag_resolver: &'mir Resolver<CompoundTypeData>,
 
     pub local_decls: Arena<LocalDecl>,
     pub basic_blocks: Arena<BasicBlockData>,
 
     pub span: Span,
+}
+
+impl Body<'_> {
+    pub fn type_of_operand(&self, operand: &Operand) -> TyKind {
+        match operand {
+            Operand::Place(place) => self.type_of_place(place),
+            Operand::Const(konst) => match konst {
+                Const::Lit(lit) => match lit.kind {
+                    crate::hir::LitKind::Str(_) => todo!(),
+                    crate::hir::LitKind::Char(_) => todo!(),
+                    crate::hir::LitKind::Int(_) => todo!(),
+                    crate::hir::LitKind::Float(_) => todo!(),
+                },
+                Const::Symbol(idx) => match self.symbol_resolver.get_data_by_res(idx) {
+                    SymbolKind::Var(var_decl) => var_decl.ty.kind.clone(),
+                    SymbolKind::Func(func_decl) => TyKind::Func {
+                        sig: Box::new(func_decl.sig.clone()),
+                    },
+                    _ => todo!(),
+                },
+                Const::Sizeof(_) => todo!(),
+            },
+        }
+    }
+
+    /// # Panics
+    /// Panics if the body contains invalid types. A panic here is equivalent to a bug in the mir generation.
+    pub fn type_of_place(&self, place: &Place) -> TyKind {
+        let mut ty = self.local_decls[place.local].ty.kind.clone();
+        for proj in &place.projections {
+            match proj {
+                PlaceElem::Field(field_name) => {
+                    let idx = match ty {
+                        TyKind::Struct(idx) | TyKind::Union(idx) => idx,
+                        _ => panic!("Invalid mir: field {field_name} of non-compound type."),
+                    };
+                    let data = self.type_tag_resolver.get_data_by_res(&idx);
+                    let fields = match data {
+                        CompoundTypeData::Struct { fields }
+                        | CompoundTypeData::Union { fields } => fields,
+                        CompoundTypeData::Enum => {
+                            panic!("Invalid mir: field of enum.")
+                        }
+                        CompoundTypeData::DeclaredOnly => {
+                            panic!("Invalid mir: field of declare only struct.")
+                        }
+                    };
+                    let field = fields
+                        .iter()
+                        .find(|x| x.ident.name == *field_name)
+                        .expect("Invalid mir: unknown field");
+                    ty = field.ty.kind.clone();
+                }
+                PlaceElem::Index(_) => todo!(),
+                PlaceElem::Deref => {
+                    if let TyKind::Ptr { kind, quals: _ } = ty {
+                        ty = *kind;
+                    } else {
+                        panic!("Invalid mir: deref of non-ptr type.");
+                    }
+                }
+            }
+        }
+        ty
+    }
 }
 
 pub type Local = Idx<LocalDecl>;

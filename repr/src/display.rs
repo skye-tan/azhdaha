@@ -196,7 +196,7 @@ impl MirDisplay for Operand {
                         SymbolKind::EnumVariant { value, span: _ } => format!("Enum({value})"),
                     }
                 }
-                Const::Sizeof => "sizeof".to_owned(),
+                Const::Sizeof(ty) => format!("sizeof({})", ty.mir_display(body)),
             },
         }
     }

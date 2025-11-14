@@ -10,6 +10,7 @@ itertools.workspace = true
 la-arena.workspace = true
 log.workspace = true
 tree-sitter.workspace = true
+unescaper = "0.1.6"
 
 [lints]
 workspace = true

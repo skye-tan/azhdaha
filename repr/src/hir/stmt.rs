@@ -338,11 +338,43 @@ impl HirCtx<'_> {
                     loop_end:
                 */
 
-                let decl_stmt = self.lower_to_stmt(node.child(2).unwrap())?;
+                let decl_stmt = match node.child_by_field_name("initializer") {
+                    Some(init) => {
+                        if init.kind() == constants::DECLARATION {
+                            self.lower_to_stmt(init)?
+                        } else {
+                            Stmt {
+                                kind: StmtKind::Expr(self.lower_to_cond_expr(init)?),
+                                span,
+                            }
+                        }
+                    }
+                    None => Stmt {
+                        kind: StmtKind::Noop,
+                        span,
+                    },
+                };
 
-                let cond_expr = self.lower_to_cond_expr(node.child(3).unwrap())?;
+                let cond_expr =
+                    self.lower_to_cond_expr(node.child_by_field_name("condition").unwrap())?;
 
-                let update_expr = self.lower_to_expr(node.child(5).unwrap())?;
+                let update_expr = match node.child_by_field_name("update") {
+                    Some(update) => {
+                        dbg!(update.to_sexp());
+
+                        self.lower_to_expr(update)?
+                    }
+                    None => Expr {
+                        kind: ExprKind::Empty,
+                        ty: Ty {
+                            kind: TyKind::PrimTy(PrimTyKind::Void),
+                            is_linear: false,
+                            quals: vec![],
+                            span,
+                        },
+                        span,
+                    },
+                };
 
                 let loop_start = format!("loop_start_{}_{}", span.lo, span.hi);
                 let loop_start_label = self.label_resolver.insert_symbol(loop_start.clone(), ());
@@ -356,7 +388,7 @@ impl HirCtx<'_> {
 
                 let saved_symbol_resolver = self.symbol_resolver.clone();
 
-                let body_stmt = self.lower_to_stmt(node.child(7).unwrap())?;
+                let body_stmt = self.lower_to_stmt(node.child_by_field_name("body").unwrap())?;
 
                 self.start_label = saved_start_label;
                 self.end_label = saved_end_label;

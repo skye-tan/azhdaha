@@ -67,7 +67,7 @@ impl TyKind {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PrimTyKind {
     Bool,
     Char,

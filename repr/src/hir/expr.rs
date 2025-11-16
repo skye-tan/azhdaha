@@ -395,7 +395,44 @@ impl HirCtx<'_> {
                             self.lower_to_expr_with_expected_type(cursor.node(), param.ty.clone())?,
                         );
                     } else if sig.variadic_param {
-                        arguments.push(self.lower_to_expr(cursor.node())?);
+                        let mut expr = self.lower_to_expr(cursor.node())?;
+                        match &expr.ty.kind {
+                            TyKind::PrimTy(prim_ty_kind) => {
+                                let target = match prim_ty_kind {
+                                    PrimTyKind::Bool => PrimTyKind::Int,
+                                    PrimTyKind::Char => PrimTyKind::Int,
+                                    PrimTyKind::Int => PrimTyKind::Int,
+                                    PrimTyKind::Float => PrimTyKind::Double,
+                                    PrimTyKind::Double => PrimTyKind::Double,
+                                    PrimTyKind::Void => {
+                                        bail!(
+                                            "Type error - can not pass void to variadic functino."
+                                        )
+                                    }
+                                };
+                                if target != *prim_ty_kind {
+                                    expr = Expr {
+                                        kind: ExprKind::Cast(Box::new(expr)),
+                                        ty: Ty {
+                                            kind: TyKind::PrimTy(target),
+                                            is_linear: false,
+                                            quals: vec![],
+                                            span,
+                                        },
+                                        span,
+                                    }
+                                }
+                            }
+                            TyKind::Ptr { .. } => (),
+                            TyKind::Array { .. } => {
+                                expr = self.array_to_pointer_decay(expr);
+                            }
+                            _ => bail!(
+                                "Type error - can not pass {} as variadic argument.",
+                                &expr.ty
+                            ),
+                        }
+                        arguments.push(expr);
                     } else {
                         bail!("Type error - too many arguments to call {sig:?}");
                     }
@@ -663,7 +700,7 @@ impl HirCtx<'_> {
                     },
                     LitKind::Char(_) => TyKind::PrimTy(PrimTyKind::Char),
                     LitKind::Int(_) => TyKind::PrimTy(PrimTyKind::Int),
-                    LitKind::Float(_) => TyKind::PrimTy(PrimTyKind::Float),
+                    LitKind::Float(_) => TyKind::PrimTy(PrimTyKind::Double),
                 };
                 (
                     ExprKind::Lit(lit),

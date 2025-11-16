@@ -286,8 +286,16 @@ impl HirCtx<'_> {
             }
         }
 
-        let ty = lhs.ty.clone(); // TODO: Care about casts
-
+        let ty = if BinOp::COMPARISONS.contains(&bin_op) {
+            Ty {
+                kind: TyKind::PrimTy(PrimTyKind::Bool),
+                is_linear: false,
+                quals: vec![],
+                span,
+            }
+        } else {
+            lhs.ty.clone()
+        };
         Ok((ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)), ty))
     }
 

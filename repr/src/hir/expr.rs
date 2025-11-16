@@ -286,6 +286,39 @@ impl HirCtx<'_> {
             }
         }
 
+        let TyKind::PrimTy(lhs_ty) = lhs.ty.kind else {
+            bail!("Type error - can not use binop on type {}", lhs.ty);
+        };
+        let TyKind::PrimTy(rhs_ty) = rhs.ty.kind else {
+            bail!("Type error - can not use binop on type {}", rhs.ty);
+        };
+
+        let max_ty_kind = lhs_ty.max(rhs_ty);
+        if max_ty_kind == PrimTyKind::Void {
+            bail!("Type error - can not use binop on void.");
+        }
+        let max_ty = || Ty {
+            kind: TyKind::PrimTy(max_ty_kind),
+            is_linear: false,
+            quals: vec![],
+            span,
+        };
+
+        if lhs_ty != max_ty_kind {
+            lhs = Expr {
+                kind: ExprKind::Cast(Box::new(lhs)),
+                ty: max_ty(),
+                span,
+            };
+        }
+        if rhs_ty != max_ty_kind {
+            rhs = Expr {
+                kind: ExprKind::Cast(Box::new(rhs)),
+                ty: max_ty(),
+                span,
+            };
+        }
+
         let ty = if BinOp::COMPARISONS.contains(&bin_op) {
             Ty {
                 kind: TyKind::PrimTy(PrimTyKind::Bool),
@@ -530,8 +563,20 @@ impl HirCtx<'_> {
                         }
                         Some(bin_op) => {
                             let rhs = self.lower_to_expr(node.child(2).unwrap())?;
-                            let (kind, ty) = self.lower_bin_op(lhs.clone(), rhs, bin_op, span)?;
-                            ExprKind::Assign(Box::new(lhs), Box::new(Expr { kind, span, ty }))
+                            let (kind, binop_ty) =
+                                self.lower_bin_op(lhs.clone(), rhs, bin_op, span)?;
+                            ExprKind::Assign(
+                                Box::new(lhs),
+                                Box::new(Expr {
+                                    kind: ExprKind::Cast(Box::new(Expr {
+                                        kind,
+                                        span,
+                                        ty: binop_ty,
+                                    })),
+                                    ty: ty.clone(),
+                                    span,
+                                }),
+                            )
                         }
                     },
                     ty,

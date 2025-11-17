@@ -175,6 +175,8 @@ impl<'mir> MirCtx<'mir> {
             | hir::ExprKind::Lit(..)
             | hir::ExprKind::Local(..)
             | hir::ExprKind::Assign(..)
+            | hir::ExprKind::AssignWithBinOp(..)
+            | hir::ExprKind::AssignPtrOffset(..)
             | hir::ExprKind::Cond(..)
             | hir::ExprKind::Sizeof(..)
             | hir::ExprKind::Field(..) => Rvalue::Use(self.lower_to_operand(expr, bb, stmt_span)),

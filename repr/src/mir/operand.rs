@@ -24,6 +24,99 @@ impl<'mir> MirCtx<'mir> {
                 }),
                 None => Operand::Const(Const::Symbol(*symbol)),
             },
+            hir::ExprKind::AssignWithBinOp(
+                lhs_expr,
+                rhs_expr,
+                binop,
+                binop_ty,
+                return_semantics,
+            ) => {
+                let binop = match MirBinOp::from_hir(*binop) {
+                    MirBinOp::IntBinOp(int_bin_op) => int_bin_op,
+                    MirBinOp::ShortCircuitBinOp(_) => {
+                        panic!("Invalid binop for assignment.")
+                    }
+                };
+
+                let lhs = self.lower_to_place(lhs_expr, bb, stmt_span);
+
+                let rhs = self.lower_to_operand(rhs_expr, bb, stmt_span);
+
+                let temp = self.alloc_temp_place(stmt_span, binop_ty.clone());
+                let old_lhs = self.alloc_temp_place(stmt_span, binop_ty.clone());
+
+                let bb_data = self.retrieve_bb(*bb);
+
+                bb_data.statements.push(Statement {
+                    kind: StatementKind::Assign(
+                        old_lhs.clone(),
+                        Rvalue::Cast {
+                            value: Operand::Place(lhs.clone()),
+                            from_type: expr.ty.kind.clone(),
+                            to_type: binop_ty.kind.clone(),
+                        },
+                    ),
+                    span: stmt_span,
+                });
+
+                bb_data.statements.push(Statement {
+                    kind: StatementKind::Assign(
+                        temp.clone(),
+                        Rvalue::BinaryOp(binop, Operand::Place(old_lhs.clone()), rhs),
+                    ),
+                    span: stmt_span,
+                });
+
+                bb_data.statements.push(Statement {
+                    kind: StatementKind::Assign(
+                        lhs.clone(),
+                        Rvalue::Cast {
+                            value: Operand::Place(temp),
+                            from_type: binop_ty.kind.clone(),
+                            to_type: expr.ty.kind.clone(),
+                        },
+                    ),
+                    span: stmt_span,
+                });
+
+                match return_semantics {
+                    hir::ReturnSemantic::AfterAssign => Operand::Place(lhs),
+                    hir::ReturnSemantic::BeforeAssign => Operand::Place(old_lhs),
+                }
+            }
+            hir::ExprKind::AssignPtrOffset(lhs_expr, rhs_expr, return_semantics) => {
+                let lhs = self.lower_to_place(lhs_expr, bb, stmt_span);
+
+                let rhs = self.lower_to_place(rhs_expr, bb, stmt_span);
+
+                let mut offsetted_lhs = lhs.clone();
+                offsetted_lhs.projections.push(PlaceElem::Index(rhs));
+
+                let old_lhs = self.alloc_temp_place(stmt_span, expr.ty.clone());
+
+                let bb_data = self.retrieve_bb(*bb);
+
+                bb_data.statements.push(Statement {
+                    kind: StatementKind::Assign(
+                        old_lhs.clone(),
+                        Rvalue::Use(Operand::Place(lhs.clone())),
+                    ),
+                    span: stmt_span,
+                });
+
+                bb_data.statements.push(Statement {
+                    kind: StatementKind::Assign(
+                        lhs.clone(),
+                        Rvalue::Use(Operand::Place(offsetted_lhs)),
+                    ),
+                    span: stmt_span,
+                });
+
+                match return_semantics {
+                    hir::ReturnSemantic::AfterAssign => Operand::Place(lhs),
+                    hir::ReturnSemantic::BeforeAssign => Operand::Place(old_lhs),
+                }
+            }
             hir::ExprKind::Assign(lhs_expr, rhs_expr) => {
                 let place = self.lower_to_place(lhs_expr, bb, stmt_span);
 

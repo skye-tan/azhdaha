@@ -1,6 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use std::mem;
+use std::{collections::HashMap, mem};
 
 use anyhow::bail;
 use la_arena::Idx;
@@ -13,13 +13,13 @@ use super::{
     resolver::{Resolver, Symbol, SymbolKind},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Item {
     pub kind: ItemKind,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum ItemKind {
     Func(Box<FuncDef>),
     Decl(Vec<Symbol>),
@@ -28,20 +28,18 @@ pub enum ItemKind {
     Empty,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct FuncDef {
-    pub symbol_resolver: Resolver<SymbolKind>,
     pub label_resolver: Resolver<()>,
 
+    pub arguments_symbols: HashMap<String, Symbol>,
     pub symbol: Symbol,
     pub body: Stmt,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Block {
-    pub symbol_resolver: Resolver<SymbolKind>,
-
     pub stmts: Vec<Stmt>,
     pub span: Span,
 }
@@ -123,7 +121,7 @@ impl HirCtx<'_> {
             hi: node.end_byte(),
         };
 
-        let mut saved_symbol_resolver = self.symbol_resolver.clone();
+        let saved_symbol_resolver = self.symbol_resolver.open_new_scope();
 
         let func_decl = self.lower_to_func_decl(node)?;
 
@@ -135,20 +133,26 @@ impl HirCtx<'_> {
             SymbolKind::Func(func_decl.clone()),
         );
 
+        let mut arguments_symbols = HashMap::new();
+
         for param in &func_decl.sig.params {
             if let Some(ident) = &param.ident {
-                _ = self
-                    .symbol_resolver
-                    .insert_symbol(ident.name.clone(), SymbolKind::Param(param.clone()));
+                arguments_symbols.insert(
+                    ident.name.clone(),
+                    self.symbol_resolver
+                        .insert_symbol(ident.name.clone(), SymbolKind::Param(param.clone())),
+                );
             }
         }
 
-        let symbol = saved_symbol_resolver
-            .insert_symbol(func_decl.ident.name.clone(), SymbolKind::Func(func_decl));
-
         let body = self.lower_to_stmt(node.child(node.child_count() - 1).unwrap());
 
-        let symbol_resolver = mem::replace(&mut self.symbol_resolver, saved_symbol_resolver);
+        self.symbol_resolver
+            .restore_prev_scope(saved_symbol_resolver);
+        let symbol = self
+            .symbol_resolver
+            .insert_symbol(func_decl.ident.name.clone(), SymbolKind::Func(func_decl));
+
         let label_resolver = mem::take(&mut self.label_resolver);
         self.return_ty = None;
 
@@ -156,8 +160,8 @@ impl HirCtx<'_> {
         let body = body?;
 
         Ok(FuncDef {
-            symbol_resolver,
             label_resolver,
+            arguments_symbols,
             symbol,
             body,
             span,
@@ -172,7 +176,7 @@ impl HirCtx<'_> {
             hi: node.end_byte(),
         };
 
-        let saved_symbol_resolver = self.symbol_resolver.clone();
+        let saved_symbol_resolver = self.symbol_resolver.open_new_scope();
 
         let mut stmts = vec![];
 
@@ -188,12 +192,9 @@ impl HirCtx<'_> {
             cursor.goto_next_sibling();
         }
 
-        let symbol_resolver = mem::replace(&mut self.symbol_resolver, saved_symbol_resolver);
+        self.symbol_resolver
+            .restore_prev_scope(saved_symbol_resolver);
 
-        Ok(Block {
-            symbol_resolver,
-            stmts,
-            span,
-        })
+        Ok(Block { stmts, span })
     }
 }

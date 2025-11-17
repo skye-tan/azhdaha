@@ -37,7 +37,7 @@ fn main() -> anyhow::Result<()> {
 
     for ast_repr in ast_reprs {
         let hir_ctx = HirCtx::new(&ast_repr);
-        let (items, _, type_tag_resolver) = hir_ctx.lower_to_hir();
+        let (items, symbol_resolver, type_tag_resolver) = hir_ctx.lower_to_hir();
 
         let linear_ctx = LinearCtx::new(&ast_repr.source_info.path, &ast_repr.source_info.code)?;
 
@@ -47,7 +47,7 @@ fn main() -> anyhow::Result<()> {
             };
 
             let mir_ctx = MirCtx::new(
-                &func_def.symbol_resolver,
+                &symbol_resolver,
                 &func_def.label_resolver,
                 &type_tag_resolver,
                 func_def.body.span,

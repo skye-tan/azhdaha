@@ -38,7 +38,7 @@ pub enum TyKind {
     },
     Array {
         kind: Box<TyKind>,
-        size: Option<Box<Expr>>,
+        size: (),
     },
     Func {
         sig: Box<FuncSig>,
@@ -206,7 +206,7 @@ impl HirCtx<'_> {
 
                     kind = TyKind::Array {
                         kind: Box::new(kind),
-                        size,
+                        size: (),
                     }
                 }
                 constants::PARENTHESIZED_DECLARATOR => continue,
@@ -301,7 +301,7 @@ impl HirCtx<'_> {
 
                     ty_kind = TyKind::Array {
                         kind: Box::new(ty_kind),
-                        size,
+                        size: (),
                     }
                 }
                 constants::FUNCTION_DECLARATOR

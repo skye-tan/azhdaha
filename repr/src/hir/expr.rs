@@ -11,14 +11,32 @@ use crate::hir::{
 
 use super::{constants, resolver::Symbol};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Expr {
     pub kind: ExprKind,
     pub ty: Ty,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+impl Expr {
+    fn take(&mut self) -> Expr {
+        Expr {
+            kind: self.kind.take(),
+            ty: self.ty.clone(),
+            span: self.span,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ReturnSemantic {
+    /// For x += 1 and ++x
+    AfterAssign,
+    /// For x++
+    BeforeAssign,
+}
+
+#[derive(Debug)]
 pub enum ExprKind {
     Lit(Lit),
     Local(Symbol),
@@ -26,9 +44,11 @@ pub enum ExprKind {
     Binary(BinOp, Box<Expr>, Box<Expr>),
     Unary(UnOp, Box<Expr>),
     Assign(Box<Expr>, Box<Expr>),
+    AssignWithBinOp(Box<Expr>, Box<Expr>, BinOp, Ty, ReturnSemantic),
     Field(Box<Expr>, Ident),
     PtrOffset(Box<Expr>, Box<Expr>),
     PtrDiff(Box<Expr>, Box<Expr>),
+    AssignPtrOffset(Box<Expr>, Box<Expr>, ReturnSemantic),
     Cast(Box<Expr>),
     Array(Vec<Expr>),
     Comma(Vec<Expr>),
@@ -38,13 +58,19 @@ pub enum ExprKind {
     Empty,
 }
 
-#[derive(Debug, Clone)]
+impl ExprKind {
+    fn take(&mut self) -> ExprKind {
+        std::mem::replace(self, ExprKind::Empty)
+    }
+}
+
+#[derive(Debug)]
 pub struct Sizeof {
     pub kind: SizeofKind,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum SizeofKind {
     Ty(Ty),
     Expr(Box<Expr>),
@@ -227,8 +253,13 @@ impl HirCtx<'_> {
         mut rhs: Expr,
         bin_op: BinOp,
         span: Span,
+        is_assignment: bool,
     ) -> anyhow::Result<(ExprKind, Ty)> {
-        self.array_to_pointer_decay_if_array(&mut lhs);
+        if is_assignment && lhs.ty.kind.is_array() {
+            bail!("Type error - can not run binop on arrays.");
+        } else {
+            self.array_to_pointer_decay_if_array(&mut lhs);
+        }
         self.array_to_pointer_decay_if_array(&mut rhs);
 
         if BinOp::COMPARISONS.contains(&bin_op) {
@@ -269,6 +300,9 @@ impl HirCtx<'_> {
                     }
                     (true, false) => lhs.ty.clone(),
                     (false, true) => {
+                        if is_assignment {
+                            bail!("Type error - can not rotate arguments in assignment.");
+                        }
                         std::mem::swap(&mut lhs, &mut rhs);
                         lhs.ty.clone()
                     }
@@ -304,7 +338,7 @@ impl HirCtx<'_> {
             span,
         };
 
-        if lhs_ty != max_ty_kind {
+        if lhs_ty != max_ty_kind && !is_assignment {
             lhs = Expr {
                 kind: ExprKind::Cast(Box::new(lhs)),
                 ty: max_ty(),
@@ -327,7 +361,7 @@ impl HirCtx<'_> {
                 span,
             }
         } else {
-            lhs.ty.clone()
+            rhs.ty.clone()
         };
         Ok((ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)), ty))
     }
@@ -346,7 +380,7 @@ impl HirCtx<'_> {
 
         *expr = Expr {
             span: expr.span,
-            kind: ExprKind::Cast(Box::new(expr.clone())),
+            kind: ExprKind::Cast(Box::new(expr.take())),
             ty,
         };
     }
@@ -355,7 +389,7 @@ impl HirCtx<'_> {
         if !expr.ty.kind.is_array() {
             return;
         }
-        *expr = self.array_to_pointer_decay(expr.clone());
+        *expr = self.array_to_pointer_decay(expr.take());
     }
 
     fn array_to_pointer_decay(&mut self, expr: Expr) -> Expr {
@@ -486,21 +520,21 @@ impl HirCtx<'_> {
 
                 let rhs = self.lower_to_expr(node.child(2).unwrap())?;
 
-                self.lower_bin_op(lhs, rhs, bin_op, span)?
+                self.lower_bin_op(lhs, rhs, bin_op, span, false)?
             }
             constants::UPDATE_EXPRESSION => {
-                let (lhs, bin_op) = if let Ok(bin_op) = self.lower_to_bin_op(node.child(1).unwrap())
-                {
-                    let lhs = self.lower_to_expr(node.child(0).unwrap())?;
+                let (lhs, bin_op, return_semantic) =
+                    if let Ok(bin_op) = self.lower_to_bin_op(node.child(1).unwrap()) {
+                        let lhs = self.lower_to_expr(node.child(0).unwrap())?;
 
-                    (lhs, bin_op)
-                } else {
-                    let bin_op = self.lower_to_bin_op(node.child(0).unwrap())?;
+                        (lhs, bin_op, ReturnSemantic::BeforeAssign)
+                    } else {
+                        let bin_op = self.lower_to_bin_op(node.child(0).unwrap())?;
 
-                    let lhs = self.lower_to_expr(node.child(1).unwrap())?;
+                        let lhs = self.lower_to_expr(node.child(1).unwrap())?;
 
-                    (lhs, bin_op)
-                };
+                        (lhs, bin_op, ReturnSemantic::AfterAssign)
+                    };
 
                 let rhs = Expr {
                     kind: ExprKind::Lit(Lit {
@@ -508,23 +542,30 @@ impl HirCtx<'_> {
                         span,
                     }),
                     span,
-                    ty: lhs.ty.clone(), // TODO: probably wrong
+                    ty: Ty {
+                        kind: TyKind::PrimTy(PrimTyKind::Int),
+                        is_linear: false,
+                        quals: vec![],
+                        span,
+                    },
                 };
 
                 let ty = lhs.ty.clone();
                 let bin_op = bin_op.expect("Assignment isn't valid operator for update?");
 
-                (
-                    ExprKind::Assign(
-                        Box::new(lhs.clone()),
-                        Box::new(Expr {
-                            kind: ExprKind::Binary(bin_op, Box::new(lhs), Box::new(rhs)),
-                            span,
-                            ty: ty.clone(),
-                        }),
+                let (kind, binop_ty) = self.lower_bin_op(lhs, rhs, bin_op, span, true)?;
+                match kind {
+                    ExprKind::Binary(bin_op, lhs, rhs) => (
+                        ExprKind::AssignWithBinOp(lhs, rhs, bin_op, binop_ty, return_semantic),
+                        ty,
                     ),
-                    ty,
-                )
+                    ExprKind::PtrOffset(lhs, rhs) => {
+                        (ExprKind::AssignPtrOffset(lhs, rhs, return_semantic), ty)
+                    }
+                    _ => {
+                        unreachable!();
+                    }
+                }
             }
             constants::UNARY_EXPRESSION | constants::POINTER_EXPRESSION => {
                 let un_op = self.lower_to_un_op(node.child(0).unwrap())?;
@@ -564,19 +605,22 @@ impl HirCtx<'_> {
                         Some(bin_op) => {
                             let rhs = self.lower_to_expr(node.child(2).unwrap())?;
                             let (kind, binop_ty) =
-                                self.lower_bin_op(lhs.clone(), rhs, bin_op, span)?;
-                            ExprKind::Assign(
-                                Box::new(lhs),
-                                Box::new(Expr {
-                                    kind: ExprKind::Cast(Box::new(Expr {
-                                        kind,
-                                        span,
-                                        ty: binop_ty,
-                                    })),
-                                    ty: ty.clone(),
-                                    span,
-                                }),
-                            )
+                                self.lower_bin_op(lhs, rhs, bin_op, span, true)?;
+                            match kind {
+                                ExprKind::Binary(bin_op, lhs, rhs) => ExprKind::AssignWithBinOp(
+                                    lhs,
+                                    rhs,
+                                    bin_op,
+                                    binop_ty,
+                                    ReturnSemantic::AfterAssign,
+                                ),
+                                ExprKind::PtrOffset(lhs, rhs) => {
+                                    ExprKind::AssignPtrOffset(lhs, rhs, ReturnSemantic::AfterAssign)
+                                }
+                                _ => {
+                                    unreachable!();
+                                }
+                            }
                         }
                     },
                     ty,
@@ -630,7 +674,7 @@ impl HirCtx<'_> {
                 let index = self.lower_to_expr(node.child(2).unwrap())?;
 
                 let a_plus_i = {
-                    let (kind, ty) = self.lower_bin_op(target, index, BinOp::Add, span)?;
+                    let (kind, ty) = self.lower_bin_op(target, index, BinOp::Add, span, false)?;
                     Expr { kind, ty, span }
                 };
                 self.lower_un_op(a_plus_i, UnOp::Deref, span)?
@@ -672,7 +716,7 @@ impl HirCtx<'_> {
                 let ty = Ty {
                     kind: TyKind::Array {
                         kind: Box::new(TyKind::PrimTy(PrimTyKind::Void)), // TODO: non sense
-                        size: None, // TODO: Why this has type Expr?
+                        size: (),
                     },
                     is_linear: false,
                     quals: vec![],

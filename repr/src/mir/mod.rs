@@ -35,7 +35,6 @@ pub struct MirCtx<'mir> {
     pub label_resolver: &'mir Resolver<()>,
 
     pub body: Body<'mir>,
-    pub has_inner_symbol_resolver: bool,
 
     pub bb_map: HashMap<Label, BasicBlock>,
     pub local_map: HashMap<Symbol, Local>,
@@ -58,7 +57,6 @@ impl<'mir> MirCtx<'mir> {
                 basic_blocks: Arena::new(),
                 span,
             },
-            has_inner_symbol_resolver: false,
 
             local_map: HashMap::new(),
             bb_map: HashMap::new(),
@@ -83,10 +81,9 @@ impl<'mir> MirCtx<'mir> {
 
         for param in &func_dec.sig.params {
             if let Some(ident) = &param.ident {
-                let symbol = self
-                    .body
-                    .symbol_resolver
-                    .get_res_by_name(&ident.name)
+                let symbol = *func_def
+                    .arguments_symbols
+                    .get(&ident.name)
                     .context(format!(
                         "Parameter {} have not been inserted into resolver.",
                         ident.name

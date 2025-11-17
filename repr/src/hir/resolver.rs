@@ -9,7 +9,7 @@ use crate::hir::*;
 pub type Label = Idx<()>;
 pub type Symbol = Idx<SymbolKind>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum SymbolKind {
     Var(VarDecl),
     Func(FuncDecl),
@@ -18,7 +18,7 @@ pub enum SymbolKind {
     EnumVariant { value: i32, span: Span },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum CompoundTypeData {
     Struct { fields: Vec<VarDecl> },
     Union { fields: Vec<VarDecl> },
@@ -50,7 +50,7 @@ impl SymbolKind {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Resolver<T> {
     pub arena: Arena<T>,
     pub map: HashMap<String, Idx<T>>,
@@ -89,6 +89,14 @@ impl<T: Debug> Resolver<T> {
     #[track_caller]
     pub fn get_data_by_res_mut(&mut self, res: &Idx<T>) -> &mut T {
         &mut self.arena[*res]
+    }
+
+    pub fn open_new_scope(&self) -> HashMap<String, Idx<T>> {
+        self.map.clone()
+    }
+
+    pub fn restore_prev_scope(&mut self, saved_map: HashMap<String, Idx<T>>) {
+        self.map = saved_map;
     }
 }
 

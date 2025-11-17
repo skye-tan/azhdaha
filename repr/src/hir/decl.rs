@@ -5,7 +5,7 @@ use log::trace;
 
 use crate::hir::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct VarDecl {
     pub storage: Option<Storage>,
     pub ident: Ident,

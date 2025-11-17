@@ -74,18 +74,11 @@ impl<'mir> MirCtx<'mir> {
                     panic!("Invalid gnu block last statement");
                 };
 
-                let saved_symbol_resolver = self.body.symbol_resolver;
-                self.body.symbol_resolver = &block.symbol_resolver;
-
                 for stmt in base {
                     self.lower_to_bb(stmt, bb);
                 }
 
-                let place = self.lower_to_place(last, bb, stmt_span);
-
-                self.body.symbol_resolver = saved_symbol_resolver;
-
-                place
+                self.lower_to_place(last, bb, stmt_span)
             }
             _ => {
                 let rvalue = self.lower_to_rvalue(expr, bb, stmt_span);

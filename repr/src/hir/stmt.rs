@@ -1,7 +1,5 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use std::mem;
-
 use anyhow::bail;
 use log::trace;
 
@@ -12,13 +10,13 @@ use super::{
     resolver::{Label, Symbol},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Stmt {
     pub kind: StmtKind,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum StmtKind {
     Block(Block),
     Expr(Expr),
@@ -141,7 +139,6 @@ impl HirCtx<'_> {
                 self.end_label = saved_end_label;
 
                 StmtKind::Block(Block {
-                    symbol_resolver: self.symbol_resolver.clone(),
                     stmts: vec![
                         body_stmt,
                         Stmt {
@@ -153,65 +150,66 @@ impl HirCtx<'_> {
                 })
             }
             constants::CASE_STATEMENT => {
-                let Some(switch_cond) = self.switch_cond.clone() else {
-                    bail!("Case statement outside of switch body.")
-                };
+                todo!()
+                // let Some(switch_cond) = self.switch_cond.clone() else {
+                //     bail!("Case statement outside of switch body.")
+                // };
 
-                match node.child(0).unwrap().kind() {
-                    constants::CASE => {
-                        let case_expr = self.lower_to_expr(node.child(1).unwrap())?;
+                // match node.child(0).unwrap().kind() {
+                //     constants::CASE => {
+                //         let case_expr = self.lower_to_expr(node.child(1).unwrap())?;
 
-                        let mut stmts = vec![];
+                //         let mut stmts = vec![];
 
-                        let mut cursor = node.walk();
+                //         let mut cursor = node.walk();
 
-                        for child in node.children(&mut cursor).skip(3) {
-                            stmts.push(self.lower_to_stmt(child)?);
-                        }
+                //         for child in node.children(&mut cursor).skip(3) {
+                //             stmts.push(self.lower_to_stmt(child)?);
+                //         }
 
-                        StmtKind::If(
-                            Expr {
-                                span: case_expr.span,
-                                ty: Ty {
-                                    kind: TyKind::PrimTy(PrimTyKind::Bool),
-                                    is_linear: false,
-                                    quals: vec![],
-                                    span: case_expr.span,
-                                },
-                                kind: ExprKind::Binary(
-                                    BinOp::Eq,
-                                    Box::new(switch_cond),
-                                    Box::new(case_expr),
-                                ),
-                            },
-                            Box::new(Stmt {
-                                kind: StmtKind::Block(Block {
-                                    symbol_resolver: self.symbol_resolver.clone(),
-                                    stmts,
-                                    span,
-                                }),
-                                span,
-                            }),
-                            None,
-                        )
-                    }
-                    constants::DEFAULT => {
-                        let mut stmts = vec![];
+                //         StmtKind::If(
+                //             Expr {
+                //                 span: case_expr.span,
+                //                 ty: Ty {
+                //                     kind: TyKind::PrimTy(PrimTyKind::Bool),
+                //                     is_linear: false,
+                //                     quals: vec![],
+                //                     span: case_expr.span,
+                //                 },
+                //                 kind: ExprKind::Binary(
+                //                     BinOp::Eq,
+                //                     Box::new(switch_cond),
+                //                     Box::new(case_expr),
+                //                 ),
+                //             },
+                //             Box::new(Stmt {
+                //                 kind: StmtKind::Block(Block {
+                //                     symbol_resolver: self.symbol_resolver.clone(),
+                //                     stmts,
+                //                     span,
+                //                 }),
+                //                 span,
+                //             }),
+                //             None,
+                //         )
+                //     }
+                //     constants::DEFAULT => {
+                //         let mut stmts = vec![];
 
-                        let mut cursor = node.walk();
+                //         let mut cursor = node.walk();
 
-                        for child in node.children(&mut cursor).skip(2) {
-                            stmts.push(self.lower_to_stmt(child)?);
-                        }
+                //         for child in node.children(&mut cursor).skip(2) {
+                //             stmts.push(self.lower_to_stmt(child)?);
+                //         }
 
-                        StmtKind::Block(Block {
-                            symbol_resolver: self.symbol_resolver.clone(),
-                            stmts,
-                            span,
-                        })
-                    }
-                    kind => bail!("Unknown keyword '{kind}' in switch statement."),
-                }
+                //         StmtKind::Block(Block {
+                //             symbol_resolver: self.symbol_resolver.clone(),
+                //             stmts,
+                //             span,
+                //         })
+                //     }
+                //     kind => bail!("Unknown keyword '{kind}' in switch statement."),
+                // }
             }
             constants::WHILE_STATEMENT => {
                 /*
@@ -238,7 +236,6 @@ impl HirCtx<'_> {
                 self.end_label = saved_end_label;
 
                 StmtKind::Block(Block {
-                    symbol_resolver: self.symbol_resolver.clone(),
                     stmts: vec![
                         Stmt {
                             kind: StmtKind::Label(loop_start_label, None),
@@ -296,7 +293,6 @@ impl HirCtx<'_> {
                 self.end_label = saved_end_label;
 
                 StmtKind::Block(Block {
-                    symbol_resolver: self.symbol_resolver.clone(),
                     stmts: vec![
                         Stmt {
                             kind: StmtKind::Label(loop_start_label, None),
@@ -381,18 +377,17 @@ impl HirCtx<'_> {
                 let saved_end_label = self.end_label;
                 self.end_label = Some(loop_end_label);
 
-                let saved_symbol_resolver = self.symbol_resolver.clone();
+                let saved_symbol_resolver = self.symbol_resolver.open_new_scope();
 
                 let body_stmt = self.lower_to_stmt(node.child_by_field_name("body").unwrap())?;
 
                 self.start_label = saved_start_label;
                 self.end_label = saved_end_label;
 
-                let symbol_resolver =
-                    mem::replace(&mut self.symbol_resolver, saved_symbol_resolver);
+                self.symbol_resolver
+                    .restore_prev_scope(saved_symbol_resolver);
 
                 StmtKind::Block(Block {
-                    symbol_resolver,
                     stmts: vec![
                         decl_stmt,
                         Stmt {

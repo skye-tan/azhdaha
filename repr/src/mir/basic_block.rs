@@ -11,14 +11,6 @@ impl<'mir> MirCtx<'mir> {
 
         match &stmt.kind {
             hir::StmtKind::Block(block) => {
-                if !self.has_inner_symbol_resolver {
-                    self.body.symbol_resolver = &block.symbol_resolver;
-                    self.has_inner_symbol_resolver = true;
-                }
-
-                let saved_symbol_resolver = self.body.symbol_resolver;
-                self.body.symbol_resolver = &block.symbol_resolver;
-
                 for stmt in &block.stmts {
                     self.lower_to_bb(stmt, bb);
 
@@ -28,8 +20,6 @@ impl<'mir> MirCtx<'mir> {
                         );
                     }
                 }
-
-                self.body.symbol_resolver = saved_symbol_resolver;
             }
             hir::StmtKind::Expr(expr) => {
                 let rvalue = self.lower_to_rvalue(expr, bb, span);

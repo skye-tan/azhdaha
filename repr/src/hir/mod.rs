@@ -29,10 +29,20 @@ pub use item::*;
 pub use stmt::*;
 pub use ty::*;
 
+use crate::hir::resolver::Label;
+
 #[derive(Debug, Clone, Copy)]
 pub struct Span {
     pub lo: usize,
     pub hi: usize,
+}
+
+#[derive(Default)]
+pub struct SwitchData {
+    /// `case x:` with evaluated `x`.
+    cases: Vec<(i32, Label)>,
+    /// `default:`
+    default_case: Option<Label>,
 }
 
 pub struct HirCtx<'hir> {
@@ -42,7 +52,7 @@ pub struct HirCtx<'hir> {
 
     pub items: Vec<Item>,
 
-    pub switch_cond: Option<Expr>,
+    pub switch_cond: Option<SwitchData>,
     pub start_label: Option<resolver::Label>,
     pub end_label: Option<resolver::Label>,
 

@@ -198,7 +198,7 @@ impl HirCtx<'_> {
                     }
                 }
                 constants::ARRAY_DECLARATOR | constants::ABSTRACT_ARRAY_DECLARATOR => {
-                    let size = if decl_node.child_count() == 4 {
+                    let _size = if decl_node.child_count() == 4 {
                         Some(Box::new(self.lower_to_expr(decl_node.child(2).unwrap())?))
                     } else {
                         None
@@ -293,7 +293,7 @@ impl HirCtx<'_> {
                     }
                 }
                 constants::ARRAY_DECLARATOR | constants::ABSTRACT_ARRAY_DECLARATOR => {
-                    let size = if decl_node.child_count() == 4 {
+                    let _size = if decl_node.child_count() == 4 {
                         Some(Box::new(self.lower_to_expr(decl_node.child(2).unwrap())?))
                     } else {
                         None
@@ -360,7 +360,7 @@ impl HirCtx<'_> {
         Ok(idx)
     }
 
-    fn const_eval_enum_value(&self, node: Node<'_>) -> anyhow::Result<i32> {
+    pub(crate) fn const_eval_enum_value(&self, node: Node<'_>) -> anyhow::Result<i32> {
         match node.kind() {
             constants::NUMBER_LITERAL => {
                 let lit = self.lower_to_lit(node)?;

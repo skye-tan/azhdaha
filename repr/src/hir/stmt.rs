@@ -127,7 +127,7 @@ impl HirCtx<'_> {
             constants::SWITCH_STATEMENT => {
                 let cond_expr = self.lower_to_expr(node.child(1).unwrap())?;
 
-                let saved_switch_cond = self.switch_cond.replace(cond_expr);
+                let saved_switch_cond = self.switch_cond.replace(SwitchData::default());
 
                 let switch_end_label = self.label_resolver.insert_unnamed_symbol(());
                 let saved_end_label = self.end_label;
@@ -135,81 +135,119 @@ impl HirCtx<'_> {
 
                 let body_stmt = self.lower_to_stmt(node.child(2).unwrap())?;
 
+                let my_switch_data = self.switch_cond.take().unwrap();
                 self.switch_cond = saved_switch_cond;
                 self.end_label = saved_end_label;
 
-                StmtKind::Block(Block {
-                    stmts: vec![
-                        body_stmt,
-                        Stmt {
-                            kind: StmtKind::Label(switch_end_label, None),
+                let ty = cond_expr.ty.clone();
+
+                let cond_storage =
+                    self.symbol_resolver
+                        .insert_unnamed_symbol(SymbolKind::Var(VarDecl {
+                            storage: None,
+                            ident: Ident {
+                                name: "_switch_cond".to_owned(),
+                                span,
+                            },
+                            ty: ty.clone(),
+                            init: Some(cond_expr),
                             span,
-                        },
-                    ],
+                        }));
+
+                let mut stmts = vec![Stmt {
+                    kind: StmtKind::Decl(vec![cond_storage]),
                     span,
-                })
+                }];
+
+                for (cond, label) in my_switch_data.cases {
+                    stmts.push(Stmt {
+                        kind: StmtKind::If(
+                            Expr {
+                                kind: ExprKind::Binary(
+                                    BinOp::Eq,
+                                    Box::new(Expr {
+                                        kind: ExprKind::Local(cond_storage),
+                                        ty: ty.clone(),
+                                        span,
+                                    }),
+                                    Box::new(Expr {
+                                        kind: ExprKind::Lit(Lit {
+                                            kind: LitKind::Int(cond as i128),
+                                            span,
+                                        }),
+                                        ty: ty.clone(),
+                                        span,
+                                    }),
+                                ),
+                                ty: Ty {
+                                    kind: TyKind::PrimTy(PrimTyKind::Bool),
+                                    is_linear: false,
+                                    quals: vec![],
+                                    span,
+                                },
+                                span,
+                            },
+                            Box::new(Stmt {
+                                kind: StmtKind::Goto(label),
+                                span,
+                            }),
+                            None,
+                        ),
+                        span,
+                    });
+                }
+
+                stmts.push(Stmt {
+                    kind: StmtKind::Goto(my_switch_data.default_case.unwrap_or(switch_end_label)),
+                    span,
+                });
+                stmts.push(body_stmt);
+                stmts.push(Stmt {
+                    kind: StmtKind::Label(switch_end_label, None),
+                    span,
+                });
+
+                StmtKind::Block(Block { stmts, span })
             }
             constants::CASE_STATEMENT => {
-                todo!()
-                // let Some(switch_cond) = self.switch_cond.clone() else {
-                //     bail!("Case statement outside of switch body.")
-                // };
+                let Some(mut switch_data) = self.switch_cond.take() else {
+                    bail!("Case statement outside of switch body.")
+                };
 
-                // match node.child(0).unwrap().kind() {
-                //     constants::CASE => {
-                //         let case_expr = self.lower_to_expr(node.child(1).unwrap())?;
+                let label = self.label_resolver.insert_unnamed_symbol(());
 
-                //         let mut stmts = vec![];
+                let stmt_child_index = match node.child(0).unwrap().kind() {
+                    constants::CASE => {
+                        let case_value =
+                            self.const_eval_enum_value(node.child_by_field_name("value").unwrap())?;
+                        switch_data.cases.push((case_value, label));
+                        3
+                    }
+                    constants::DEFAULT => {
+                        if switch_data.default_case.is_some() {
+                            bail!("Duplicate default label in switch case.");
+                        }
+                        switch_data.default_case = Some(label);
+                        2
+                    }
+                    kind => bail!("Unknown keyword '{kind}' in switch statement."),
+                };
 
-                //         let mut cursor = node.walk();
+                let mut stmts = vec![];
 
-                //         for child in node.children(&mut cursor).skip(3) {
-                //             stmts.push(self.lower_to_stmt(child)?);
-                //         }
+                let mut cursor = node.walk();
 
-                //         StmtKind::If(
-                //             Expr {
-                //                 span: case_expr.span,
-                //                 ty: Ty {
-                //                     kind: TyKind::PrimTy(PrimTyKind::Bool),
-                //                     is_linear: false,
-                //                     quals: vec![],
-                //                     span: case_expr.span,
-                //                 },
-                //                 kind: ExprKind::Binary(
-                //                     BinOp::Eq,
-                //                     Box::new(switch_cond),
-                //                     Box::new(case_expr),
-                //                 ),
-                //             },
-                //             Box::new(Stmt {
-                //                 kind: StmtKind::Block(Block {
-                //                     symbol_resolver: self.symbol_resolver.clone(),
-                //                     stmts,
-                //                     span,
-                //                 }),
-                //                 span,
-                //             }),
-                //             None,
-                //         )
-                //     }
-                //     constants::DEFAULT => {
-                //         let mut stmts = vec![];
-
-                //         let mut cursor = node.walk();
-
-                //         for child in node.children(&mut cursor).skip(2) {
-                //             stmts.push(self.lower_to_stmt(child)?);
-                //         }
-
-                //         StmtKind::Block(Block {
-                //             symbol_resolver: self.symbol_resolver.clone(),
-                //             stmts,
-                //             span,
-                //         })
-                //     }
-                //     kind => bail!("Unknown keyword '{kind}' in switch statement."),
-                // }
+                for child in node.children(&mut cursor).skip(stmt_child_index) {
+                    stmts.push(self.lower_to_stmt(child)?);
+                }
+                self.switch_cond = Some(switch_data);
+                StmtKind::Label(
+                    label,
+                    Some(Box::new(Stmt {
+                        kind: StmtKind::Block(Block { stmts, span }),
+                        span,
+                    })),
+                )
             }
             constants::WHILE_STATEMENT => {
                 /*

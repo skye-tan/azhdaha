@@ -20,9 +20,17 @@ impl<'mir> MirCtx<'mir> {
                     Rvalue::UnaryOp(un_op, operand)
                 }
                 MirUnOp::AddrOf => {
-                    let place = self.lower_to_place(inner_expr, bb, stmt_span);
+                    if inner_expr.ty.kind.is_fn() {
+                        Rvalue::Cast {
+                            value: self.lower_to_operand(inner_expr, bb, stmt_span),
+                            from_type: inner_expr.ty.kind.clone(),
+                            to_type: expr.ty.kind.clone(),
+                        }
+                    } else {
+                        let place = self.lower_to_place(inner_expr, bb, stmt_span);
 
-                    Rvalue::AddrOf(place)
+                        Rvalue::AddrOf(place)
+                    }
                 }
                 MirUnOp::Deref => Rvalue::Use(self.lower_to_operand(expr, bb, stmt_span)),
             },

@@ -315,8 +315,6 @@ impl HirCtx<'_> {
                     loop_end:
                 */
 
-                let body_stmt = self.lower_to_stmt(node.child(1).unwrap())?;
-
                 let loop_start_label = self.label_resolver.insert_unnamed_symbol(());
                 let saved_start_label = self.start_label;
                 self.start_label = Some(loop_start_label);
@@ -324,6 +322,8 @@ impl HirCtx<'_> {
                 let loop_end_label = self.label_resolver.insert_unnamed_symbol(());
                 let saved_end_label = self.end_label;
                 self.end_label = Some(loop_end_label);
+
+                let body_stmt = self.lower_to_stmt(node.child(1).unwrap())?;
 
                 let cond_expr = self.lower_to_cond_expr(node.child(3).unwrap())?;
 

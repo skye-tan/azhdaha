@@ -171,6 +171,8 @@ pub(crate) const VOID: &str = "void";
 
 /// An identifiers used for [`LitKind`]'s construction representing a [`LitKind::Str`].
 pub(crate) const STRING_LITERAL: &str = "string_literal";
+/// An identifiers used for [`LitKind`]'s construction representing a [`LitKind::Str`].
+pub(crate) const CONCATENATED_STRING: &str = "concatenated_string";
 /// An identifiers used for [`LitKind`]'s construction representing a [`LitKind::Char`].
 pub(crate) const CHAR_LITERAL: &str = "char_literal";
 /// An identifiers used for [`LitKind`]'s construction representing a [`LitKind::Int`] or [`LitKind::Float`].

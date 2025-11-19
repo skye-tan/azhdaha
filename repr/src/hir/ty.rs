@@ -84,6 +84,7 @@ pub enum TyQual {
     Volatile,
     Restrict,
     Atomic,
+    Extension,
     NoReturn,
 }
 
@@ -462,6 +463,7 @@ impl HirCtx<'_> {
             constants::RESTRICT => TyQual::Restrict,
             constants::ATOMIC => TyQual::Atomic,
             constants::NORETURN => TyQual::NoReturn,
+            constants::EXTENSION => TyQual::Extension,
             kind => bail!("Cannot lower '{kind}' to 'TyQual'."),
         })
     }

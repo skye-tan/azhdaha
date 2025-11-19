@@ -1,6 +1,9 @@
 //! Identifiers used by tree-sitter-c library to represent nodes.
 //!
 
+#[cfg(doc)]
+use crate::hir::{ItemKind, StmtKind, TyQual};
+
 /// An identifiers used for [`ItemKind`]'s construction representing an [`ItemKind::TyDef`].
 pub(crate) const TYPE_DEFINITION: &str = "type_definition";
 /// An identifiers used for [`ItemKind`]'s construction representing an [`ItemKind::Func`].
@@ -111,6 +114,8 @@ pub(crate) const VOLATILE: &str = "volatile";
 pub(crate) const RESTRICT: &str = "restrict";
 /// An identifiers used for [`TyQual`]'s construction representing a [`TyQual::Atomic`].
 pub(crate) const ATOMIC: &str = "_Atomic";
+/// An identifiers used for [`TyQual`]'s construction representing a [`TyQual::Extension`].
+pub(crate) const EXTENSION: &str = "__extension__";
 /// An identifiers used for [`TyQual`]'s construction representing a [`TyQual::NoReturn`].
 pub(crate) const NORETURN: &str = "noreturn";
 

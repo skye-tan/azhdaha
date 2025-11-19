@@ -315,13 +315,15 @@ impl MirDisplay for Storage {
 impl MirDisplay for TyQual {
     fn mir_display(&self, _body: &Body) -> String {
         match &self {
-            TyQual::Const => "const".to_owned(),
-            TyQual::ConstExpr => "constexpr".to_owned(),
-            TyQual::Volatile => "volatile".to_owned(),
-            TyQual::Restrict => "restrict".to_owned(),
-            TyQual::Atomic => "atomic".to_owned(),
-            TyQual::NoReturn => "noreturn".to_owned(),
+            TyQual::Const => "const",
+            TyQual::ConstExpr => "constexpr",
+            TyQual::Volatile => "volatile",
+            TyQual::Restrict => "restrict",
+            TyQual::Atomic => "atomic",
+            TyQual::NoReturn => "noreturn",
+            TyQual::Extension => "__extension__",
         }
+        .to_owned()
     }
 }
 

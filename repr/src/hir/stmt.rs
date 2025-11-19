@@ -384,8 +384,22 @@ impl HirCtx<'_> {
                     },
                 };
 
-                let cond_expr =
-                    self.lower_to_cond_expr(node.child_by_field_name("condition").unwrap())?;
+                let cond_expr = match node.child_by_field_name("condition") {
+                    Some(node) => self.lower_to_cond_expr(node)?,
+                    None => Expr {
+                        kind: ExprKind::Lit(Lit {
+                            kind: LitKind::Int(1),
+                            span,
+                        }),
+                        ty: Ty {
+                            kind: TyKind::PrimTy(PrimTyKind::Bool),
+                            is_linear: false,
+                            quals: vec![],
+                            span,
+                        },
+                        span,
+                    },
+                };
 
                 let update_expr = match node.child_by_field_name("update") {
                     Some(update) => {

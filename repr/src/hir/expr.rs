@@ -780,6 +780,30 @@ impl HirCtx<'_> {
                     span,
                 },
             ),
+            constants::CONCATENATED_STRING => {
+                let mut result = "".to_owned();
+                for node in node.children(&mut node.walk()) {
+                    let LitKind::Str(part) = self.lower_to_lit_kind(node)? else {
+                        bail!("Invalid literal in concatenated string.");
+                    };
+                    result.push_str(&part);
+                }
+                (
+                    ExprKind::Lit(Lit {
+                        kind: LitKind::Str(result),
+                        span,
+                    }),
+                    Ty {
+                        kind: TyKind::Ptr {
+                            kind: Box::new(TyKind::PrimTy(PrimTyKind::Char)),
+                            quals: vec![],
+                        },
+                        is_linear: false,
+                        quals: vec![],
+                        span,
+                    },
+                )
+            }
             kind if kind.contains(constants::LITERAL) => {
                 let lit = self.lower_to_lit(node)?;
                 let kind = match lit.kind {

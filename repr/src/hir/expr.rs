@@ -222,7 +222,13 @@ impl HirCtx<'_> {
         span: Span,
     ) -> anyhow::Result<(ExprKind, Ty)> {
         let ty = match un_op {
-            UnOp::Not | UnOp::Neg | UnOp::Com | UnOp::Pos => expr.ty.clone(),
+            UnOp::Not => Ty {
+                kind: TyKind::PrimTy(PrimTyKind::Int(4)),
+                is_linear: false,
+                quals: vec![],
+                span,
+            },
+            UnOp::Neg | UnOp::Com | UnOp::Pos => expr.ty.clone(),
             UnOp::AddrOf => {
                 if expr.ty.kind.is_array() {
                     let it = self.array_to_pointer_decay(expr);

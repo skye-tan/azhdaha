@@ -773,13 +773,53 @@ impl HirCtx<'_> {
 
                 let else_expr = self.lower_to_expr(node.child(4).unwrap())?;
 
-                let ty = body_expr.ty.clone(); // TODO: handle casts
+                let ty = match (&body_expr.ty.kind, &else_expr.ty.kind) {
+                    (TyKind::PrimTy(prim_l), TyKind::PrimTy(prim_r)) => {
+                        TyKind::PrimTy(*prim_l.max(prim_r))
+                    }
+                    (TyKind::Struct(idx_l), TyKind::Struct(idx_r)) => {
+                        if idx_l != idx_r {
+                            bail!("Incompatible structs in ternary.");
+                        }
+                        TyKind::Struct(*idx_l)
+                    }
+                    (TyKind::Union(idx_l), TyKind::Union(idx_r)) => {
+                        if idx_l != idx_r {
+                            bail!("Incompatible unions in ternary.");
+                        }
+                        TyKind::Union(*idx_l)
+                    }
+                    (TyKind::Ptr { .. }, TyKind::Ptr { .. }) => body_expr.ty.kind.clone(),
+                    (TyKind::Array { .. }, TyKind::Array { .. }) => {
+                        bail!("Array is invalid in ternary.")
+                    }
+                    (TyKind::Func { .. }, TyKind::Func { .. }) => body_expr.ty.kind.clone(),
+                    (TyKind::InitializerList, TyKind::InitializerList) => {
+                        bail!("Initializer list is invalid in ternary.")
+                    }
+                    _ => bail!("Incompatible types in ternary."),
+                };
+
+                let ty = Ty {
+                    kind: ty,
+                    is_linear: false,
+                    quals: vec![],
+                    span,
+                };
 
                 (
                     ExprKind::Cond(
                         Box::new(cond_expr),
-                        Box::new(body_expr),
-                        Box::new(else_expr),
+                        Box::new(Expr {
+                            kind: ExprKind::Cast(Box::new(body_expr)),
+                            ty: ty.clone(),
+                            span,
+                        }),
+                        Box::new(Expr {
+                            kind: ExprKind::Cast(Box::new(else_expr)),
+                            ty: ty.clone(),
+                            span,
+                        }),
                     ),
                     ty,
                 )

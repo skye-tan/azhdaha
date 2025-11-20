@@ -41,7 +41,7 @@ impl SymbolKind {
             SymbolKind::Param(param_decl) => param_decl.ty.clone(),
             SymbolKind::TyDef(_) => panic!("Symbol is not a expression position symbol."),
             &SymbolKind::EnumVariant { value: _, span } => Ty {
-                kind: TyKind::PrimTy(PrimTyKind::Int),
+                kind: TyKind::PrimTy(PrimTyKind::Int(4)),
                 is_linear: false,
                 quals: vec![],
                 span,

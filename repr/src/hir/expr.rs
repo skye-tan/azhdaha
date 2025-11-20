@@ -302,7 +302,7 @@ impl HirCtx<'_> {
                 match (lhs_is_ptr, rhs_is_ptr) {
                     (true, true) => {
                         let ty = Ty {
-                            kind: TyKind::PrimTy(PrimTyKind::Int),
+                            kind: TyKind::PrimTy(PrimTyKind::Int(8)),
                             is_linear: false,
                             quals: vec![],
                             span,
@@ -383,7 +383,7 @@ impl HirCtx<'_> {
         }
 
         let ty = Ty {
-            kind: TyKind::PrimTy(PrimTyKind::Int),
+            kind: TyKind::PrimTy(PrimTyKind::Int(8)),
             is_linear: false,
             quals: vec![],
             span: expr.span,
@@ -477,11 +477,10 @@ impl HirCtx<'_> {
                         match &expr.ty.kind {
                             TyKind::PrimTy(prim_ty_kind) => {
                                 let target = match prim_ty_kind {
-                                    PrimTyKind::Bool => PrimTyKind::Int,
-                                    PrimTyKind::Char => PrimTyKind::Int,
-                                    PrimTyKind::Int => PrimTyKind::Int,
-                                    PrimTyKind::Float => PrimTyKind::Double,
-                                    PrimTyKind::Double => PrimTyKind::Double,
+                                    PrimTyKind::Bool => PrimTyKind::Int(4),
+                                    PrimTyKind::Char => PrimTyKind::Int(4),
+                                    PrimTyKind::Int(bytes) => PrimTyKind::Int(4.max(*bytes)),
+                                    PrimTyKind::Float(bytes) => PrimTyKind::Float(8.max(*bytes)),
                                     PrimTyKind::Void => {
                                         bail!(
                                             "Type error - can not pass void to variadic functino."
@@ -554,7 +553,7 @@ impl HirCtx<'_> {
                     }),
                     span,
                     ty: Ty {
-                        kind: TyKind::PrimTy(PrimTyKind::Int),
+                        kind: TyKind::PrimTy(PrimTyKind::Int(1)),
                         is_linear: false,
                         quals: vec![],
                         span,
@@ -786,7 +785,7 @@ impl HirCtx<'_> {
             constants::SIZEOF_EXPRESSION => (
                 ExprKind::Sizeof(self.lower_to_sizeof(node)?),
                 Ty {
-                    kind: TyKind::PrimTy(PrimTyKind::Int),
+                    kind: TyKind::PrimTy(PrimTyKind::Int(8)),
                     is_linear: false,
                     quals: vec![],
                     span,
@@ -833,8 +832,8 @@ impl HirCtx<'_> {
                         quals: vec![],
                     },
                     LitKind::Char(_) => TyKind::PrimTy(PrimTyKind::Char),
-                    LitKind::Int(_) => TyKind::PrimTy(PrimTyKind::Int),
-                    LitKind::Float(_) => TyKind::PrimTy(PrimTyKind::Double),
+                    LitKind::Int(_) => TyKind::PrimTy(PrimTyKind::Int(8)),
+                    LitKind::Float(_) => TyKind::PrimTy(PrimTyKind::Float(8)),
                 };
                 (
                     ExprKind::Lit(lit),

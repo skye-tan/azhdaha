@@ -2,7 +2,7 @@
 
 use std::{collections::HashMap, mem};
 
-use anyhow::bail;
+use anyhow::{Context, bail};
 use la_arena::Idx;
 use log::trace;
 
@@ -149,15 +149,17 @@ impl HirCtx<'_> {
 
         self.symbol_resolver
             .restore_prev_scope(saved_symbol_resolver);
-        let symbol = self
-            .symbol_resolver
-            .insert_symbol(func_decl.ident.name.clone(), SymbolKind::Func(func_decl));
+        let symbol = self.symbol_resolver.insert_symbol(
+            func_decl.ident.name.clone(),
+            SymbolKind::Func(func_decl.clone()),
+        );
 
         let label_resolver = mem::take(&mut self.label_resolver);
         self.return_ty = None;
 
         // Restore resolvers and bail later to not break subsequent functions in case of failure.
-        let body = body?;
+        let body =
+            body.with_context(|| format!("Fail to lower function {}", func_decl.ident.name))?;
 
         Ok(FuncDef {
             label_resolver,

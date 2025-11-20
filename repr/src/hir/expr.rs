@@ -249,6 +249,10 @@ impl HirCtx<'_> {
                 let TyKind::Ptr { kind, quals: _ } = &expr.ty.kind else {
                     bail!("Type error: dereference of non-ptr type");
                 };
+                if kind.is_fn() {
+                    // dereference of function pointers is no op.
+                    return Ok((expr.kind, expr.ty));
+                }
                 Ty {
                     kind: *kind.clone(),
                     is_linear: false,

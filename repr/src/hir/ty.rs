@@ -43,6 +43,8 @@ pub enum TyKind {
     Func {
         sig: Box<FuncSig>,
     },
+    /// This type does not exist in C, it is an imaginary type for compiler proposes.
+    InitializerList,
 }
 
 impl TyKind {

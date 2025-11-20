@@ -136,17 +136,12 @@ impl<'mir> MirCtx<'mir> {
                 Rvalue::Call(operand, arguments)
             }
             hir::ExprKind::Cast(inner_expr) => {
-                if let hir::ExprKind::Array(array) = &inner_expr.kind {
-                    match &expr.ty.kind {
-                        hir::TyKind::Struct(idx) => {
-                            let mut ops = vec![];
-                            for elem in array {
-                                ops.push(self.lower_to_operand(elem, bb, stmt_span));
-                            }
-                            Rvalue::StructInitializing(*idx, ops)
-                        }
-                        _ => panic!("Invalid cast from initializer list to {}", expr.ty),
+                if let hir::ExprKind::InitializerList(array) = &inner_expr.kind {
+                    let mut ops = vec![];
+                    for elem in array {
+                        ops.push(self.lower_to_operand(elem, bb, stmt_span));
                     }
+                    Rvalue::CompoundInitializing(expr.ty.kind.clone(), ops)
                 } else {
                     let operand = self.lower_to_operand(inner_expr, bb, stmt_span);
 
@@ -168,14 +163,8 @@ impl<'mir> MirCtx<'mir> {
 
                 Rvalue::Use(first_place)
             }
-            hir::ExprKind::Array(exprs) => {
-                let mut operands = vec![];
-
-                for expr in exprs {
-                    operands.push(self.lower_to_operand(expr, bb, stmt_span));
-                }
-
-                Rvalue::List(operands)
+            hir::ExprKind::InitializerList(_) => {
+                panic!("Using initializer lists as expression is invalid.");
             }
             hir::ExprKind::Empty => Rvalue::Empty,
             hir::ExprKind::GnuBlock(_)

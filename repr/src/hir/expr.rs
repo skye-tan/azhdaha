@@ -50,7 +50,7 @@ pub enum ExprKind {
     PtrDiff(Box<Expr>, Box<Expr>),
     AssignPtrOffset(Box<Expr>, Box<Expr>, ReturnSemantic),
     Cast(Box<Expr>),
-    Array(Vec<Expr>),
+    InitializerList(Vec<Expr>),
     Comma(Vec<Expr>),
     Sizeof(Sizeof),
     Cond(Box<Expr>, Box<Expr>, Box<Expr>),
@@ -714,16 +714,13 @@ impl HirCtx<'_> {
                 }
 
                 let ty = Ty {
-                    kind: TyKind::Array {
-                        kind: Box::new(TyKind::PrimTy(PrimTyKind::Void)), // TODO: non sense
-                        size: (),
-                    },
+                    kind: TyKind::InitializerList,
                     is_linear: false,
                     quals: vec![],
                     span,
                 };
 
-                (ExprKind::Array(elements), ty)
+                (ExprKind::InitializerList(elements), ty)
             }
             constants::COMMA_EXPRESSION => {
                 let mut exprs = vec![];

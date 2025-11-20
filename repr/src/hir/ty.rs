@@ -73,9 +73,8 @@ impl TyKind {
 pub enum PrimTyKind {
     Bool,
     Char,
-    Int,
-    Float,
-    Double,
+    Int(u8),
+    Float(u8),
     Void,
 }
 
@@ -257,8 +256,9 @@ impl HirCtx<'_> {
                     _ => bail!("Use of invalid type identifier '{}'.", &ident.name),
                 }
             }
-            constants::PRIMITIVE_TYPE => TyKind::PrimTy(self.lower_to_prim_ty_kind(ty_node)?),
-            constants::SIZED_TYPE_SPECIFIER => TyKind::PrimTy(PrimTyKind::Int),
+            constants::SIZED_TYPE_SPECIFIER | constants::PRIMITIVE_TYPE => {
+                TyKind::PrimTy(self.lower_to_prim_ty_kind(ty_node)?)
+            }
             constants::UNION_SPECIFIER
             | constants::STRUCT_SPECIFIER
             | constants::ENUM_SPECIFIER => {
@@ -266,7 +266,7 @@ impl HirCtx<'_> {
                 match ty_node.kind() {
                     constants::STRUCT_SPECIFIER => TyKind::Struct(idx),
                     constants::UNION_SPECIFIER => TyKind::Union(idx),
-                    constants::ENUM_SPECIFIER => TyKind::PrimTy(PrimTyKind::Int),
+                    constants::ENUM_SPECIFIER => TyKind::PrimTy(PrimTyKind::Int(4)),
                     _ => unreachable!(),
                 }
             }
@@ -429,12 +429,15 @@ impl HirCtx<'_> {
 
         Ok(
             match std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])? {
-                kind if kind.contains(constants::INT) => PrimTyKind::Int,
-                constants::SIZE => PrimTyKind::Int,
+                "unsigned" => PrimTyKind::Int(4),
+                kind if kind.contains("short") => PrimTyKind::Int(2),
+                kind if kind.contains("long") => PrimTyKind::Int(8),
+                kind if kind.contains(constants::INT) => PrimTyKind::Int(4),
+                constants::SIZE => PrimTyKind::Int(8),
                 constants::BOOL => PrimTyKind::Bool,
                 constants::CHAR => PrimTyKind::Char,
-                constants::FLOAT => PrimTyKind::Float,
-                constants::DOUBLE => PrimTyKind::Double,
+                constants::FLOAT => PrimTyKind::Float(4),
+                constants::DOUBLE => PrimTyKind::Float(8),
                 constants::VOID => PrimTyKind::Void,
                 kind => bail!("Cannot lower '{kind}' to 'PrimTyKind'."),
             },

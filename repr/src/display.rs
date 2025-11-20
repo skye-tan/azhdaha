@@ -276,10 +276,9 @@ impl MirDisplay for TyKind {
 impl MirDisplay for PrimTyKind {
     fn mir_display(&self, _body: &Body) -> String {
         match self {
-            PrimTyKind::Int => "int".to_owned(),
+            PrimTyKind::Int(bytes) => format!("i{}", *bytes * 8),
             PrimTyKind::Bool => "bool".to_owned(),
-            PrimTyKind::Float => "float".to_owned(),
-            PrimTyKind::Double => "double".to_owned(),
+            PrimTyKind::Float(bytes) => format!("f{}", *bytes * 8),
             PrimTyKind::Char => "char".to_owned(),
             PrimTyKind::Void => "void".to_owned(),
         }

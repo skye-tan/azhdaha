@@ -957,7 +957,15 @@ impl HirCtx<'_> {
 
         Ok(match node.kind() {
             constants::STRING_LITERAL => {
-                let text = &self.source_code[node.start_byte() + 1..node.end_byte() - 1];
+                let text = &self.source_code[node.start_byte()..node.end_byte()];
+                let Some((first_quote, _)) = text.iter().enumerate().find(|x| *x.1 == b'"') else {
+                    bail!("Could not found \" in string literal.");
+                };
+                let Some((last_quote, _)) = text.iter().enumerate().rev().find(|x| *x.1 == b'"')
+                else {
+                    bail!("Could not found \" in string literal.");
+                };
+                let text = &text[first_quote + 1..last_quote];
                 let text = std::str::from_utf8(text)?;
                 LitKind::Str(unescaper::unescape(text)?)
             }

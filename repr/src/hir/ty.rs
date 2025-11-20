@@ -231,10 +231,13 @@ impl HirCtx<'_> {
     ) -> anyhow::Result<TyKind> {
         trace!("[HIR/TyKind] Lowering '{}'", node.kind());
 
-        let mut ty_node = node.child_by_field_name("type").unwrap();
+        let mut ty_node = node;
 
         while let Some(child) = ty_node.child_by_field_name("type") {
             ty_node = child;
+            if ty_node.kind() == constants::SIZED_TYPE_SPECIFIER {
+                break;
+            }
         }
 
         let mut ty_kind = match ty_node.kind() {
@@ -427,21 +430,61 @@ impl HirCtx<'_> {
     fn lower_to_prim_ty_kind(&mut self, node: Node) -> anyhow::Result<PrimTyKind> {
         trace!("[HIR/PrimTyKind] Lowering '{}'", node.kind());
 
-        Ok(
-            match std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])? {
-                "unsigned" => PrimTyKind::Int(4),
-                kind if kind.contains("short") => PrimTyKind::Int(2),
-                kind if kind.contains("long") => PrimTyKind::Int(8),
-                kind if kind.contains(constants::INT) => PrimTyKind::Int(4),
-                constants::SIZE => PrimTyKind::Int(8),
-                constants::BOOL => PrimTyKind::Bool,
-                constants::CHAR => PrimTyKind::Char,
-                constants::FLOAT => PrimTyKind::Float(4),
-                constants::DOUBLE => PrimTyKind::Float(8),
-                constants::VOID => PrimTyKind::Void,
-                kind => bail!("Cannot lower '{kind}' to 'PrimTyKind'."),
-            },
-        )
+        let ty = std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])?;
+        let ty = ty.trim();
+        let tokens: Vec<&str> = ty.split_whitespace().collect();
+
+        use PrimTyKind::*;
+
+        let prim = match tokens.as_slice() {
+            // ---- Integer types ----
+            // Standard fixed forms
+            ["char"] => Char,
+            ["signed", "char"] => Char,
+            ["unsigned", "char"] => Int(1), // unsigned char is effectively 1-byte integer
+
+            ["short"] | ["short", "int"] | ["signed", "short"] | ["signed", "short", "int"] => {
+                Int(2)
+            }
+            ["unsigned", "short"] | ["unsigned", "short", "int"] => Int(2),
+
+            ["int"] | ["signed"] | ["signed", "int"] => Int(4),
+            ["unsigned"] | ["unsigned", "int"] => Int(4),
+
+            // long
+            ["long"] | ["long", "int"] | ["signed", "long"] | ["signed", "long", "int"] => Int(8),
+            ["unsigned", "long"] | ["unsigned", "long", "int"] => Int(8),
+
+            // long long
+            ["long", "long"]
+            | ["long", "long", "int"]
+            | ["signed", "long", "long"]
+            | ["signed", "long", "long", "int"] => Int(8),
+            ["unsigned", "long", "long"] | ["unsigned", "long", "long", "int"] => Int(8),
+
+            // size_t, ptrdiff_t, etc. (target dependent; assuming 64-bit)
+            ["size_t"] => Int(8),
+            ["ptrdiff_t"] => Int(8),
+
+            ["int8_t"] | ["uint8_t"] => Int(1),
+            ["int16_t"] | ["uint16_t"] => Int(2),
+            ["int32_t"] | ["uint32_t"] => Int(4),
+            ["int64_t"] | ["uint64_t"] => Int(8),
+
+            // ---- Floating-point ----
+            ["float"] => Float(4),
+            ["double"] => Float(8),
+            ["long", "double"] => Float(8), // Not really correct.
+
+            // ---- Special ----
+            ["_Bool"] | ["bool"] => Bool,
+            ["void"] => Void,
+
+            // ---- Anything else ----
+            _ => bail!("Cannot lower '{ty}' to PrimTyKind."),
+        };
+
+        Ok(prim)
     }
 
     pub(crate) fn lower_to_storage(&mut self, node: Node) -> anyhow::Result<Storage> {

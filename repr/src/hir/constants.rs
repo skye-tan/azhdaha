@@ -159,21 +159,6 @@ pub(crate) const UNION_SPECIFIER: &str = "union_specifier";
 /// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::Enum`].
 pub(crate) const ENUM_SPECIFIER: &str = "enum_specifier";
 
-/// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Int`].
-pub(crate) const INT: &str = "int";
-/// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Int`].
-pub(crate) const SIZE: &str = "size_t";
-/// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::BOOL`].
-pub(crate) const BOOL: &str = "_Bool";
-/// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Float`].
-pub(crate) const FLOAT: &str = "float";
-/// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Double`].
-pub(crate) const DOUBLE: &str = "double";
-/// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Char`].
-pub(crate) const CHAR: &str = "char";
-/// An identifiers used for [`PrimTyKind`]'s construction representing a [`PrimTyKind::Void`].
-pub(crate) const VOID: &str = "void";
-
 /// An identifiers used for [`LitKind`]'s construction representing a [`LitKind::Str`].
 pub(crate) const STRING_LITERAL: &str = "string_literal";
 /// An identifiers used for [`LitKind`]'s construction representing a [`LitKind::Str`].

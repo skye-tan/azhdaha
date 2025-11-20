@@ -266,8 +266,7 @@ pub enum Rvalue {
         from_type: TyKind,
         to_type: TyKind,
     },
-    StructInitializing(Idx<CompoundTypeData>, Vec<Operand>),
-    List(Vec<Operand>),
+    CompoundInitializing(TyKind, Vec<Operand>),
     Empty,
 }
 

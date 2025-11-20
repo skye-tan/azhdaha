@@ -114,38 +114,6 @@ impl LinearCtx<'_> {
 
                         return Ok(true);
                     }
-                    mir::Rvalue::List(operands) => {
-                        for operand in operands {
-                            if self.process_operand(
-                                report_builder,
-                                linear_local,
-                                operand,
-                                statement.span,
-                            )? {
-                                return Ok(true);
-                            }
-                        }
-
-                        if lhs.local != linear_local.local {
-                            return Ok(false);
-                        }
-
-                        report_builder.set_message("Assignment of non-linear to linear");
-
-                        report_builder.add_label(
-                            Label::new(ReportSpan::new(statement.span))
-                                .with_message(format!(
-                                    "Cannot store a non-linear value in {} which is defined as linear",
-                                    format!("`{}`",linear_local.name)
-                                        .fg(DIAGNOSIS_REPORT_COLOR),
-                                ))
-                                .with_color(DIAGNOSIS_REPORT_COLOR),
-                        );
-
-                        report_builder.add_help("Try to store the value in a non-linear variable");
-
-                        return Ok(true);
-                    }
                     mir::Rvalue::Call(..) => {
                         return self.process_func_call(
                             body,
@@ -154,7 +122,7 @@ impl LinearCtx<'_> {
                             statement,
                         );
                     }
-                    mir::Rvalue::StructInitializing(..)
+                    mir::Rvalue::CompoundInitializing(..)
                     | mir::Rvalue::AddrOf(_)
                     | mir::Rvalue::AddrOfStatic(_)
                     | mir::Rvalue::Empty => {}

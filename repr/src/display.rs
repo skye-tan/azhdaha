@@ -156,7 +156,7 @@ impl MirDisplay for Rvalue {
                     value.mir_display(body),
                 )
             }
-            Rvalue::List(operands) | Rvalue::StructInitializing(_, operands) => {
+            Rvalue::CompoundInitializing(_, operands) => {
                 let mut result = "{".to_owned();
 
                 for operand in operands {
@@ -282,6 +282,7 @@ impl MirDisplay for TyKind {
             }
             TyKind::Array { kind, .. } => format!("{}[]", kind.mir_display(body)),
             TyKind::Func { .. } => "function pointer".to_owned(),
+            TyKind::InitializerList => "initializer list".to_owned(),
         }
     }
 }

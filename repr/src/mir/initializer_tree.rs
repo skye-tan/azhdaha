@@ -1,5 +1,5 @@
 use crate::{
-    hir::{self, ExprKind, TyKind},
+    hir::{self, ExprKind, LitKind, Ty, TyKind},
     mir::{BasicBlock, MirCtx, Operand},
 };
 
@@ -16,12 +16,33 @@ impl<'mir> MirCtx<'mir> {
     pub(crate) fn lower_to_initializer_tree(
         &mut self,
         expected_ty: &TyKind,
-        expr: &'mir hir::Expr,
+        expr: &hir::Expr,
         bb: &mut BasicBlock,
     ) -> InitializerTree {
-        let ExprKind::InitializerList(list) = &expr.kind else {
-            let op = self.lower_to_operand(expr, bb, expr.span);
-            return InitializerTree::Leaf(op);
+        let list = match &expr.kind {
+            ExprKind::InitializerList(list) => list,
+            ExprKind::Lit(lit) => {
+                if let LitKind::Str(string) = &lit.kind {
+                    let init_expr = initializer_list_from_string(
+                        string,
+                        Ty {
+                            kind: expected_ty.clone(),
+                            is_linear: false,
+                            quals: vec![],
+                            span: expr.span,
+                        },
+                        expr.span,
+                    );
+                    return self.lower_to_initializer_tree(expected_ty, &init_expr, bb);
+                } else {
+                    let op = self.lower_to_operand(expr, bb, expr.span);
+                    return InitializerTree::Leaf(op);
+                }
+            }
+            _ => {
+                let op = self.lower_to_operand(expr, bb, expr.span);
+                return InitializerTree::Leaf(op);
+            }
         };
         let mut children = vec![];
         for item in list {
@@ -38,5 +59,33 @@ impl<'mir> MirCtx<'mir> {
             children.push(self.lower_to_initializer_tree(expected_ty, &item.value, bb));
         }
         InitializerTree::Middle { children }
+    }
+}
+
+pub(crate) fn initializer_list_from_string(
+    string: &str,
+    ty: hir::Ty,
+    span: hir::Span,
+) -> hir::Expr {
+    use hir::{Expr, ExprKind, InitializerItem, Lit, LitKind};
+    Expr {
+        kind: ExprKind::InitializerList(
+            string
+                .chars()
+                .map(|ch| InitializerItem {
+                    designator: None,
+                    value: Expr {
+                        kind: ExprKind::Lit(Lit {
+                            kind: LitKind::Char(ch),
+                            span,
+                        }),
+                        ty: ty.clone(),
+                        span,
+                    },
+                })
+                .collect(),
+        ),
+        ty,
+        span,
     }
 }

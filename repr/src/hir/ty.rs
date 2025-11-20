@@ -375,6 +375,17 @@ impl HirCtx<'_> {
                 };
                 Ok(value as i32)
             }
+            constants::IDENTIFIER => {
+                let ident = self.lower_to_ident(node)?;
+                let idx = self
+                    .symbol_resolver
+                    .get_res_by_name(&ident.name)
+                    .context("Fail to resolve ident.")?;
+                match self.symbol_resolver.get_data_by_res(&idx) {
+                    SymbolKind::EnumVariant { value, span: _ } => Ok(*value),
+                    _ => bail!("Only enum variants can be evaluated at compile time."),
+                }
+            }
             kind => bail!("Cannot const eval node of type '{kind}'"),
         }
     }

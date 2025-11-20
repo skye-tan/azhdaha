@@ -7,6 +7,7 @@ use crate::{
 pub enum InitializerTree {
     Middle { children: Vec<InitializerTree> },
     Leaf(Operand),
+    Zeroed,
 }
 
 impl InitializerTree {}
@@ -24,7 +25,17 @@ impl<'mir> MirCtx<'mir> {
         };
         let mut children = vec![];
         for item in list {
-            children.push(self.lower_to_initializer_tree(expected_ty, item, bb));
+            if let Some(designator) = &item.designator {
+                match designator {
+                    hir::Designator::Subscript { value } => {
+                        let value = *value as usize;
+                        while children.len() < value {
+                            children.push(InitializerTree::Zeroed);
+                        }
+                    }
+                }
+            }
+            children.push(self.lower_to_initializer_tree(expected_ty, &item.value, bb));
         }
         InitializerTree::Middle { children }
     }

@@ -2,7 +2,10 @@
 //!
 
 #[cfg(doc)]
-use crate::hir::{ItemKind, StmtKind, TyQual};
+use crate::hir::{
+    BinOp, Designator, ExprKind, ItemKind, LitKind, PrimTyKind, StmtKind, Storage, TyKind, TyQual,
+    UnOp,
+};
 
 /// An identifiers used for [`ItemKind`]'s construction representing an [`ItemKind::TyDef`].
 pub(crate) const TYPE_DEFINITION: &str = "type_definition";
@@ -90,6 +93,8 @@ pub(crate) const SUBSCRIPT_EXPRESSION: &str = "subscript_expression";
 pub(crate) const CAST_EXPRESSION: &str = "cast_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Array`].  
 pub(crate) const INITIALIZER_LIST: &str = "initializer_list";
+/// An identifiers used for [`ExprKind`]'s construction representing a designated item of [`ExprKind::Array`].  
+pub(crate) const INITIALIZER_PAIR: &str = "initializer_pair";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Comma`].  
 pub(crate) const COMMA_EXPRESSION: &str = "comma_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Cond`].  
@@ -178,69 +183,72 @@ pub(crate) const CHAR_LITERAL: &str = "char_literal";
 /// An identifiers used for [`LitKind`]'s construction representing a [`LitKind::Int`] or [`LitKind::Float`].
 pub(crate) const NUMBER_LITERAL: &str = "number_literal";
 
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Assign`].
+/// An identifiers used for [`Designator`]'s construction representing a [`Designator::Subscript`].
+pub(crate) const SUBSCRIPT_DESIGNATOR: &str = "subscript_designator";
+
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Assign`].
 pub(crate) const ASSIGN: &str = "=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Add`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Add`].
 pub(crate) const ASSIGN_ADD: &str = "+=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Sub`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Sub`].
 pub(crate) const ASSIGN_SUB: &str = "-=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Mul`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Mul`].
 pub(crate) const ASSIGN_MUL: &str = "*=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Div`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Div`].
 pub(crate) const ASSIGN_DIV: &str = "/=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Rem`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Rem`].
 pub(crate) const ASSIGN_REM: &str = "%=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::BitXor`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::BitXor`].
 pub(crate) const ASSIGN_BIT_XOR: &str = "^=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::BitAnd`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::BitAnd`].
 pub(crate) const ASSIGN_BIT_AND: &str = "&=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::BitOr`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::BitOr`].
 pub(crate) const ASSIGN_BIT_OR: &str = "|=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Shl`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Shl`].
 pub(crate) const ASSIGN_SHL: &str = "<<=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Eq`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Eq`].
 pub(crate) const ASSIGN_SHR: &str = ">>=";
 
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Add`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Add`].
 pub(crate) const INC: &str = "++";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Sub`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Sub`].
 pub(crate) const DEC: &str = "--";
 
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Add`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Add`].
 pub(crate) const ADD: &str = "+";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Sub`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Sub`].
 pub(crate) const SUB: &str = "-";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Mul`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Mul`].
 pub(crate) const MUL: &str = "*";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Div`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Div`].
 pub(crate) const DIV: &str = "/";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Rem`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Rem`].
 pub(crate) const REM: &str = "%";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::And`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::And`].
 pub(crate) const AND: &str = "&&";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Or`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Or`].
 pub(crate) const OR: &str = "||";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::BitXor`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::BitXor`].
 pub(crate) const BIT_XOR: &str = "^";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::BitAnd`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::BitAnd`].
 pub(crate) const BIT_AND: &str = "&";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::BitOr`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::BitOr`].
 pub(crate) const BIT_OR: &str = "|";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Shl`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Shl`].
 pub(crate) const SHL: &str = "<<";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Shr`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Shr`].
 pub(crate) const SHR: &str = ">>";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Eq`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Eq`].
 pub(crate) const EQ: &str = "==";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Lt`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Lt`].
 pub(crate) const LT: &str = "<";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Le`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Le`].
 pub(crate) const LE: &str = "<=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Ne`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Ne`].
 pub(crate) const NE: &str = "!=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Ge`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Ge`].
 pub(crate) const GE: &str = ">=";
-/// An identifiers used for [`BinOpKind`]'s construction representing a [`BinOpKind::Gt`].
+/// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Gt`].
 pub(crate) const GT: &str = ">";
 
 /// An identifiers used for [`UnOp`]'s construction representing an [`UnOp::Not`].

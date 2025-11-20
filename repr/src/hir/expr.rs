@@ -37,6 +37,17 @@ pub enum ReturnSemantic {
 }
 
 #[derive(Debug)]
+pub enum Designator {
+    Subscript { value: i128 },
+}
+
+#[derive(Debug)]
+pub struct InitializerItem {
+    pub designator: Option<Designator>,
+    pub value: Expr,
+}
+
+#[derive(Debug)]
 pub enum ExprKind {
     Lit(Lit),
     Local(Symbol),
@@ -50,7 +61,7 @@ pub enum ExprKind {
     PtrDiff(Box<Expr>, Box<Expr>),
     AssignPtrOffset(Box<Expr>, Box<Expr>, ReturnSemantic),
     Cast(Box<Expr>),
-    InitializerList(Vec<Expr>),
+    InitializerList(Vec<InitializerItem>),
     Comma(Vec<Expr>),
     Sizeof(Sizeof),
     Cond(Box<Expr>, Box<Expr>, Box<Expr>),
@@ -705,7 +716,20 @@ impl HirCtx<'_> {
                 cursor.goto_next_sibling();
 
                 loop {
-                    elements.push(self.lower_to_expr(cursor.node())?);
+                    let node = cursor.node();
+                    elements.push(if node.kind() == constants::INITIALIZER_PAIR {
+                        let value = node.child_by_field_name("value").unwrap();
+                        let designator = node.child_by_field_name("designator").unwrap();
+                        InitializerItem {
+                            designator: Some(self.lower_to_designator(designator)?),
+                            value: self.lower_to_expr(value)?,
+                        }
+                    } else {
+                        InitializerItem {
+                            designator: None,
+                            value: self.lower_to_expr(node)?,
+                        }
+                    });
 
                     cursor.goto_next_sibling();
                     if !cursor.goto_next_sibling() {
@@ -973,6 +997,17 @@ impl HirCtx<'_> {
             constants::ADDR_OF => UnOp::AddrOf,
             constants::DEREF => UnOp::Deref,
             kind => bail!("Cannot lower '{kind}' to 'UnOp'."),
+        })
+    }
+
+    fn lower_to_designator(&self, node: Node<'_>) -> anyhow::Result<Designator> {
+        Ok(match node.kind() {
+            constants::SUBSCRIPT_DESIGNATOR => Designator::Subscript {
+                value: self.const_eval_enum_value(node.child(1).unwrap())? as i128,
+            },
+            kind => {
+                bail!("Cannot lower '{kind}' to 'Designator'")
+            }
         })
     }
 }

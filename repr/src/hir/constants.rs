@@ -71,6 +71,8 @@ pub(crate) const PARENTHESIZED_DECLARATOR: &str = "parenthesized_declarator";
 
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Lit`].  
 pub(crate) const LITERAL: &str = "literal";
+/// An identifiers used for [`StmtKind`]'s construction representing a [`StmtKind::Block`].
+pub(crate) const COMPOUND_LITERAL: &str = "compound_literal_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Call`].  
 pub(crate) const CALL_EXPRESSION: &str = "call_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Binary`].  

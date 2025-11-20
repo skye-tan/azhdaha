@@ -697,7 +697,7 @@ impl HirCtx<'_> {
                 };
                 self.lower_un_op(a_plus_i, UnOp::Deref, span)?
             }
-            constants::CAST_EXPRESSION => {
+            constants::CAST_EXPRESSION | constants::COMPOUND_LITERAL => {
                 let cast_node = node.child(1).unwrap();
 
                 let decl_node = cast_node.child_by_field_name("declarator");

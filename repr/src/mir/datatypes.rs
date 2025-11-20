@@ -111,8 +111,8 @@ pub enum LocalKind {
     Temp,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct BasicBlock(Idx<BasicBlockData>);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct BasicBlock(pub(crate) Idx<BasicBlockData>);
 
 impl BasicBlock {
     pub fn set(&mut self, bb: BasicBlock) {

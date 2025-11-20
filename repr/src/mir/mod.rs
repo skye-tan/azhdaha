@@ -14,6 +14,9 @@ use crate::hir::{
 
 /// Contains methods needed to manage arenas and resolvers.
 mod allocation;
+/// Contains methods to minimize the mir, reducing the time of furthur analyzing.
+mod optimization;
+
 /// Contains methods needed to lower HIR to MIR's [`BasicBlock`].
 mod basic_block;
 /// Contains methods needed to lower HIR to MIR's [`Operand`].
@@ -106,6 +109,8 @@ impl<'mir> MirCtx<'mir> {
 
         let mut bb = self.alloc_bb();
         self.lower_to_bb(&func_def.body, &mut bb);
+
+        self.body.optimize();
 
         Ok(self.body)
     }

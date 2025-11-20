@@ -68,14 +68,34 @@ impl HirCtx<'_> {
 
         let mut cursor = node.walk();
 
-        for mut decl_node in node.children_by_field_name("declarator", &mut cursor) {
+        for decl_node in node.children_by_field_name("declarator", &mut cursor) {
             let ty = self.lower_to_ty(node, Some(decl_node))?;
 
+            let ident = {
+                let mut decl_node = decl_node;
+                loop {
+                    match decl_node.kind() {
+                        constants::IDENTIFIER
+                        | constants::TYPE_IDENTIFIER
+                        | constants::FIELD_IDENTIFIER => {
+                            break self.lower_to_ident(decl_node)?;
+                        }
+                        _ => {
+                            decl_node = decl_node
+                                .child_by_field_name("declarator")
+                                .context("Cannot find declarator.")?;
+                        }
+                    }
+                }
+            };
+
             let init = if decl_node.kind() == constants::INIT_DECLARATOR {
-                let mut init = self.lower_to_expr_with_expected_type(
-                    decl_node.child(decl_node.child_count() - 1).unwrap(),
-                    ty.clone(),
-                )?;
+                let mut init = self
+                    .lower_to_expr_with_expected_type(
+                        decl_node.child(decl_node.child_count() - 1).unwrap(),
+                        ty.clone(),
+                    )
+                    .with_context(|| format!("Fail to lower initializer of {}", ident.name))?;
 
                 if ty.kind.is_array() {
                     let mut temp = &init;
@@ -97,21 +117,6 @@ impl HirCtx<'_> {
                 Some(init)
             } else {
                 None
-            };
-
-            let ident = loop {
-                match decl_node.kind() {
-                    constants::IDENTIFIER
-                    | constants::TYPE_IDENTIFIER
-                    | constants::FIELD_IDENTIFIER => {
-                        break self.lower_to_ident(decl_node)?;
-                    }
-                    _ => {
-                        decl_node = decl_node
-                            .child_by_field_name("declarator")
-                            .context("Cannot find declarator.")?;
-                    }
-                }
             };
 
             decls.push(VarDecl {
@@ -316,7 +321,7 @@ impl HirCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_to_ident(&mut self, node: Node) -> anyhow::Result<Ident> {
+    pub(crate) fn lower_to_ident(&self, node: Node) -> anyhow::Result<Ident> {
         trace!("[HIR/Ident] Lowering '{}'", node.kind());
 
         let span = Span {

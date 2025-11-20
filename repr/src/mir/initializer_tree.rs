@@ -50,13 +50,16 @@ impl<'mir> MirCtx<'mir> {
                 match designator {
                     hir::Designator::Subscript { value } => {
                         let value = *value as usize;
-                        while children.len() < value {
+                        while children.len() <= value {
                             children.push(InitializerTree::Zeroed);
                         }
+                        children[value] =
+                            self.lower_to_initializer_tree(expected_ty, &item.value, bb);
                     }
                 }
+            } else {
+                children.push(self.lower_to_initializer_tree(expected_ty, &item.value, bb));
             }
-            children.push(self.lower_to_initializer_tree(expected_ty, &item.value, bb));
         }
         InitializerTree::Middle { children }
     }

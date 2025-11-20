@@ -132,6 +132,7 @@ impl BinOp {
         BinOp::Lt,
         BinOp::Ne,
     ];
+    const SHORT_CIRCUITS: &[Self] = &[BinOp::And, BinOp::Or];
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -364,9 +365,10 @@ impl HirCtx<'_> {
             };
         }
 
-        let ty = if BinOp::COMPARISONS.contains(&bin_op) {
+        let ty = if BinOp::COMPARISONS.contains(&bin_op) || BinOp::SHORT_CIRCUITS.contains(&bin_op)
+        {
             Ty {
-                kind: TyKind::PrimTy(PrimTyKind::Bool),
+                kind: TyKind::PrimTy(PrimTyKind::Int(4)),
                 is_linear: false,
                 quals: vec![],
                 span,

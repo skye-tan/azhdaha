@@ -25,8 +25,11 @@ mod rvalue;
 
 /// Contains datatypes used to represent the MIR.
 mod datatypes;
+/// Contains datatypes used to represent the initializer lists.
+mod initializer_tree;
 
 pub use datatypes::*;
+pub use initializer_tree::InitializerTree;
 
 pub const RETURN_LOCAL: Local = Local::from_raw(RawIdx::from_u32(0));
 

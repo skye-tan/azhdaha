@@ -156,21 +156,7 @@ impl MirDisplay for Rvalue {
                     value.mir_display(body),
                 )
             }
-            Rvalue::CompoundInitializing(_, operands) => {
-                let mut result = "{".to_owned();
-
-                for operand in operands {
-                    result.push_str(&format!(" {},", operand.mir_display(body)));
-                }
-
-                if !operands.is_empty() {
-                    result.pop();
-                }
-
-                result.push_str(" }");
-
-                result
-            }
+            Rvalue::CompoundInitializing(_, _) => "initializer tree".to_owned(),
             Rvalue::Empty => String::new(),
         }
     }

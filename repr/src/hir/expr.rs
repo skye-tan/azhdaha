@@ -724,6 +724,9 @@ impl HirCtx<'_> {
 
                 loop {
                     let node = cursor.node();
+                    if node.kind() == "}" {
+                        break;
+                    }
                     elements.push(if node.kind() == constants::INITIALIZER_PAIR {
                         let value = node.child_by_field_name("value").unwrap();
                         let designator = node.child_by_field_name("designator").unwrap();

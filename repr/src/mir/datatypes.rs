@@ -2,9 +2,12 @@
 
 use la_arena::{Arena, Idx};
 
-use crate::hir::{
-    BinOp, Ident, Lit, Span, Storage, Ty, TyKind, UnOp,
-    resolver::{CompoundTypeData, Resolver, Symbol, SymbolKind},
+use crate::{
+    hir::{
+        BinOp, Ident, Lit, Span, Storage, Ty, TyKind, UnOp,
+        resolver::{CompoundTypeData, Resolver, Symbol, SymbolKind},
+    },
+    mir::InitializerTree,
 };
 
 #[derive(Debug, Clone)]
@@ -266,7 +269,7 @@ pub enum Rvalue {
         from_type: TyKind,
         to_type: TyKind,
     },
-    CompoundInitializing(TyKind, Vec<Operand>),
+    CompoundInitializing(TyKind, InitializerTree),
     Empty,
 }
 

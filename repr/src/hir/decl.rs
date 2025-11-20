@@ -3,7 +3,7 @@
 use anyhow::Context;
 use log::trace;
 
-use crate::hir::*;
+use crate::{hir::*, mir::initializer_list_from_string};
 
 #[derive(Debug)]
 pub struct VarDecl {
@@ -72,10 +72,27 @@ impl HirCtx<'_> {
             let ty = self.lower_to_ty(node, Some(decl_node))?;
 
             let init = if decl_node.kind() == constants::INIT_DECLARATOR {
-                let init = self.lower_to_expr_with_expected_type(
+                let mut init = self.lower_to_expr_with_expected_type(
                     decl_node.child(decl_node.child_count() - 1).unwrap(),
                     ty.clone(),
                 )?;
+
+                if ty.kind.is_array() {
+                    let mut temp = &init;
+                    while let ExprKind::Cast(inner) = &temp.kind {
+                        temp = &inner;
+                    }
+                    if let ExprKind::Lit(lit) = &temp.kind
+                        && let LitKind::Str(string) = &lit.kind
+                    {
+                        init = initializer_list_from_string(&string, ty.clone(), span);
+                        init = Expr {
+                            kind: ExprKind::Cast(Box::new(init)),
+                            ty: ty.clone(),
+                            span,
+                        };
+                    }
+                }
 
                 Some(init)
             } else {
@@ -133,7 +150,15 @@ impl HirCtx<'_> {
         let ty = self.lower_to_ty(node, Some(decl_node))?;
 
         let init = if decl_node.kind() == constants::INIT_DECLARATOR {
-            let init = self.lower_to_expr(decl_node.child(decl_node.child_count() - 1).unwrap())?;
+            let mut init =
+                self.lower_to_expr(decl_node.child(decl_node.child_count() - 1).unwrap())?;
+
+            if ty.kind.is_array()
+                && let ExprKind::Lit(lit) = &init.kind
+                && let LitKind::Str(string) = &lit.kind
+            {
+                init = initializer_list_from_string(&string, ty.clone(), span);
+            }
 
             Some(init)
         } else {

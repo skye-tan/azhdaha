@@ -402,11 +402,7 @@ impl HirCtx<'_> {
                 };
 
                 let update_expr = match node.child_by_field_name("update") {
-                    Some(update) => {
-                        dbg!(update.to_sexp());
-
-                        self.lower_to_expr(update)?
-                    }
+                    Some(update) => self.lower_to_expr(update)?,
                     None => Expr {
                         kind: ExprKind::Empty,
                         ty: Ty {

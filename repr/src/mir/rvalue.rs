@@ -8,7 +8,7 @@ use crate::{
 impl<'mir> MirCtx<'mir> {
     pub(crate) fn lower_to_rvalue(
         &mut self,
-        expr: &'mir hir::Expr,
+        expr: &hir::Expr,
         bb: &mut BasicBlock,
         stmt_span: Span,
     ) -> Rvalue {

@@ -33,6 +33,7 @@ mod initializer_tree;
 
 pub use datatypes::*;
 pub use initializer_tree::InitializerTree;
+pub(crate) use initializer_tree::initializer_list_from_string;
 
 pub const RETURN_LOCAL: Local = Local::from_raw(RawIdx::from_u32(0));
 

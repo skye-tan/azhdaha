@@ -6,7 +6,7 @@ use crate::{
 };
 
 impl<'mir> MirCtx<'mir> {
-    pub(crate) fn lower_to_bb(&mut self, stmt: &'mir hir::Stmt, bb: &mut BasicBlock) {
+    pub(crate) fn lower_to_bb(&mut self, stmt: &hir::Stmt, bb: &mut BasicBlock) {
         let span = stmt.span;
 
         match &stmt.kind {

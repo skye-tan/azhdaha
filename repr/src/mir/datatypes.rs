@@ -72,7 +72,8 @@ impl Body<'_> {
                         .expect("Invalid mir: unknown field");
                     ty = field.ty.kind.clone();
                 }
-                PlaceElem::Index(_) => todo!(),
+                // Index is like ptr.offset in Rust, so it doesn't change type.
+                PlaceElem::Index(_) => (),
                 PlaceElem::Deref => {
                     if let TyKind::Ptr { kind, quals: _ } = ty {
                         ty = *kind;

@@ -803,6 +803,10 @@ impl HirCtx<'_> {
                         TyKind::Union(*idx_l)
                     }
                     (TyKind::Ptr { .. }, TyKind::Ptr { .. }) => body_expr.ty.kind.clone(),
+                    // This is only allowed for 0 (null pointer constant) but we will do it
+                    // for all ints. Who cares?
+                    (ptr @ TyKind::Ptr { .. }, TyKind::PrimTy(_))
+                    | (TyKind::PrimTy(_), ptr @ TyKind::Ptr { .. }) => ptr.clone(),
                     (TyKind::Array { .. }, TyKind::Array { .. }) => {
                         bail!("Array is invalid in ternary.")
                     }

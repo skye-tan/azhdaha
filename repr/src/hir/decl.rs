@@ -100,12 +100,12 @@ impl HirCtx<'_> {
                 if ty.kind.is_array() {
                     let mut temp = &init;
                     while let ExprKind::Cast(inner) = &temp.kind {
-                        temp = &inner;
+                        temp = inner;
                     }
                     if let ExprKind::Lit(lit) = &temp.kind
                         && let LitKind::Str(string) = &lit.kind
                     {
-                        init = initializer_list_from_string(&string, ty.clone(), span);
+                        init = initializer_list_from_string(string, ty.clone(), span);
                         init = Expr {
                             kind: ExprKind::Cast(Box::new(init)),
                             ty: ty.clone(),
@@ -162,7 +162,7 @@ impl HirCtx<'_> {
                 && let ExprKind::Lit(lit) = &init.kind
                 && let LitKind::Str(string) = &lit.kind
             {
-                init = initializer_list_from_string(&string, ty.clone(), span);
+                init = initializer_list_from_string(string, ty.clone(), span);
             }
 
             Some(init)

@@ -992,25 +992,26 @@ impl HirCtx<'_> {
             }
             constants::NUMBER_LITERAL => {
                 let literal =
-                    std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])?;
+                    std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])?
+                        .to_lowercase();
 
-                let literal = if let Some(literal) = literal.strip_suffix("U") {
+                let literal = if let Some(literal) = literal.strip_suffix("llu") {
                     literal
-                } else if let Some(literal) = literal.strip_suffix("LL") {
+                } else if let Some(literal) = literal.strip_suffix("lu") {
                     literal
-                } else if let Some(literal) = literal.strip_suffix("L") {
+                } else if let Some(literal) = literal.strip_suffix("u") {
+                    literal
+                } else if let Some(literal) = literal.strip_suffix("ll") {
+                    literal
+                } else if let Some(literal) = literal.strip_suffix("l") {
                     literal
                 } else {
-                    literal
+                    &literal
                 };
 
                 if let Some(stripped_literal) = literal.strip_prefix("0x") {
                     LitKind::Int(i128::from_str_radix(stripped_literal, 16)?)
-                } else if let Some(stripped_literal) = literal.strip_prefix("0X") {
-                    LitKind::Int(i128::from_str_radix(stripped_literal, 16)?)
                 } else if let Some(stripped_literal) = literal.strip_prefix("0b") {
-                    LitKind::Int(i128::from_str_radix(stripped_literal, 2)?)
-                } else if let Some(stripped_literal) = literal.strip_prefix("0B") {
                     LitKind::Int(i128::from_str_radix(stripped_literal, 2)?)
                 } else if let Some(stripped_literal) = literal.strip_prefix("0") {
                     if stripped_literal.is_empty() {

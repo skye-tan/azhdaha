@@ -512,7 +512,7 @@ impl HirCtx<'_> {
                                     }
                                 }
                             }
-                            TyKind::Ptr { .. } => (),
+                            TyKind::Ptr { .. } | TyKind::Struct(_) | TyKind::Union(_) => (),
                             TyKind::Array { .. } => {
                                 expr = self.array_to_pointer_decay(expr);
                             }

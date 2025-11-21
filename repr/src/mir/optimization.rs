@@ -3,11 +3,13 @@ use std::collections::{HashMap, hash_map};
 use crate::mir::{BasicBlock, Body, TerminatorKind};
 
 impl Body<'_> {
+    /// Reduce the number of locals and basic blocks in mir.
     pub(crate) fn optimize(&mut self) {
         self.flat_unneeded_gotos();
         self.remove_unneeded_basic_blocks();
     }
 
+    /// Remove unneeded jumps to empty basic blocks which only jump to another basic blcok.
     fn flat_unneeded_gotos(&mut self) {
         let mut bb_map = HashMap::new();
         for (bb, _) in self.basic_blocks.iter() {
@@ -17,6 +19,7 @@ impl Body<'_> {
         self.transform_bbs_with_map(bb_map);
     }
 
+    /// Returns the equivalent goto with fewer jumps.
     fn find_most_inner_goto(&self, bb: BasicBlock) -> BasicBlock {
         let bb_data = &self.basic_blocks[bb.0];
         if !bb_data.statements.is_empty() {
@@ -33,6 +36,8 @@ impl Body<'_> {
         }
     }
 
+    /// Remove all basic blocks that won't get control flow on them.
+    /// Best to do at last, so that some gotos are removed/normalized.
     fn remove_unneeded_basic_blocks(&mut self) {
         let prev_basic_blocks = std::mem::take(&mut self.basic_blocks);
         let mut bb_map = HashMap::new();
@@ -50,26 +55,26 @@ impl Body<'_> {
         mark_used(BasicBlock(prev_basic_blocks.iter().next().unwrap().0));
 
         for (_, bb_data) in prev_basic_blocks.iter() {
-            match &bb_data.terminator {
-                Some(terminator) => match &terminator.kind {
+            if let Some(terminator) = &bb_data.terminator {
+                match &terminator.kind {
                     TerminatorKind::Goto { bb } => mark_used(*bb),
                     TerminatorKind::SwitchInt { discr: _, targets } => {
                         mark_used(targets[0]);
                         mark_used(targets[1]);
                     }
                     TerminatorKind::Return => (),
-                },
-                None => (),
+                }
             }
         }
 
         self.transform_bbs_with_map(bb_map);
     }
 
+    /// Transform basic blocks with a map.
     fn transform_bbs_with_map(&mut self, bb_map: HashMap<BasicBlock, BasicBlock>) {
         for (_, bb_data) in self.basic_blocks.iter_mut() {
-            match &mut bb_data.terminator {
-                Some(terminator) => match &mut terminator.kind {
+            if let Some(terminator) = &mut bb_data.terminator {
+                match &mut terminator.kind {
                     TerminatorKind::Goto { bb } => {
                         *bb = bb_map[bb];
                     }
@@ -78,8 +83,7 @@ impl Body<'_> {
                         targets[1] = bb_map[&targets[1]];
                     }
                     TerminatorKind::Return => (),
-                },
-                None => (),
+                }
             }
         }
     }

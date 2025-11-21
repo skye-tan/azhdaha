@@ -13,6 +13,7 @@ pub enum InitializerTree {
 impl InitializerTree {}
 
 impl<'mir> MirCtx<'mir> {
+    /// Convert a hir expression to an initializer tree.
     pub(crate) fn lower_to_initializer_tree(
         &mut self,
         expected_ty: &TyKind,
@@ -65,6 +66,7 @@ impl<'mir> MirCtx<'mir> {
     }
 }
 
+/// Construct an initializer list from a string literal.
 pub(crate) fn initializer_list_from_string(
     string: &str,
     ty: hir::Ty,

@@ -52,7 +52,7 @@ pub struct HirCtx<'hir> {
 
     pub items: Vec<Item>,
 
-    pub switch_cond: Option<SwitchData>,
+    pub switch_data: Option<SwitchData>,
     pub start_label: Option<resolver::Label>,
     pub end_label: Option<resolver::Label>,
 
@@ -71,7 +71,7 @@ impl<'hir> HirCtx<'hir> {
 
             items: vec![],
 
-            switch_cond: None,
+            switch_data: None,
             start_label: None,
             end_label: None,
 

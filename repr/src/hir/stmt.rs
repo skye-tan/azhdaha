@@ -127,7 +127,7 @@ impl HirCtx<'_> {
             constants::SWITCH_STATEMENT => {
                 let cond_expr = self.lower_to_expr(node.child(1).unwrap())?;
 
-                let saved_switch_cond = self.switch_cond.replace(SwitchData::default());
+                let saved_switch_cond = self.switch_data.replace(SwitchData::default());
 
                 let switch_end_label = self.label_resolver.insert_unnamed_symbol(());
                 let saved_end_label = self.end_label;
@@ -135,8 +135,8 @@ impl HirCtx<'_> {
 
                 let body_stmt = self.lower_to_stmt(node.child(2).unwrap())?;
 
-                let my_switch_data = self.switch_cond.take().unwrap();
-                self.switch_cond = saved_switch_cond;
+                let my_switch_data = self.switch_data.take().unwrap();
+                self.switch_data = saved_switch_cond;
                 self.end_label = saved_end_label;
 
                 let ty = cond_expr.ty.clone();
@@ -210,7 +210,7 @@ impl HirCtx<'_> {
                 StmtKind::Block(Block { stmts, span })
             }
             constants::CASE_STATEMENT => {
-                let Some(mut switch_data) = self.switch_cond.take() else {
+                let Some(mut switch_data) = self.switch_data.take() else {
                     bail!("Case statement outside of switch body.")
                 };
 
@@ -233,6 +233,8 @@ impl HirCtx<'_> {
                     kind => bail!("Unknown keyword '{kind}' in switch statement."),
                 };
 
+                self.switch_data = Some(switch_data);
+
                 let mut stmts = vec![];
 
                 let mut cursor = node.walk();
@@ -240,7 +242,6 @@ impl HirCtx<'_> {
                 for child in node.children(&mut cursor).skip(stmt_child_index) {
                     stmts.push(self.lower_to_stmt(child)?);
                 }
-                self.switch_cond = Some(switch_data);
                 StmtKind::Label(
                     label,
                     Some(Box::new(Stmt {

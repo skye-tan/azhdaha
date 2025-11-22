@@ -56,7 +56,7 @@ pub enum ExprKind {
     Unary(UnOp, Box<Expr>),
     Assign(Box<Expr>, Box<Expr>),
     AssignWithBinOp(Box<Expr>, Box<Expr>, BinOp, Ty, ReturnSemantic),
-    Field(Box<Expr>, Ident),
+    Field(Box<Expr>, usize),
     PtrOffset(Box<Expr>, Box<Expr>),
     PtrDiff(Box<Expr>, Box<Expr>),
     AssignPtrOffset(Box<Expr>, Box<Expr>, ReturnSemantic),
@@ -680,15 +680,44 @@ impl HirCtx<'_> {
                     ),
                 };
 
-                let Some(field_data) = fields.iter().find(|f| f.ident.name == field.name) else {
+                let Some(field_data) = fields.by_name.get(&field.name) else {
                     bail!(
                         "Unresolved field {}. Available fields are {:?}.",
                         field.name,
                         fields
                     );
                 };
-                let ty = field_data.ty.clone();
-                (ExprKind::Field(Box::new(target), field), ty)
+                let mut result = target;
+
+                for &field_index in field_data {
+                    let fields = match &result.ty.kind {
+                        TyKind::Struct(idx) => {
+                            let data = self.type_tag_resolver.get_data_by_res(idx);
+                            let CompoundTypeData::Struct { fields } = data else {
+                                bail!("Invalid struct {data:?}");
+                            };
+                            fields
+                        }
+                        TyKind::Union(idx) => {
+                            let data = self.type_tag_resolver.get_data_by_res(idx);
+                            let CompoundTypeData::Union { fields } = data else {
+                                bail!("Invalid union {data:?}");
+                            };
+                            fields
+                        }
+                        _ => bail!(
+                            "Type error: field expression on type {} is invalid.",
+                            result.ty
+                        ),
+                    };
+                    result = Expr {
+                        span: result.span,
+                        kind: ExprKind::Field(Box::new(result), field_index),
+                        ty: fields.by_index[field_index].clone(),
+                    };
+                }
+
+                (result.kind, result.ty)
             }
             constants::SUBSCRIPT_EXPRESSION => {
                 let target = self.lower_to_expr(node.child(0).unwrap())?;

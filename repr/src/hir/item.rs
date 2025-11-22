@@ -3,10 +3,14 @@
 use std::{collections::HashMap, mem};
 
 use anyhow::{Context, bail};
+use itertools::Either;
 use la_arena::Idx;
 use log::trace;
 
-use crate::hir::*;
+use crate::hir::{
+    resolver::{CompoundTypeData, FieldsData},
+    *,
+};
 
 use super::{
     constants,
@@ -66,7 +70,9 @@ impl HirCtx<'_> {
                 ItemKind::Func(Box::new(self.lower_to_func_def(node)?))
             }
             constants::DECLARATION => {
-                let var_decl_list = self.lower_to_var_decl_list(node)?;
+                let Either::Left(var_decl_list) = self.lower_to_var_decl_list(node)? else {
+                    bail!("Invalid empty item declarations.");
+                };
 
                 let mut symbols = vec![];
 
@@ -102,15 +108,55 @@ impl HirCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_fields_in_specifier(&mut self, body: Node<'_>) -> Vec<VarDecl> {
-        body.children(&mut body.walk())
-            .flat_map(|x| {
-                if x.kind() == "{" || x.kind() == "}" {
-                    return vec![];
+    pub(crate) fn lower_fields_in_specifier(&mut self, body: Node<'_>) -> FieldsData {
+        let mut result = FieldsData {
+            by_index: vec![],
+            by_name: HashMap::new(),
+        };
+        for node in body.children(&mut body.walk()) {
+            if node.kind() == "{" || node.kind() == "}" {
+                continue;
+            }
+            match self.lower_to_var_decl_list(node).unwrap() {
+                Either::Left(fields) => {
+                    for field in fields {
+                        let new_index = result.by_index.len();
+                        result.by_index.push(field.ty);
+                        result.by_name.insert(field.ident.name, vec![new_index]);
+                    }
                 }
-                self.lower_to_var_decl_list(x).unwrap()
-            })
-            .collect()
+                Either::Right(unnamed) => {
+                    let new_index = result.by_index.len();
+                    result.by_index.push(unnamed.clone());
+                    let inner_fields = match &unnamed.kind {
+                        TyKind::Struct(idx) => {
+                            let data = self.type_tag_resolver.get_data_by_res(idx);
+                            let CompoundTypeData::Struct { fields } = data else {
+                                panic!("Invalid struct {data:?}");
+                            };
+                            fields
+                        }
+                        TyKind::Union(idx) => {
+                            let data = self.type_tag_resolver.get_data_by_res(idx);
+                            let CompoundTypeData::Union { fields } = data else {
+                                panic!("Invalid union {data:?}");
+                            };
+                            fields
+                        }
+                        _ => panic!(
+                            "Type error: primitive unnamed field with type {} is invalid.",
+                            unnamed,
+                        ),
+                    };
+                    for inner_field in &inner_fields.by_name {
+                        let mut indexes = vec![new_index];
+                        indexes.extend_from_slice(inner_field.1);
+                        result.by_name.insert(inner_field.0.clone(), indexes);
+                    }
+                }
+            }
+        }
+        result
     }
 
     pub(crate) fn lower_to_func_def(&mut self, node: Node) -> anyhow::Result<FuncDef> {

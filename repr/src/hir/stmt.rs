@@ -1,6 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use anyhow::bail;
+use itertools::Either;
 use log::trace;
 
 use crate::hir::{resolver::SymbolKind, *};
@@ -59,7 +60,9 @@ impl HirCtx<'_> {
                 StmtKind::Expr(self.lower_to_expr(node.child(0).unwrap())?)
             }
             constants::DECLARATION => {
-                let var_decl_list = self.lower_to_var_decl_list(node)?;
+                let Either::Left(var_decl_list) = self.lower_to_var_decl_list(node)? else {
+                    bail!("Invalid empty variable declarations.");
+                };
 
                 let mut symbols = vec![];
 

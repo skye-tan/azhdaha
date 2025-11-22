@@ -41,10 +41,10 @@ impl<'mir> MirCtx<'mir> {
                     addr_place
                 }
             },
-            hir::ExprKind::Field(expr, ident) => {
+            hir::ExprKind::Field(expr, field_index) => {
                 let mut place = self.lower_to_place(expr, bb, stmt_span);
 
-                place.projections.push(PlaceElem::Field(ident.name.clone()));
+                place.projections.push(PlaceElem::Field(*field_index));
 
                 place
             }

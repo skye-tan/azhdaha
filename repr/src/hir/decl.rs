@@ -1,6 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use anyhow::Context;
+use itertools::Either;
 use log::trace;
 
 use crate::{hir::*, mir::initializer_list_from_string};
@@ -45,7 +46,10 @@ pub struct Ident {
 }
 
 impl HirCtx<'_> {
-    pub(crate) fn lower_to_var_decl_list(&mut self, node: Node) -> anyhow::Result<Vec<VarDecl>> {
+    pub(crate) fn lower_to_var_decl_list(
+        &mut self,
+        node: Node,
+    ) -> anyhow::Result<Either<Vec<VarDecl>, Ty>> {
         trace!("[HIR/LocalDeclList] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -128,7 +132,11 @@ impl HirCtx<'_> {
             });
         }
 
-        Ok(decls)
+        if decls.is_empty() {
+            return Ok(Either::Right(self.lower_to_ty(node, None)?));
+        }
+
+        Ok(Either::Left(decls))
     }
 
     pub(crate) fn lower_to_var_decl(&mut self, node: Node) -> anyhow::Result<VarDecl> {

@@ -19,9 +19,15 @@ pub enum SymbolKind {
 }
 
 #[derive(Debug)]
+pub struct FieldsData {
+    pub by_index: Vec<Ty>,
+    pub by_name: HashMap<String, Vec<usize>>,
+}
+
+#[derive(Debug)]
 pub enum CompoundTypeData {
-    Struct { fields: Vec<VarDecl> },
-    Union { fields: Vec<VarDecl> },
+    Struct { fields: FieldsData },
+    Union { fields: FieldsData },
     Enum,
     DeclaredOnly,
 }

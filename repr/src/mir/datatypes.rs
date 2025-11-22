@@ -50,10 +50,10 @@ impl Body<'_> {
         let mut ty = self.local_decls[place.local].ty.kind.clone();
         for proj in &place.projections {
             match proj {
-                PlaceElem::Field(field_name) => {
+                PlaceElem::Field(field_index) => {
                     let idx = match ty {
                         TyKind::Struct(idx) | TyKind::Union(idx) => idx,
-                        _ => panic!("Invalid mir: field {field_name} of non-compound type."),
+                        _ => panic!("Invalid mir: field {field_index} of non-compound type."),
                     };
                     let data = self.type_tag_resolver.get_data_by_res(&idx);
                     let fields = match data {
@@ -66,11 +66,12 @@ impl Body<'_> {
                             panic!("Invalid mir: field of declare only struct.")
                         }
                     };
-                    let field = fields
-                        .iter()
-                        .find(|x| x.ident.name == *field_name)
+                    let field_ty = fields
+                        .by_index
+                        .get(*field_index)
                         .expect("Invalid mir: unknown field");
-                    ty = field.ty.kind.clone();
+
+                    ty = field_ty.kind.clone();
                 }
                 // Index is like ptr.offset in Rust, so it doesn't change type.
                 PlaceElem::Index(_) => (),
@@ -289,7 +290,7 @@ pub struct Place {
 
 #[derive(Debug, Clone)]
 pub enum PlaceElem {
-    Field(String),
+    Field(usize),
     Index(Place),
     Deref,
 }

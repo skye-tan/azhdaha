@@ -4,10 +4,7 @@ use anyhow::{Context, bail};
 use itertools::Either;
 use log::trace;
 
-use crate::hir::{
-    resolver::{CompoundTypeData, SymbolKind},
-    *,
-};
+use crate::hir::{resolver::SymbolKind, *};
 
 use super::{constants, resolver::Symbol};
 
@@ -39,11 +36,12 @@ pub enum ReturnSemantic {
 #[derive(Debug)]
 pub enum Designator {
     Subscript { value: i128 },
+    Field { name: String },
 }
 
 #[derive(Debug)]
 pub struct InitializerItem {
-    pub designator: Option<Designator>,
+    pub designators: Option<Vec<Designator>>,
     pub value: Expr,
 }
 
@@ -659,26 +657,11 @@ impl HirCtx<'_> {
                     target = Expr { kind, ty, span };
                 }
 
-                let fields = match target.ty.kind {
-                    TyKind::Struct(idx) => {
-                        let data = self.type_tag_resolver.get_data_by_res(&idx);
-                        let CompoundTypeData::Struct { fields } = data else {
-                            bail!("Invalid struct {data:?}");
-                        };
-                        fields
-                    }
-                    TyKind::Union(idx) => {
-                        let data = self.type_tag_resolver.get_data_by_res(&idx);
-                        let CompoundTypeData::Union { fields } = data else {
-                            bail!("Invalid union {data:?}");
-                        };
-                        fields
-                    }
-                    _ => bail!(
-                        "Type error: field expression on type {} is invalid.",
-                        target.ty
-                    ),
-                };
+                let fields = target
+                    .ty
+                    .kind
+                    .fields(&self.type_tag_resolver)
+                    .context("Failed to get fields of target expression.")?;
 
                 let Some(field_data) = fields.by_name.get(&field.name) else {
                     bail!(
@@ -690,26 +673,11 @@ impl HirCtx<'_> {
                 let mut result = target;
 
                 for &field_index in field_data {
-                    let fields = match &result.ty.kind {
-                        TyKind::Struct(idx) => {
-                            let data = self.type_tag_resolver.get_data_by_res(idx);
-                            let CompoundTypeData::Struct { fields } = data else {
-                                bail!("Invalid struct {data:?}");
-                            };
-                            fields
-                        }
-                        TyKind::Union(idx) => {
-                            let data = self.type_tag_resolver.get_data_by_res(idx);
-                            let CompoundTypeData::Union { fields } = data else {
-                                bail!("Invalid union {data:?}");
-                            };
-                            fields
-                        }
-                        _ => bail!(
-                            "Type error: field expression on type {} is invalid.",
-                            result.ty
-                        ),
-                    };
+                    let fields = result
+                        .ty
+                        .kind
+                        .fields(&self.type_tag_resolver)
+                        .context("Failed to get fields of unnamed compound type.")?;
                     result = Expr {
                         span: result.span,
                         kind: ExprKind::Field(Box::new(result), field_index),
@@ -762,14 +730,19 @@ impl HirCtx<'_> {
                     }
                     elements.push(if node.kind() == constants::INITIALIZER_PAIR {
                         let value = node.child_by_field_name("value").unwrap();
-                        let designator = node.child_by_field_name("designator").unwrap();
+                        let mut designators = vec![];
+                        for designator in
+                            node.children_by_field_name("designator", &mut node.walk())
+                        {
+                            designators.push(self.lower_to_designator(designator)?);
+                        }
                         InitializerItem {
-                            designator: Some(self.lower_to_designator(designator)?),
+                            designators: Some(designators),
                             value: self.lower_to_expr(value)?,
                         }
                     } else {
                         InitializerItem {
-                            designator: None,
+                            designators: None,
                             value: self.lower_to_expr(node)?,
                         }
                     });
@@ -1108,6 +1081,9 @@ impl HirCtx<'_> {
         Ok(match node.kind() {
             constants::SUBSCRIPT_DESIGNATOR => Designator::Subscript {
                 value: self.const_eval_enum_value(node.child(1).unwrap())? as i128,
+            },
+            constants::FIELD_DESIGNATOR => Designator::Field {
+                name: self.lower_to_ident(node.child(1).unwrap())?.name,
             },
             kind => {
                 bail!("Cannot lower '{kind}' to 'Designator'")

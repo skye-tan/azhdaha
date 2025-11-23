@@ -7,7 +7,7 @@ use la_arena::Idx;
 use log::trace;
 
 use crate::hir::{
-    resolver::{CompoundTypeData, SymbolKind},
+    resolver::{CompoundTypeData, FieldsData, Resolver, SymbolKind},
     *,
 };
 
@@ -66,6 +66,29 @@ impl TyKind {
 
     pub fn is_void(&self) -> bool {
         matches!(self, TyKind::PrimTy(PrimTyKind::Void))
+    }
+
+    pub fn fields<'a>(
+        &self,
+        type_tag_resolver: &'a Resolver<CompoundTypeData>,
+    ) -> anyhow::Result<&'a FieldsData> {
+        Ok(match self {
+            TyKind::Struct(idx) => {
+                let data = type_tag_resolver.get_data_by_res(idx);
+                let CompoundTypeData::Struct { fields } = data else {
+                    bail!("Invalid struct {data:?}");
+                };
+                fields
+            }
+            TyKind::Union(idx) => {
+                let data = type_tag_resolver.get_data_by_res(idx);
+                let CompoundTypeData::Union { fields } = data else {
+                    bail!("Invalid union {data:?}");
+                };
+                fields
+            }
+            _ => bail!("Type error: type {:?} has no fields.", self),
+        })
     }
 }
 

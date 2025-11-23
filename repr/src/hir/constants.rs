@@ -172,6 +172,8 @@ pub(crate) const NUMBER_LITERAL: &str = "number_literal";
 
 /// An identifiers used for [`Designator`]'s construction representing a [`Designator::Subscript`].
 pub(crate) const SUBSCRIPT_DESIGNATOR: &str = "subscript_designator";
+/// An identifiers used for [`Designator`]'s construction representing a [`Designator::Field`].
+pub(crate) const FIELD_DESIGNATOR: &str = "field_designator";
 
 /// An identifiers used for [`BinOp`]'s construction representing a [`BinOp::Assign`].
 pub(crate) const ASSIGN: &str = "=";

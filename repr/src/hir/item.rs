@@ -108,7 +108,10 @@ impl HirCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_fields_in_specifier(&mut self, body: Node<'_>) -> FieldsData {
+    pub(crate) fn lower_fields_in_specifier(
+        &mut self,
+        body: Node<'_>,
+    ) -> anyhow::Result<FieldsData> {
         let mut result = FieldsData {
             by_index: vec![],
             by_name: HashMap::new(),
@@ -117,7 +120,10 @@ impl HirCtx<'_> {
             if node.kind() == "{" || node.kind() == "}" {
                 continue;
             }
-            match self.lower_to_var_decl_list(node).unwrap() {
+            match self
+                .lower_to_var_decl_list(node)
+                .context("Failed to lower field declarations")?
+            {
                 Either::Left(fields) => {
                     for field in fields {
                         let new_index = result.by_index.len();
@@ -156,7 +162,7 @@ impl HirCtx<'_> {
                 }
             }
         }
-        result
+        Ok(result)
     }
 
     pub(crate) fn lower_to_func_def(&mut self, node: Node) -> anyhow::Result<FuncDef> {

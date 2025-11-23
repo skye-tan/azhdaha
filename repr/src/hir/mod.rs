@@ -16,6 +16,8 @@ pub mod resolver;
 mod decl;
 /// Contains methods needed to lower to expression.
 mod expr;
+/// Contains methods needed to lower to initializer list tree.
+mod initializer_tree;
 /// Contains methods needed to lower to item.
 mod item;
 /// Contains methods needed to lower to statement.
@@ -25,6 +27,7 @@ mod ty;
 
 pub use decl::*;
 pub use expr::*;
+pub use initializer_tree::*;
 pub use item::*;
 pub use stmt::*;
 pub use ty::*;

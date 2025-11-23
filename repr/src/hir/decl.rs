@@ -4,7 +4,7 @@ use anyhow::Context;
 use itertools::Either;
 use log::trace;
 
-use crate::{hir::*, mir::initializer_list_from_string};
+use crate::hir::*;
 
 #[derive(Debug)]
 pub struct VarDecl {
@@ -73,7 +73,7 @@ impl HirCtx<'_> {
         let mut cursor = node.walk();
 
         for decl_node in node.children_by_field_name("declarator", &mut cursor) {
-            let ty = self.lower_to_ty(node, Some(decl_node))?;
+            let mut ty = self.lower_to_ty(node, Some(decl_node))?;
 
             let ident = {
                 let mut decl_node = decl_node;
@@ -109,13 +109,34 @@ impl HirCtx<'_> {
                     if let ExprKind::Lit(lit) = &temp.kind
                         && let LitKind::Str(string) = &lit.kind
                     {
-                        init = initializer_list_from_string(string, ty.clone(), span);
+                        let list = initializer_list_from_string(string, ty.clone(), span);
+                        init = Expr {
+                            kind: ExprKind::InitializerList(Box::new(
+                                self.lower_to_initializer_tree(&ty.kind, list),
+                            )),
+                            ty: Ty {
+                                kind: TyKind::InitializerList,
+                                is_linear: false,
+                                quals: vec![],
+                                span,
+                            },
+                            span,
+                        };
                         init = Expr {
                             kind: ExprKind::Cast(Box::new(init)),
                             ty: ty.clone(),
                             span,
                         };
                     }
+                }
+
+                if let ExprKind::Cast(in_cast) = &mut init.kind
+                    && let ExprKind::InitializerList(items) = &mut in_cast.kind
+                    && let TyKind::Array { kind: _, size } = &mut ty.kind
+                    && size.is_none()
+                {
+                    *size = Some(items.children().len());
+                    init.ty = ty.clone();
                 }
 
                 Some(init)
@@ -163,15 +184,7 @@ impl HirCtx<'_> {
         let ty = self.lower_to_ty(node, Some(decl_node))?;
 
         let init = if decl_node.kind() == constants::INIT_DECLARATOR {
-            let mut init =
-                self.lower_to_expr(decl_node.child(decl_node.child_count() - 1).unwrap())?;
-
-            if ty.kind.is_array()
-                && let ExprKind::Lit(lit) = &init.kind
-                && let LitKind::Str(string) = &lit.kind
-            {
-                init = initializer_list_from_string(string, ty.clone(), span);
-            }
+            let init = self.lower_to_expr(decl_node.child(decl_node.child_count() - 1).unwrap())?;
 
             Some(init)
         } else {

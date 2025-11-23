@@ -4,7 +4,7 @@ use anyhow::{Context, bail};
 use itertools::Either;
 use log::trace;
 
-use crate::hir::{resolver::SymbolKind, *};
+use crate::hir::{initializer_tree::InitializerTree, resolver::SymbolKind, *};
 
 use super::{constants, resolver::Symbol};
 
@@ -42,7 +42,13 @@ pub enum Designator {
 #[derive(Debug)]
 pub struct InitializerItem {
     pub designators: Option<Vec<Designator>>,
-    pub value: Expr,
+    pub value: ExprOrList,
+}
+
+#[derive(Debug)]
+pub enum ExprOrList {
+    Expr(Expr),
+    List(Vec<InitializerItem>),
 }
 
 #[derive(Debug)]
@@ -59,7 +65,7 @@ pub enum ExprKind {
     PtrDiff(Box<Expr>, Box<Expr>),
     AssignPtrOffset(Box<Expr>, Box<Expr>, ReturnSemantic),
     Cast(Box<Expr>),
-    InitializerList(Vec<InitializerItem>),
+    InitializerList(Box<InitializerTree>),
     Comma(Vec<Expr>),
     Sizeof(Sizeof),
     Cond(Box<Expr>, Box<Expr>, Box<Expr>),
@@ -149,7 +155,7 @@ impl HirCtx<'_> {
         node: Node,
         ty: Ty,
     ) -> anyhow::Result<Expr> {
-        let expr = self.lower_to_expr(node)?;
+        let expr = self.lower_to_expr_with_maybe_expected_type(node, Some(ty.clone()))?;
 
         Ok(Expr {
             span: expr.span,
@@ -176,6 +182,14 @@ impl HirCtx<'_> {
     }
 
     pub(crate) fn lower_to_expr(&mut self, node: Node) -> anyhow::Result<Expr> {
+        self.lower_to_expr_with_maybe_expected_type(node, None)
+    }
+
+    pub(crate) fn lower_to_expr_with_maybe_expected_type(
+        &mut self,
+        node: Node,
+        expected_ty: Option<Ty>,
+    ) -> anyhow::Result<Expr> {
         trace!("[HIR/Expr] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -183,7 +197,7 @@ impl HirCtx<'_> {
             hi: node.end_byte(),
         };
 
-        let (kind, ty) = self.lower_to_expr_kind(node)?;
+        let (kind, ty) = self.lower_to_expr_kind(node, expected_ty)?;
 
         Ok(Expr { kind, ty, span })
     }
@@ -435,7 +449,11 @@ impl HirCtx<'_> {
         }
     }
 
-    fn lower_to_expr_kind(&mut self, node: Node) -> anyhow::Result<(ExprKind, Ty)> {
+    fn lower_to_expr_kind(
+        &mut self,
+        node: Node,
+        expected_ty: Option<Ty>,
+    ) -> anyhow::Result<(ExprKind, Ty)> {
         trace!("[HIR/ExprKind] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -603,7 +621,7 @@ impl HirCtx<'_> {
                     let ty = last_expr.ty.clone();
                     (ExprKind::GnuBlock(block), ty)
                 } else {
-                    self.lower_to_expr_kind(child)?
+                    self.lower_to_expr_kind(child, expected_ty)?
                 }
             }
             constants::ASSIGNMENT_EXPRESSION => {
@@ -717,41 +735,11 @@ impl HirCtx<'_> {
                 (ExprKind::Cast(Box::new(target)), ty)
             }
             constants::INITIALIZER_LIST => {
-                let mut elements = vec![];
-
-                let mut cursor = node.walk();
-                cursor.goto_first_child();
-                cursor.goto_next_sibling();
-
-                loop {
-                    let node = cursor.node();
-                    if node.kind() == "}" {
-                        break;
-                    }
-                    elements.push(if node.kind() == constants::INITIALIZER_PAIR {
-                        let value = node.child_by_field_name("value").unwrap();
-                        let mut designators = vec![];
-                        for designator in
-                            node.children_by_field_name("designator", &mut node.walk())
-                        {
-                            designators.push(self.lower_to_designator(designator)?);
-                        }
-                        InitializerItem {
-                            designators: Some(designators),
-                            value: self.lower_to_expr(value)?,
-                        }
-                    } else {
-                        InitializerItem {
-                            designators: None,
-                            value: self.lower_to_expr(node)?,
-                        }
-                    });
-
-                    cursor.goto_next_sibling();
-                    if !cursor.goto_next_sibling() {
-                        break;
-                    }
-                }
+                let list = self.lower_to_expr_or_list(node)?;
+                let Some(expected_ty) = expected_ty else {
+                    bail!("Initializer lists should have expected type.");
+                };
+                let tree = self.lower_to_initializer_tree(&expected_ty.kind, list);
 
                 let ty = Ty {
                     kind: TyKind::InitializerList,
@@ -760,7 +748,7 @@ impl HirCtx<'_> {
                     span,
                 };
 
-                (ExprKind::InitializerList(elements), ty)
+                (ExprKind::InitializerList(Box::new(tree)), ty)
             }
             constants::COMMA_EXPRESSION => {
                 let mut exprs = vec![];
@@ -907,6 +895,51 @@ impl HirCtx<'_> {
                 )
             }
             kind => bail!("Cannot lower '{kind}' to 'ExprKind'."),
+        })
+    }
+
+    fn lower_to_expr_or_list(&mut self, node: Node) -> anyhow::Result<ExprOrList> {
+        Ok(match node.kind() {
+            constants::INITIALIZER_LIST => {
+                let mut elements = vec![];
+
+                let mut cursor = node.walk();
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                loop {
+                    let node = cursor.node();
+                    if node.kind() == "}" {
+                        break;
+                    }
+                    elements.push(if node.kind() == constants::INITIALIZER_PAIR {
+                        let value = node.child_by_field_name("value").unwrap();
+                        let mut designators = vec![];
+                        for designator in
+                            node.children_by_field_name("designator", &mut node.walk())
+                        {
+                            designators.push(self.lower_to_designator(designator)?);
+                        }
+                        InitializerItem {
+                            designators: Some(designators),
+                            value: self.lower_to_expr_or_list(value)?,
+                        }
+                    } else {
+                        InitializerItem {
+                            designators: None,
+                            value: self.lower_to_expr_or_list(node)?,
+                        }
+                    });
+
+                    cursor.goto_next_sibling();
+                    if !cursor.goto_next_sibling() {
+                        break;
+                    }
+                }
+
+                ExprOrList::List(elements)
+            }
+            _ => ExprOrList::Expr(self.lower_to_expr(node)?),
         })
     }
 

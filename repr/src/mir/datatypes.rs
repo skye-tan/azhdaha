@@ -7,7 +7,7 @@ use crate::{
         BinOp, Ident, Lit, Span, Storage, Ty, TyKind, UnOp,
         resolver::{CompoundTypeData, Resolver, Symbol, SymbolKind},
     },
-    mir::InitializerTree,
+    mir::initializer_tree::MirInitializerTree,
 };
 
 #[derive(Debug, Clone)]
@@ -271,7 +271,7 @@ pub enum Rvalue {
         from_type: TyKind,
         to_type: TyKind,
     },
-    CompoundInitializing(TyKind, InitializerTree),
+    CompoundInitializing(TyKind, MirInitializerTree),
     Empty,
 }
 

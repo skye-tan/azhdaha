@@ -186,7 +186,9 @@ impl<'mir> MirCtx<'mir> {
         let list = match &expr.kind {
             ExprKind::InitializerList(list) => list,
             ExprKind::Lit(lit) => {
-                if let LitKind::Str(string) = &lit.kind {
+                if let LitKind::Str(string) = &lit.kind
+                    && expected_ty.is_array()
+                {
                     let init_expr = initializer_list_from_string(
                         string,
                         Ty {

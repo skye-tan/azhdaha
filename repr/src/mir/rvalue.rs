@@ -136,8 +136,8 @@ impl<'mir> MirCtx<'mir> {
                 Rvalue::Call(operand, arguments)
             }
             hir::ExprKind::Cast(inner_expr) => {
-                if let hir::ExprKind::InitializerList(_) = &inner_expr.kind {
-                    let tree = self.lower_to_initializer_tree(&expr.ty.kind, inner_expr, bb);
+                if let hir::ExprKind::InitializerList(tree) = &inner_expr.kind {
+                    let tree = self.lower_to_initializer_tree(tree, bb);
                     Rvalue::CompoundInitializing(expr.ty.kind.clone(), tree)
                 } else {
                     let operand = self.lower_to_operand(inner_expr, bb, stmt_span);

@@ -38,7 +38,7 @@ pub enum TyKind {
     },
     Array {
         kind: Box<TyKind>,
-        size: (),
+        size: Option<usize>,
     },
     Func {
         sig: Box<FuncSig>,
@@ -223,15 +223,16 @@ impl HirCtx<'_> {
                     }
                 }
                 constants::ARRAY_DECLARATOR | constants::ABSTRACT_ARRAY_DECLARATOR => {
-                    let _size = if decl_node.child_count() == 4 {
-                        Some(Box::new(self.lower_to_expr(decl_node.child(2).unwrap())?))
+                    let size = if decl_node.child_count() == 4 {
+                        let value = self.const_eval_enum_value(decl_node.child(2).unwrap())?;
+                        Some(value as usize)
                     } else {
                         None
                     };
 
                     kind = TyKind::Array {
                         kind: Box::new(kind),
-                        size: (),
+                        size,
                     }
                 }
                 constants::PARENTHESIZED_DECLARATOR => continue,
@@ -322,15 +323,16 @@ impl HirCtx<'_> {
                     }
                 }
                 constants::ARRAY_DECLARATOR | constants::ABSTRACT_ARRAY_DECLARATOR => {
-                    let _size = if decl_node.child_count() == 4 {
-                        Some(Box::new(self.lower_to_expr(decl_node.child(2).unwrap())?))
+                    let size = if decl_node.child_count() == 4 {
+                        let value = self.const_eval_enum_value(decl_node.child(2).unwrap())?;
+                        Some(value as usize)
                     } else {
                         None
                     };
 
                     ty_kind = TyKind::Array {
                         kind: Box::new(ty_kind),
-                        size: (),
+                        size,
                     }
                 }
                 constants::FUNCTION_DECLARATOR
@@ -437,7 +439,9 @@ impl HirCtx<'_> {
             )
         };
         let data = if let Some(body) = ty_node.child_by_field_name("body") {
-            let fields = self.lower_fields_in_specifier(body);
+            let fields = self
+                .lower_fields_in_specifier(body)
+                .with_context(|| format!("Failed to lower fields of {ident:?}"))?;
             Some(match ty_node.kind() {
                 constants::STRUCT_SPECIFIER => CompoundTypeData::Struct { fields },
                 constants::UNION_SPECIFIER => CompoundTypeData::Union { fields },

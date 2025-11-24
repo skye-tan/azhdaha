@@ -11,6 +11,9 @@ pub enum InitializerTree {
 }
 impl InitializerTree {
     /// Returns the children of this initializer list, break it if it was empty.
+    ///
+    /// # Panics
+    /// Panics if the node is a leaf.
     pub fn children(&mut self) -> &mut Vec<InitializerTree> {
         match self {
             InitializerTree::Middle { children } => children,

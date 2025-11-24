@@ -342,7 +342,7 @@ impl HirCtx<'_> {
                 | constants::IDENTIFIER => {
                     break;
                 }
-                constants::INIT_DECLARATOR => (),
+                constants::PARENTHESIZED_DECLARATOR | constants::INIT_DECLARATOR => (),
                 kind => bail!("Cannot lower '{kind}' to 'TyKind' <todo: wrong message>."),
             }
 

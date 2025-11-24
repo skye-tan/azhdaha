@@ -1,5 +1,5 @@
 [workspace]
-members = ["ast-utils", "azhdaha", "cli-utils", "repr"]
+members = ["ast-utils", "azhdaha", "azhdaha-errors", "cli-utils", "repr"]
 resolver = "3"
 
 [workspace.package]

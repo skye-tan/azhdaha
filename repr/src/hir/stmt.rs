@@ -1,6 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use anyhow::bail;
+use azhdaha_errors::bail;
 use itertools::Either;
 use log::trace;
 
@@ -30,7 +30,7 @@ pub enum StmtKind {
 }
 
 impl HirCtx<'_> {
-    pub(crate) fn lower_to_stmt(&mut self, node: Node) -> anyhow::Result<Stmt> {
+    pub(crate) fn lower_to_stmt(&mut self, node: Node) -> azhdaha_errors::Result<Stmt> {
         trace!("[HIR/Stmt] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -46,7 +46,7 @@ impl HirCtx<'_> {
         })
     }
 
-    fn lower_to_stmt_kind(&mut self, node: Node) -> anyhow::Result<StmtKind> {
+    fn lower_to_stmt_kind(&mut self, node: Node) -> azhdaha_errors::Result<StmtKind> {
         trace!("[HIR/StmtKind] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -61,7 +61,7 @@ impl HirCtx<'_> {
             }
             constants::DECLARATION => {
                 let Either::Left(var_decl_list) = self.lower_to_var_decl_list(node)? else {
-                    bail!("Invalid empty variable declarations.");
+                    bail!(span, "Invalid empty variable declarations.");
                 };
 
                 let mut symbols = vec![];
@@ -214,7 +214,7 @@ impl HirCtx<'_> {
             }
             constants::CASE_STATEMENT => {
                 let Some(mut switch_data) = self.switch_data.take() else {
-                    bail!("Case statement outside of switch body.")
+                    bail!(span, "Case statement outside of switch body.")
                 };
 
                 let label = self.label_resolver.insert_unnamed_symbol(());
@@ -228,12 +228,12 @@ impl HirCtx<'_> {
                     }
                     constants::DEFAULT => {
                         if switch_data.default_case.is_some() {
-                            bail!("Duplicate default label in switch case.");
+                            bail!(span, "Duplicate default label in switch case.");
                         }
                         switch_data.default_case = Some(label);
                         2
                     }
-                    kind => bail!("Unknown keyword '{kind}' in switch statement."),
+                    kind => bail!(span, "Unknown keyword '{kind}' in switch statement."),
                 };
 
                 self.switch_data = Some(switch_data);
@@ -484,11 +484,11 @@ impl HirCtx<'_> {
             }
             constants::CONTINUE_STATEMENT => match self.start_label {
                 Some(loop_start_label) => StmtKind::Goto(loop_start_label),
-                None => bail!("Continue statement outside of loop body."),
+                None => bail!(span, "Continue statement outside of loop body."),
             },
             constants::BREAK_STATEMENT => match self.end_label {
                 Some(loop_end_label) => StmtKind::Goto(loop_end_label),
-                None => bail!("Break statement outside of loop or switch body."),
+                None => bail!(span, "Break statement outside of loop or switch body."),
             },
             constants::TYPE_DEFINITION => {
                 let var_decl = self.lower_to_var_decl(node)?;
@@ -506,7 +506,7 @@ impl HirCtx<'_> {
                 StmtKind::Noop
             }
             constants::SEMICOLON => StmtKind::Noop,
-            kind => bail!("Cannot lower '{kind}' to 'StmtKind'."),
+            kind => bail!(span, "Cannot lower '{kind}' to 'StmtKind'."),
         })
     }
 }

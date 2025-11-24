@@ -2,7 +2,7 @@
 
 use std::fmt::Display;
 
-use anyhow::{Context, bail};
+use azhdaha_errors::{Context, bail};
 use la_arena::Idx;
 use log::trace;
 
@@ -71,23 +71,24 @@ impl TyKind {
     pub fn fields<'a>(
         &self,
         type_tag_resolver: &'a Resolver<CompoundTypeData>,
-    ) -> anyhow::Result<&'a FieldsData> {
+        span: Span,
+    ) -> azhdaha_errors::Result<&'a FieldsData> {
         Ok(match self {
             TyKind::Struct(idx) => {
                 let data = type_tag_resolver.get_data_by_res(idx);
                 let CompoundTypeData::Struct { fields } = data else {
-                    bail!("Invalid struct {data:?}");
+                    bail!(span, "Invalid struct {data:?}");
                 };
                 fields
             }
             TyKind::Union(idx) => {
                 let data = type_tag_resolver.get_data_by_res(idx);
                 let CompoundTypeData::Union { fields } = data else {
-                    bail!("Invalid union {data:?}");
+                    bail!(span, "Invalid union {data:?}");
                 };
                 fields
             }
-            _ => bail!("Type error: type {:?} has no fields.", self),
+            _ => bail!(span, "Type error: type {:?} has no fields.", self),
         })
     }
 }
@@ -127,7 +128,7 @@ impl HirCtx<'_> {
         &mut self,
         node: Node,
         decl_node: Option<Node>,
-    ) -> anyhow::Result<Ty> {
+    ) -> azhdaha_errors::Result<Ty> {
         trace!("[HIR/Ty] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -252,8 +253,13 @@ impl HirCtx<'_> {
         &mut self,
         node: Node,
         decl_node: Option<Node>,
-    ) -> anyhow::Result<TyKind> {
+    ) -> azhdaha_errors::Result<TyKind> {
         trace!("[HIR/TyKind] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
 
         let mut ty_node = node;
 
@@ -274,13 +280,15 @@ impl HirCtx<'_> {
                 let symbol = self
                     .symbol_resolver
                     .get_res_by_name(&ident.name)
-                    .context(format!("Use of undefined identifier '{}'.", &ident.name))?;
+                    .with_context(span, || {
+                        format!("Use of undefined identifier '{}'.", &ident.name)
+                    })?;
 
                 let symbol_kind = self.symbol_resolver.get_data_by_res(&symbol);
 
                 match symbol_kind {
                     SymbolKind::TyDef(ty) => ty.kind.clone(),
-                    _ => bail!("Use of invalid type identifier '{}'.", &ident.name),
+                    _ => bail!(span, "Use of invalid type identifier '{}'.", &ident.name),
                 }
             }
             constants::SIZED_TYPE_SPECIFIER | constants::PRIMITIVE_TYPE => {
@@ -297,7 +305,7 @@ impl HirCtx<'_> {
                     _ => unreachable!(),
                 }
             }
-            kind => bail!("Cannot lower '{kind}' to 'TyKind'."),
+            kind => bail!(span, "Cannot lower '{kind}' to 'TyKind'."),
         };
 
         let Some(mut decl_node) = decl_node else {
@@ -343,7 +351,10 @@ impl HirCtx<'_> {
                     break;
                 }
                 constants::PARENTHESIZED_DECLARATOR | constants::INIT_DECLARATOR => (),
-                kind => bail!("Cannot lower '{kind}' to 'TyKind' <todo: wrong message>."),
+                kind => bail!(
+                    span,
+                    "Cannot lower '{kind}' to 'TyKind' <todo: wrong message>."
+                ),
             }
 
             match decl_node.child_by_field_name("declarator") {
@@ -355,7 +366,10 @@ impl HirCtx<'_> {
         Ok(ty_kind)
     }
 
-    pub(crate) fn lower_enum(&mut self, node: Node<'_>) -> anyhow::Result<Idx<CompoundTypeData>> {
+    pub(crate) fn lower_enum(
+        &mut self,
+        node: Node<'_>,
+    ) -> azhdaha_errors::Result<Idx<CompoundTypeData>> {
         let idx = if let Some(name) = node.child_by_field_name("name") {
             let ident = self.lower_to_ident(name)?;
             match self.type_tag_resolver.get_res_by_name(&ident.name) {
@@ -391,12 +405,17 @@ impl HirCtx<'_> {
         Ok(idx)
     }
 
-    pub(crate) fn const_eval_enum_value(&self, node: Node<'_>) -> anyhow::Result<i32> {
+    pub(crate) fn const_eval_enum_value(&self, node: Node<'_>) -> azhdaha_errors::Result<i32> {
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
         match node.kind() {
             constants::NUMBER_LITERAL => {
                 let lit = self.lower_to_lit(node)?;
                 let LitKind::Int(value) = lit.kind else {
-                    bail!("Invalid literal {lit:?} for enum value.");
+                    bail!(span, "Invalid literal {lit:?} for enum value.");
                 };
                 Ok(value as i32)
             }
@@ -405,10 +424,10 @@ impl HirCtx<'_> {
                 let idx = self
                     .symbol_resolver
                     .get_res_by_name(&ident.name)
-                    .context("Fail to resolve ident.")?;
+                    .context(span, "Fail to resolve ident.")?;
                 match self.symbol_resolver.get_data_by_res(&idx) {
                     SymbolKind::EnumVariant { value, span: _ } => Ok(*value),
-                    _ => bail!("Only enum variants can be evaluated at compile time."),
+                    _ => bail!(span, "Only enum variants can be evaluated at compile time."),
                 }
             }
             constants::BINARY_EXPRESSION => {
@@ -416,7 +435,7 @@ impl HirCtx<'_> {
 
                 let bin_op = self
                     .lower_to_bin_op(node.child(1).unwrap())?
-                    .context("Assignment isn't valid in consteval")?;
+                    .context(span, "Assignment isn't valid in consteval")?;
 
                 let rhs = self.const_eval_enum_value(node.child(2).unwrap())?;
 
@@ -441,14 +460,18 @@ impl HirCtx<'_> {
                     BinOp::Shr => lhs >> rhs,
                 })
             }
-            kind => bail!("Cannot const eval node of type '{kind}'"),
+            kind => bail!(span, "Cannot const eval node of type '{kind}'"),
         }
     }
 
     pub(crate) fn lower_struct_or_union_or_enum(
         &mut self,
         ty_node: Node<'_>,
-    ) -> anyhow::Result<Idx<CompoundTypeData>> {
+    ) -> azhdaha_errors::Result<Idx<CompoundTypeData>> {
+        let span = Span {
+            lo: ty_node.start_byte(),
+            hi: ty_node.end_byte(),
+        };
         if ty_node.kind() == constants::ENUM_SPECIFIER {
             return self.lower_enum(ty_node);
         }
@@ -471,7 +494,7 @@ impl HirCtx<'_> {
         let data = if let Some(body) = ty_node.child_by_field_name("body") {
             let fields = self
                 .lower_fields_in_specifier(body)
-                .with_context(|| format!("Failed to lower fields of {ident:?}"))?;
+                .with_context(span, || format!("Failed to lower fields of {ident:?}"))?;
             Some(match ty_node.kind() {
                 constants::STRUCT_SPECIFIER => CompoundTypeData::Struct { fields },
                 constants::UNION_SPECIFIER => CompoundTypeData::Union { fields },
@@ -495,10 +518,18 @@ impl HirCtx<'_> {
         Ok(idx)
     }
 
-    fn lower_to_prim_ty_kind(&mut self, node: Node) -> anyhow::Result<PrimTyKind> {
+    fn lower_to_prim_ty_kind(&mut self, node: Node) -> azhdaha_errors::Result<PrimTyKind> {
         trace!("[HIR/PrimTyKind] Lowering '{}'", node.kind());
 
-        let ty = std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])?;
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
+        let Ok(ty) = std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])
+        else {
+            bail!(span, "Invalid utf8 in type literal");
+        };
         let ty = ty.trim();
         let tokens: Vec<&str> = ty.split_whitespace().collect();
 
@@ -549,14 +580,19 @@ impl HirCtx<'_> {
             ["void"] => Void,
 
             // ---- Anything else ----
-            _ => bail!("Cannot lower '{ty}' to PrimTyKind."),
+            _ => bail!(span, "Cannot lower '{ty}' to PrimTyKind."),
         };
 
         Ok(prim)
     }
 
-    pub(crate) fn lower_to_storage(&mut self, node: Node) -> anyhow::Result<Storage> {
+    pub(crate) fn lower_to_storage(&mut self, node: Node) -> azhdaha_errors::Result<Storage> {
         trace!("[HIR/Storage] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
 
         Ok(match node.kind() {
             constants::EXTERN => Storage::Extern,
@@ -565,12 +601,17 @@ impl HirCtx<'_> {
             constants::REGISTER => Storage::Register,
             constants::INLINE => Storage::Inline,
             constants::THREAD_LOCAL => Storage::ThreadLocal,
-            kind => bail!("Cannot lower '{kind}' to 'Storage'."),
+            kind => bail!(span, "Cannot lower '{kind}' to 'Storage'."),
         })
     }
 
-    fn lower_to_ty_qual(&mut self, node: Node) -> anyhow::Result<TyQual> {
+    fn lower_to_ty_qual(&mut self, node: Node) -> azhdaha_errors::Result<TyQual> {
         trace!("[HIR/TyQual] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
 
         Ok(match node.kind() {
             constants::CONST => TyQual::Const,
@@ -580,7 +621,7 @@ impl HirCtx<'_> {
             constants::ATOMIC => TyQual::Atomic,
             constants::NORETURN => TyQual::NoReturn,
             constants::EXTENSION => TyQual::Extension,
-            kind => bail!("Cannot lower '{kind}' to 'TyQual'."),
+            kind => bail!(span, "Cannot lower '{kind}' to 'TyQual'."),
         })
     }
 }

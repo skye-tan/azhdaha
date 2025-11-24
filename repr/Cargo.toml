@@ -4,8 +4,8 @@ version = "0.1.0"
 edition.workspace = true
 
 [dependencies]
-anyhow.workspace = true
 ast-utils = { version = "0.1.0", path = "../ast-utils" }
+azhdaha-errors = { version = "0.1.0", path = "../azhdaha-errors" }
 itertools.workspace = true
 la-arena.workspace = true
 log.workspace = true

@@ -1,5 +1,7 @@
+use azhdaha_errors::Span;
+
 use crate::hir::{
-    self, Designator, Expr, ExprKind, ExprOrList, HirCtx, LitKind, Ty, TyKind,
+    self, Designator, DesignatorKind, Expr, ExprKind, ExprOrList, HirCtx, LitKind, Ty, TyKind,
     resolver::{CompoundTypeData, Resolver},
 };
 
@@ -36,6 +38,8 @@ struct InitializerCursor {
     base_ty: TyKind,
     /// Index and type in each level.
     stack: Vec<(usize, TyKind)>,
+    /// The span of the initializer list.
+    span: Span,
 }
 
 impl InitializerCursor {
@@ -44,15 +48,17 @@ impl InitializerCursor {
         designators: &[Designator],
         base_ty: &TyKind,
         ttr: &Resolver<CompoundTypeData>,
+        span: hir::Span,
     ) -> Self {
         let mut base_ty = base_ty;
         let mut result = InitializerCursor {
             base_ty: base_ty.clone(),
             stack: vec![],
+            span,
         };
         for designator in designators {
-            match designator {
-                Designator::Subscript { value } => {
+            match &designator.kind {
+                DesignatorKind::Subscript { value } => {
                     match base_ty {
                         TyKind::Array { kind, size: _ } => {
                             base_ty = kind;
@@ -61,11 +67,11 @@ impl InitializerCursor {
                     }
                     result.stack.push((*value as usize, base_ty.clone()));
                 }
-                Designator::Field { name } => {
-                    let fields = base_ty.fields(ttr).unwrap();
+                DesignatorKind::Field { name } => {
+                    let fields = base_ty.fields(ttr, span).unwrap();
                     let addr = &fields.by_name[name];
                     for &elem in addr {
-                        let fields = base_ty.fields(ttr).unwrap();
+                        let fields = base_ty.fields(ttr, span).unwrap();
                         base_ty = &fields.by_index[elem].kind;
                         result.stack.push((elem, base_ty.clone()));
                     }
@@ -101,7 +107,7 @@ impl InitializerCursor {
             }
             current = &mut children[*item];
         }
-        *current = ctx.lower_to_initializer_tree(self.ty(), value);
+        *current = ctx.lower_to_initializer_tree(self.ty(), value, self.span);
     }
 
     /// Go down to the first non compound type to initialize.
@@ -111,7 +117,7 @@ impl InitializerCursor {
         }
         match self.ty() {
             ty @ (TyKind::Struct(_) | TyKind::Union(_)) => {
-                let fields = ty.fields(ttr).unwrap();
+                let fields = ty.fields(ttr, self.span).unwrap();
                 self.stack.push((0, fields.by_index[0].kind.clone()));
                 self.go_through_primitive(ttr);
             }
@@ -131,7 +137,7 @@ impl InitializerCursor {
         let mut last = self.stack.pop().unwrap();
         match self.ty() {
             ty @ TyKind::Struct(_) => {
-                let fields = ty.fields(ttr).unwrap();
+                let fields = ty.fields(ttr, self.span).unwrap();
                 last.0 += 1;
                 match fields.by_index.get(last.0) {
                     Some(field) => {
@@ -155,16 +161,18 @@ impl InitializerCursor {
     }
 
     /// Create a new cursor to the base ty.
-    fn to_first(ttr: &Resolver<CompoundTypeData>, base_ty: &TyKind) -> Self {
+    fn to_first(ttr: &Resolver<CompoundTypeData>, base_ty: &TyKind, span: hir::Span) -> Self {
         match base_ty {
             ty @ (TyKind::Struct(_) | TyKind::Union(_)) => {
-                let fields = ty.fields(ttr).unwrap();
+                let fields = ty.fields(ttr, span).unwrap();
                 Self {
+                    span,
                     base_ty: base_ty.clone(),
                     stack: vec![(0, fields.by_index[0].kind.clone())],
                 }
             }
             TyKind::Array { kind, size: _ } => Self {
+                span,
                 base_ty: base_ty.clone(),
                 stack: vec![(0, (**kind).clone())],
             },
@@ -179,6 +187,7 @@ impl<'hir> HirCtx<'hir> {
         &mut self,
         expected_ty: &TyKind,
         expr: hir::ExprOrList,
+        span: hir::Span,
     ) -> InitializerTree {
         let list = match expr {
             ExprOrList::Expr(expr) => match expr.kind {
@@ -196,7 +205,7 @@ impl<'hir> HirCtx<'hir> {
                             },
                             expr.span,
                         );
-                        return self.lower_to_initializer_tree(expected_ty, init_expr);
+                        return self.lower_to_initializer_tree(expected_ty, init_expr, span);
                     } else {
                         return InitializerTree::Leaf(expr);
                     }
@@ -208,13 +217,14 @@ impl<'hir> HirCtx<'hir> {
             ExprOrList::List(list) => list,
         };
         let mut result = InitializerTree::Middle { children: vec![] };
-        let mut cursor = InitializerCursor::to_first(&self.type_tag_resolver, expected_ty);
+        let mut cursor = InitializerCursor::to_first(&self.type_tag_resolver, expected_ty, span);
         for item in list {
             if let Some(designators) = &item.designators {
                 cursor = InitializerCursor::from_designators(
                     designators,
                     expected_ty,
                     &self.type_tag_resolver,
+                    span,
                 );
             }
             if !matches!(item.value, ExprOrList::List(_)) {

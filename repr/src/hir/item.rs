@@ -2,7 +2,7 @@
 
 use std::{collections::HashMap, mem};
 
-use anyhow::{Context, bail};
+use azhdaha_errors::{Context, bail};
 use itertools::Either;
 use la_arena::Idx;
 use log::trace;
@@ -49,7 +49,7 @@ pub struct Block {
 }
 
 impl HirCtx<'_> {
-    pub(crate) fn lower_to_item(&mut self, node: Node) -> anyhow::Result<Item> {
+    pub(crate) fn lower_to_item(&mut self, node: Node) -> azhdaha_errors::Result<Item> {
         trace!("[HIR/Item] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -62,8 +62,13 @@ impl HirCtx<'_> {
         Ok(Item { kind, span })
     }
 
-    pub(crate) fn lower_to_item_kind(&mut self, node: Node) -> anyhow::Result<ItemKind> {
+    pub(crate) fn lower_to_item_kind(&mut self, node: Node) -> azhdaha_errors::Result<ItemKind> {
         trace!("[HIR/ItemKind] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
 
         Ok(match node.kind() {
             constants::FUNCTION_DEFINITION => {
@@ -71,7 +76,7 @@ impl HirCtx<'_> {
             }
             constants::DECLARATION => {
                 let Either::Left(var_decl_list) = self.lower_to_var_decl_list(node)? else {
-                    bail!("Invalid empty item declarations.");
+                    bail!(span, "Invalid empty item declarations.");
                 };
 
                 let mut symbols = vec![];
@@ -103,7 +108,7 @@ impl HirCtx<'_> {
             }
             constants::SEMICOLON => ItemKind::Empty,
             kind => {
-                bail!("Cannot lower '{kind}' to 'ItemKind'.");
+                bail!(span, "Cannot lower '{kind}' to 'ItemKind'.");
             }
         })
     }
@@ -111,7 +116,7 @@ impl HirCtx<'_> {
     pub(crate) fn lower_fields_in_specifier(
         &mut self,
         body: Node<'_>,
-    ) -> anyhow::Result<FieldsData> {
+    ) -> azhdaha_errors::Result<FieldsData> {
         let mut result = FieldsData {
             by_index: vec![],
             by_name: HashMap::new(),
@@ -120,9 +125,13 @@ impl HirCtx<'_> {
             if node.kind() == "{" || node.kind() == "}" {
                 continue;
             }
+            let span = Span {
+                lo: node.start_byte(),
+                hi: node.end_byte(),
+            };
             match self
                 .lower_to_var_decl_list(node)
-                .context("Failed to lower field declarations")?
+                .context(span, "Failed to lower field declarations")?
             {
                 Either::Left(fields) => {
                     for field in fields {
@@ -165,7 +174,7 @@ impl HirCtx<'_> {
         Ok(result)
     }
 
-    pub(crate) fn lower_to_func_def(&mut self, node: Node) -> anyhow::Result<FuncDef> {
+    pub(crate) fn lower_to_func_def(&mut self, node: Node) -> azhdaha_errors::Result<FuncDef> {
         trace!("[HIR/FuncDef] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -210,8 +219,9 @@ impl HirCtx<'_> {
         self.return_ty = None;
 
         // Restore resolvers and bail later to not break subsequent functions in case of failure.
-        let body =
-            body.with_context(|| format!("Fail to lower function {}", func_decl.ident.name))?;
+        let body = body.with_context(span, || {
+            format!("Fail to lower function {}", func_decl.ident.name)
+        })?;
 
         Ok(FuncDef {
             label_resolver,
@@ -222,7 +232,7 @@ impl HirCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_to_block(&mut self, node: Node) -> anyhow::Result<Block> {
+    pub(crate) fn lower_to_block(&mut self, node: Node) -> azhdaha_errors::Result<Block> {
         trace!("[HIR/Block] Lowering '{}'", node.kind());
 
         let span = Span {

@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use anyhow::Context;
+use azhdaha_errors::Context;
 use la_arena::{Arena, RawIdx};
 
 use crate::hir::{
@@ -69,7 +69,10 @@ impl<'mir> MirCtx<'mir> {
         }
     }
 
-    pub fn lower_to_mir(mut self, func_def: &'mir hir::FuncDef) -> anyhow::Result<Body<'mir>> {
+    pub fn lower_to_mir(
+        mut self,
+        func_def: &'mir hir::FuncDef,
+    ) -> azhdaha_errors::Result<Body<'mir>> {
         let symbol_kind = self.body.symbol_resolver.get_data_by_res(&func_def.symbol);
 
         let func_dec = match symbol_kind {
@@ -87,13 +90,15 @@ impl<'mir> MirCtx<'mir> {
 
         for param in &func_dec.sig.params {
             if let Some(ident) = &param.ident {
-                let symbol = *func_def
-                    .arguments_symbols
-                    .get(&ident.name)
-                    .context(format!(
-                        "Parameter {} have not been inserted into resolver.",
-                        ident.name
-                    ))?;
+                let symbol = *func_def.arguments_symbols.get(&ident.name).with_context(
+                    ident.span,
+                    || {
+                        format!(
+                            "Parameter {} have not been inserted into resolver.",
+                            ident.name
+                        )
+                    },
+                )?;
 
                 let local = self.alloc_real_local(
                     param.storage.clone(),
@@ -117,7 +122,10 @@ impl<'mir> MirCtx<'mir> {
 
     /// # Panics
     /// Initializer of the [`hir::VarDecl`] should not be empty.
-    pub fn lower_static_to_mir(mut self, decl: &'mir hir::VarDecl) -> anyhow::Result<Body<'mir>> {
+    pub fn lower_static_to_mir(
+        mut self,
+        decl: &'mir hir::VarDecl,
+    ) -> azhdaha_errors::Result<Body<'mir>> {
         let ret = self.alloc_real_local(
             decl.storage.clone(),
             decl.ty.clone(),

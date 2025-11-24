@@ -1,6 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use anyhow::Context;
+use azhdaha_errors::{Context, bail};
 use itertools::Either;
 use log::trace;
 
@@ -49,7 +49,7 @@ impl HirCtx<'_> {
     pub(crate) fn lower_to_var_decl_list(
         &mut self,
         node: Node,
-    ) -> anyhow::Result<Either<Vec<VarDecl>, Ty>> {
+    ) -> azhdaha_errors::Result<Either<Vec<VarDecl>, Ty>> {
         trace!("[HIR/LocalDeclList] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -87,7 +87,7 @@ impl HirCtx<'_> {
                         _ => {
                             decl_node = decl_node
                                 .child_by_field_name("declarator")
-                                .context("Cannot find declarator.")?;
+                                .context(span, "Cannot find declarator.")?;
                         }
                     }
                 }
@@ -99,7 +99,9 @@ impl HirCtx<'_> {
                         decl_node.child(decl_node.child_count() - 1).unwrap(),
                         ty.clone(),
                     )
-                    .with_context(|| format!("Fail to lower initializer of {}", ident.name))?;
+                    .with_context(span, || {
+                        format!("Fail to lower initializer of {}", ident.name)
+                    })?;
 
                 if ty.kind.is_array() {
                     let mut temp = &init;
@@ -112,7 +114,7 @@ impl HirCtx<'_> {
                         let list = initializer_list_from_string(string, ty.clone(), span);
                         init = Expr {
                             kind: ExprKind::InitializerList(Box::new(
-                                self.lower_to_initializer_tree(&ty.kind, list),
+                                self.lower_to_initializer_tree(&ty.kind, list, span),
                             )),
                             ty: Ty {
                                 kind: TyKind::InitializerList,
@@ -160,7 +162,7 @@ impl HirCtx<'_> {
         Ok(Either::Left(decls))
     }
 
-    pub(crate) fn lower_to_var_decl(&mut self, node: Node) -> anyhow::Result<VarDecl> {
+    pub(crate) fn lower_to_var_decl(&mut self, node: Node) -> azhdaha_errors::Result<VarDecl> {
         trace!("[HIR/LocalDecl] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -199,7 +201,7 @@ impl HirCtx<'_> {
                 _ => {
                     decl_node = decl_node
                         .child_by_field_name("declarator")
-                        .context("Cannot find declarator.")?;
+                        .context(span, "Cannot find declarator.")?;
                 }
             }
         };
@@ -213,7 +215,7 @@ impl HirCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_to_func_decl(&mut self, node: Node) -> anyhow::Result<FuncDecl> {
+    pub(crate) fn lower_to_func_decl(&mut self, node: Node) -> azhdaha_errors::Result<FuncDecl> {
         trace!("[HIR/FuncDecl] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -252,7 +254,11 @@ impl HirCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_to_func_sig(&mut self, node: Node, ret_ty: Ty) -> anyhow::Result<FuncSig> {
+    pub(crate) fn lower_to_func_sig(
+        &mut self,
+        node: Node,
+        ret_ty: Ty,
+    ) -> azhdaha_errors::Result<FuncSig> {
         trace!("[HIR/FuncSig] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -292,7 +298,7 @@ impl HirCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_to_param_decl(&mut self, node: Node) -> anyhow::Result<ParamDecl> {
+    pub(crate) fn lower_to_param_decl(&mut self, node: Node) -> azhdaha_errors::Result<ParamDecl> {
         trace!("[HIR/ParamDecl] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -342,7 +348,7 @@ impl HirCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_to_ident(&self, node: Node) -> anyhow::Result<Ident> {
+    pub(crate) fn lower_to_ident(&self, node: Node) -> azhdaha_errors::Result<Ident> {
         trace!("[HIR/Ident] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -350,9 +356,13 @@ impl HirCtx<'_> {
             hi: node.end_byte(),
         };
 
+        let Ok(name) = std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])
+        else {
+            bail!(span, "Invalid utf8 in identifier name");
+        };
+
         Ok(Ident {
-            name: std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])?
-                .to_string(),
+            name: name.to_string(),
             span,
         })
     }

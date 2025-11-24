@@ -411,6 +411,36 @@ impl HirCtx<'_> {
                     _ => bail!("Only enum variants can be evaluated at compile time."),
                 }
             }
+            constants::BINARY_EXPRESSION => {
+                let lhs = self.const_eval_enum_value(node.child(0).unwrap())?;
+
+                let bin_op = self
+                    .lower_to_bin_op(node.child(1).unwrap())?
+                    .context("Assignment isn't valid in consteval")?;
+
+                let rhs = self.const_eval_enum_value(node.child(2).unwrap())?;
+
+                Ok(match bin_op {
+                    BinOp::Add => lhs + rhs,
+                    BinOp::Sub => lhs - rhs,
+                    BinOp::Mul => lhs * rhs,
+                    BinOp::Div => lhs / rhs,
+                    BinOp::Rem => lhs % rhs,
+                    BinOp::Or => lhs | rhs,
+                    BinOp::And => lhs & rhs,
+                    BinOp::BitOr => lhs | rhs,
+                    BinOp::BitXor => lhs ^ rhs,
+                    BinOp::BitAnd => lhs & rhs,
+                    BinOp::Eq => (lhs == rhs) as i32,
+                    BinOp::Lt => (lhs < rhs) as i32,
+                    BinOp::Le => (lhs <= rhs) as i32,
+                    BinOp::Ne => (lhs != rhs) as i32,
+                    BinOp::Ge => (lhs >= rhs) as i32,
+                    BinOp::Gt => (lhs > rhs) as i32,
+                    BinOp::Shl => lhs << rhs,
+                    BinOp::Shr => lhs >> rhs,
+                })
+            }
             kind => bail!("Cannot const eval node of type '{kind}'"),
         }
     }

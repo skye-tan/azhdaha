@@ -1069,7 +1069,7 @@ impl HirCtx<'_> {
     }
 
     // TODO: this function is garbage. Break it into two. One for assignments and one for normal operators.
-    fn lower_to_bin_op(&mut self, node: Node) -> anyhow::Result<Option<BinOp>> {
+    pub(crate) fn lower_to_bin_op(&self, node: Node) -> anyhow::Result<Option<BinOp>> {
         trace!("[HIR/BinOp] Lowering '{}'", node.kind());
 
         Ok(Some(match node.kind() {

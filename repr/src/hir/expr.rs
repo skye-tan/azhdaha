@@ -165,20 +165,14 @@ impl HirCtx<'_> {
     }
 
     pub(crate) fn lower_to_cond_expr(&mut self, node: Node) -> anyhow::Result<Expr> {
-        let span = Span {
-            lo: node.start_byte(),
-            hi: node.end_byte(),
-        };
+        let mut expr = self.lower_to_expr(node)?;
+        self.condify(&mut expr);
+        Ok(expr)
+    }
 
-        self.lower_to_expr_with_expected_type(
-            node,
-            Ty {
-                kind: TyKind::PrimTy(PrimTyKind::Bool),
-                is_linear: false,
-                quals: vec![],
-                span,
-            },
-        )
+    pub(crate) fn condify(&mut self, expr: &mut Expr) {
+        self.array_to_pointer_decay_if_array(expr);
+        self.pointer_to_address_decay_if_pointer(expr);
     }
 
     pub(crate) fn lower_to_expr(&mut self, node: Node) -> anyhow::Result<Expr> {
@@ -234,12 +228,15 @@ impl HirCtx<'_> {
         span: Span,
     ) -> anyhow::Result<(ExprKind, Ty)> {
         let ty = match un_op {
-            UnOp::Not => Ty {
-                kind: TyKind::PrimTy(PrimTyKind::Int(4)),
-                is_linear: false,
-                quals: vec![],
-                span,
-            },
+            UnOp::Not => {
+                self.condify(&mut expr);
+                Ty {
+                    kind: TyKind::PrimTy(PrimTyKind::Int(4)),
+                    is_linear: false,
+                    quals: vec![],
+                    span,
+                }
+            }
             UnOp::Neg | UnOp::Com | UnOp::Pos => expr.ty.clone(),
             UnOp::AddrOf => {
                 if expr.ty.kind.is_array() {

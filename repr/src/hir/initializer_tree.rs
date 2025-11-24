@@ -234,6 +234,7 @@ pub(crate) fn initializer_list_from_string(
     ExprOrList::List(
         string
             .chars()
+            .chain([0 as char])
             .map(|ch| InitializerItem {
                 designators: None,
                 value: ExprOrList::Expr(Expr {

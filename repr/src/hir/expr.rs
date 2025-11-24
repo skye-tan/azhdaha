@@ -1,6 +1,6 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
-use anyhow::{Context, bail};
+use azhdaha_errors::{Context, bail};
 use itertools::Either;
 use log::trace;
 
@@ -34,9 +34,15 @@ pub enum ReturnSemantic {
 }
 
 #[derive(Debug)]
-pub enum Designator {
+pub enum DesignatorKind {
     Subscript { value: i128 },
     Field { name: String },
+}
+
+#[derive(Debug)]
+pub struct Designator {
+    pub kind: DesignatorKind,
+    pub span: Span,
 }
 
 #[derive(Debug)]
@@ -154,7 +160,7 @@ impl HirCtx<'_> {
         &mut self,
         node: Node,
         ty: Ty,
-    ) -> anyhow::Result<Expr> {
+    ) -> azhdaha_errors::Result<Expr> {
         let expr = self.lower_to_expr_with_maybe_expected_type(node, Some(ty.clone()))?;
 
         Ok(Expr {
@@ -164,7 +170,7 @@ impl HirCtx<'_> {
         })
     }
 
-    pub(crate) fn lower_to_cond_expr(&mut self, node: Node) -> anyhow::Result<Expr> {
+    pub(crate) fn lower_to_cond_expr(&mut self, node: Node) -> azhdaha_errors::Result<Expr> {
         let mut expr = self.lower_to_expr(node)?;
         self.condify(&mut expr);
         Ok(expr)
@@ -175,7 +181,7 @@ impl HirCtx<'_> {
         self.pointer_to_address_decay_if_pointer(expr);
     }
 
-    pub(crate) fn lower_to_expr(&mut self, node: Node) -> anyhow::Result<Expr> {
+    pub(crate) fn lower_to_expr(&mut self, node: Node) -> azhdaha_errors::Result<Expr> {
         self.lower_to_expr_with_maybe_expected_type(node, None)
     }
 
@@ -183,7 +189,7 @@ impl HirCtx<'_> {
         &mut self,
         node: Node,
         expected_ty: Option<Ty>,
-    ) -> anyhow::Result<Expr> {
+    ) -> azhdaha_errors::Result<Expr> {
         trace!("[HIR/Expr] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -197,7 +203,15 @@ impl HirCtx<'_> {
     }
 
     /// This function is for sizeof when it didn't detect type at parse level, e.g. for typedefs.
-    pub(crate) fn lower_to_expr_or_type(&mut self, node: Node) -> anyhow::Result<Either<Expr, Ty>> {
+    pub(crate) fn lower_to_expr_or_type(
+        &mut self,
+        node: Node,
+    ) -> azhdaha_errors::Result<Either<Expr, Ty>> {
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
         Ok(match node.kind() {
             constants::IDENTIFIER => {
                 let ident = self.lower_to_ident(node)?;
@@ -205,7 +219,9 @@ impl HirCtx<'_> {
                 let symbol = self
                     .symbol_resolver
                     .get_res_by_name(&ident.name)
-                    .context(format!("Use of undefined identifier '{}'.", &ident.name))?;
+                    .with_context(span, || {
+                        format!("Use of undefined identifier '{}'.", &ident.name)
+                    })?;
 
                 if let SymbolKind::TyDef(ty) = &self.symbol_resolver.arena[symbol] {
                     Either::Right(ty.clone())
@@ -226,7 +242,7 @@ impl HirCtx<'_> {
         mut expr: Expr,
         un_op: UnOp,
         span: Span,
-    ) -> anyhow::Result<(ExprKind, Ty)> {
+    ) -> azhdaha_errors::Result<(ExprKind, Ty)> {
         let ty = match un_op {
             UnOp::Not => {
                 self.condify(&mut expr);
@@ -256,7 +272,7 @@ impl HirCtx<'_> {
             UnOp::Deref => {
                 self.array_to_pointer_decay_if_array(&mut expr);
                 let TyKind::Ptr { kind, quals: _ } = &expr.ty.kind else {
-                    bail!("Type error: dereference of non-ptr type");
+                    bail!(span, "Type error: dereference of non-ptr type");
                 };
                 if kind.is_fn() {
                     // dereference of function pointers is no op.
@@ -285,9 +301,9 @@ impl HirCtx<'_> {
         bin_op: BinOp,
         span: Span,
         is_assignment: bool,
-    ) -> anyhow::Result<(ExprKind, Ty)> {
+    ) -> azhdaha_errors::Result<(ExprKind, Ty)> {
         if is_assignment && lhs.ty.kind.is_array() {
-            bail!("Type error - can not run binop on arrays.");
+            bail!(span, "Type error - can not run binop on arrays.");
         } else {
             self.array_to_pointer_decay_if_array(&mut lhs);
         }
@@ -304,7 +320,7 @@ impl HirCtx<'_> {
                 let rhs_is_ptr = rhs.ty.kind.is_ptr();
 
                 match (lhs_is_ptr, rhs_is_ptr) {
-                    (true, true) => bail!("Type error: adding two pointers"),
+                    (true, true) => bail!(span, "Type error: adding two pointers"),
                     (true, false) => (),
                     (false, true) => {
                         std::mem::swap(&mut lhs, &mut rhs);
@@ -332,7 +348,7 @@ impl HirCtx<'_> {
                     (true, false) => lhs.ty.clone(),
                     (false, true) => {
                         if is_assignment {
-                            bail!("Type error - can not rotate arguments in assignment.");
+                            bail!(span, "Type error - can not rotate arguments in assignment.");
                         }
                         std::mem::swap(&mut lhs, &mut rhs);
                         lhs.ty.clone()
@@ -352,15 +368,15 @@ impl HirCtx<'_> {
         }
 
         let TyKind::PrimTy(lhs_ty) = lhs.ty.kind else {
-            bail!("Type error - can not use binop on type {}", lhs.ty);
+            bail!(span, "Type error - can not use binop on type {}", lhs.ty);
         };
         let TyKind::PrimTy(rhs_ty) = rhs.ty.kind else {
-            bail!("Type error - can not use binop on type {}", rhs.ty);
+            bail!(span, "Type error - can not use binop on type {}", rhs.ty);
         };
 
         let max_ty_kind = lhs_ty.max(rhs_ty);
         if max_ty_kind == PrimTyKind::Void {
-            bail!("Type error - can not use binop on void.");
+            bail!(span, "Type error - can not use binop on void.");
         }
         let max_ty = || Ty {
             kind: TyKind::PrimTy(max_ty_kind),
@@ -450,7 +466,7 @@ impl HirCtx<'_> {
         &mut self,
         node: Node,
         expected_ty: Option<Ty>,
-    ) -> anyhow::Result<(ExprKind, Ty)> {
+    ) -> azhdaha_errors::Result<(ExprKind, Ty)> {
         trace!("[HIR/ExprKind] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -465,7 +481,9 @@ impl HirCtx<'_> {
                 let symbol = self
                     .symbol_resolver
                     .get_res_by_name(&ident.name)
-                    .context(format!("Use of undefined identifier '{}'.", &ident.name))?;
+                    .with_context(span, || {
+                        format!("Use of undefined identifier '{}'.", &ident.name)
+                    })?;
 
                 let ty = self.symbol_resolver.arena[symbol].ty();
 
@@ -481,9 +499,12 @@ impl HirCtx<'_> {
                     TyKind::Func { sig } => sig,
                     TyKind::Ptr { kind, quals: _ } => match &**kind {
                         TyKind::Func { sig } => sig,
-                        _ => bail!("Type error: invalid call to pointer of non function type."),
+                        _ => bail!(
+                            span,
+                            "Type error: invalid call to pointer of non function type."
+                        ),
                     },
-                    _ => bail!("Type error: invalid call to non function type."),
+                    _ => bail!(span, "Type error: invalid call to non function type."),
                 };
 
                 let mut arguments = vec![];
@@ -508,6 +529,7 @@ impl HirCtx<'_> {
                                     PrimTyKind::Float(bytes) => PrimTyKind::Float(8.max(*bytes)),
                                     PrimTyKind::Void => {
                                         bail!(
+                                            span,
                                             "Type error - can not pass void to variadic functino."
                                         )
                                     }
@@ -530,13 +552,14 @@ impl HirCtx<'_> {
                                 expr = self.array_to_pointer_decay(expr);
                             }
                             _ => bail!(
+                                span,
                                 "Type error - can not pass {} as variadic argument.",
                                 &expr.ty
                             ),
                         }
                         arguments.push(expr);
                     } else {
-                        bail!("Type error - too many arguments to call {sig:?}");
+                        bail!(span, "Type error - too many arguments to call {sig:?}");
                     }
                     cursor.goto_next_sibling();
                     cursor.goto_next_sibling();
@@ -613,7 +636,7 @@ impl HirCtx<'_> {
                 if child.kind() == constants::COMPOUND_STATEMENT {
                     let block = self.lower_to_block(child)?;
                     let StmtKind::Expr(last_expr) = &block.stmts.last().unwrap().kind else {
-                        bail!("Invalid gnu statement block");
+                        bail!(span, "Invalid gnu statement block");
                     };
                     let ty = last_expr.ty.clone();
                     (ExprKind::GnuBlock(block), ty)
@@ -675,11 +698,12 @@ impl HirCtx<'_> {
                 let fields = target
                     .ty
                     .kind
-                    .fields(&self.type_tag_resolver)
-                    .context("Failed to get fields of target expression.")?;
+                    .fields(&self.type_tag_resolver, span)
+                    .context(span, "Failed to get fields of target expression.")?;
 
                 let Some(field_data) = fields.by_name.get(&field.name) else {
                     bail!(
+                        span,
                         "Unresolved field {}. Available fields are {:?}.",
                         field.name,
                         fields
@@ -691,8 +715,8 @@ impl HirCtx<'_> {
                     let fields = result
                         .ty
                         .kind
-                        .fields(&self.type_tag_resolver)
-                        .context("Failed to get fields of unnamed compound type.")?;
+                        .fields(&self.type_tag_resolver, span)
+                        .context(span, "Failed to get fields of unnamed compound type.")?;
                     result = Expr {
                         span: result.span,
                         kind: ExprKind::Field(Box::new(result), field_index),
@@ -734,9 +758,9 @@ impl HirCtx<'_> {
             constants::INITIALIZER_LIST => {
                 let list = self.lower_to_expr_or_list(node)?;
                 let Some(expected_ty) = expected_ty else {
-                    bail!("Initializer lists should have expected type.");
+                    bail!(span, "Initializer lists should have expected type.");
                 };
-                let tree = self.lower_to_initializer_tree(&expected_ty.kind, list);
+                let tree = self.lower_to_initializer_tree(&expected_ty.kind, list, span);
 
                 let ty = Ty {
                     kind: TyKind::InitializerList,
@@ -779,13 +803,13 @@ impl HirCtx<'_> {
                     }
                     (TyKind::Struct(idx_l), TyKind::Struct(idx_r)) => {
                         if idx_l != idx_r {
-                            bail!("Incompatible structs in ternary.");
+                            bail!(span, "Incompatible structs in ternary.");
                         }
                         TyKind::Struct(*idx_l)
                     }
                     (TyKind::Union(idx_l), TyKind::Union(idx_r)) => {
                         if idx_l != idx_r {
-                            bail!("Incompatible unions in ternary.");
+                            bail!(span, "Incompatible unions in ternary.");
                         }
                         TyKind::Union(*idx_l)
                     }
@@ -795,13 +819,13 @@ impl HirCtx<'_> {
                     (ptr @ TyKind::Ptr { .. }, TyKind::PrimTy(_))
                     | (TyKind::PrimTy(_), ptr @ TyKind::Ptr { .. }) => ptr.clone(),
                     (TyKind::Array { .. }, TyKind::Array { .. }) => {
-                        bail!("Array is invalid in ternary.")
+                        bail!(span, "Array is invalid in ternary.")
                     }
                     (TyKind::Func { .. }, TyKind::Func { .. }) => body_expr.ty.kind.clone(),
                     (TyKind::InitializerList, TyKind::InitializerList) => {
-                        bail!("Initializer list is invalid in ternary.")
+                        bail!(span, "Initializer list is invalid in ternary.")
                     }
-                    _ => bail!("Incompatible types in ternary."),
+                    _ => bail!(span, "Incompatible types in ternary."),
                 };
 
                 let ty = Ty {
@@ -850,7 +874,7 @@ impl HirCtx<'_> {
                 let mut result = "".to_owned();
                 for node in node.children(&mut node.walk()) {
                     let LitKind::Str(part) = self.lower_to_lit_kind(node)? else {
-                        bail!("Invalid literal in concatenated string.");
+                        bail!(span, "Invalid literal in concatenated string.");
                     };
                     result.push_str(&part);
                 }
@@ -891,11 +915,11 @@ impl HirCtx<'_> {
                     },
                 )
             }
-            kind => bail!("Cannot lower '{kind}' to 'ExprKind'."),
+            kind => bail!(span, "Cannot lower '{kind}' to 'ExprKind'."),
         })
     }
 
-    fn lower_to_expr_or_list(&mut self, node: Node) -> anyhow::Result<ExprOrList> {
+    fn lower_to_expr_or_list(&mut self, node: Node) -> azhdaha_errors::Result<ExprOrList> {
         Ok(match node.kind() {
             constants::INITIALIZER_LIST => {
                 let mut elements = vec![];
@@ -940,7 +964,7 @@ impl HirCtx<'_> {
         })
     }
 
-    fn lower_to_sizeof(&mut self, node: Node) -> anyhow::Result<Sizeof> {
+    fn lower_to_sizeof(&mut self, node: Node) -> azhdaha_errors::Result<Sizeof> {
         trace!("[HIR/SizeOf] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -953,8 +977,13 @@ impl HirCtx<'_> {
         Ok(Sizeof { kind, span })
     }
 
-    fn lower_to_sizeof_kind(&mut self, node: Node) -> anyhow::Result<SizeofKind> {
+    fn lower_to_sizeof_kind(&mut self, node: Node) -> azhdaha_errors::Result<SizeofKind> {
         trace!("[HIR/SizeofKind] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
 
         let sizeof_kind = 'size_of: {
             if let Some(child) = node.child_by_field_name("value") {
@@ -970,13 +999,13 @@ impl HirCtx<'_> {
                 );
             }
 
-            bail!("Cannot lower '{}' to 'SizeofKind'.", node.to_sexp());
+            bail!(span, "Cannot lower '{}' to 'SizeofKind'.", node.to_sexp());
         };
 
         Ok(sizeof_kind)
     }
 
-    pub(crate) fn lower_to_lit(&self, node: Node) -> anyhow::Result<Lit> {
+    pub(crate) fn lower_to_lit(&self, node: Node) -> azhdaha_errors::Result<Lit> {
         trace!("[HIR/Lit] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -985,7 +1014,7 @@ impl HirCtx<'_> {
         };
 
         Ok(Lit {
-            kind: self.lower_to_lit_kind(node).with_context(|| {
+            kind: self.lower_to_lit_kind(node).with_context(span, || {
                 format!(
                     "In lowering {:?} to literal",
                     node.utf8_text(self.source_code)
@@ -995,41 +1024,58 @@ impl HirCtx<'_> {
         })
     }
 
-    fn lower_to_lit_kind(&self, node: Node) -> anyhow::Result<LitKind> {
+    fn lower_to_lit_kind(&self, node: Node) -> azhdaha_errors::Result<LitKind> {
         trace!("[HIR/LitKind] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
 
         Ok(match node.kind() {
             constants::STRING_LITERAL => {
                 let text = &self.source_code[node.start_byte()..node.end_byte()];
                 let Some((first_quote, _)) = text.iter().enumerate().find(|x| *x.1 == b'"') else {
-                    bail!("Could not found \" in string literal.");
+                    bail!(span, "Could not found \" in string literal.");
                 };
                 let Some((last_quote, _)) = text.iter().enumerate().rev().find(|x| *x.1 == b'"')
                 else {
-                    bail!("Could not found \" in string literal.");
+                    bail!(span, "Could not found \" in string literal.");
                 };
                 let text = &text[first_quote + 1..last_quote];
-                let text = std::str::from_utf8(text)?;
-                LitKind::Str(unescaper::unescape(text)?)
+                let Ok(text) = std::str::from_utf8(text) else {
+                    bail!(span, "Invalid utf8 in string literal");
+                };
+                let Ok(text) = unescaper::unescape(text) else {
+                    bail!(span, "Could not escape the string {text}");
+                };
+                LitKind::Str(text)
             }
             constants::CHAR_LITERAL => {
                 let text = &self.source_code[node.start_byte()..node.end_byte()];
                 let Some((first_quote, _)) = text.iter().enumerate().find(|x| *x.1 == b'\'') else {
-                    bail!("Could not found ' in char literal.");
+                    bail!(span, "Could not found ' in char literal.");
                 };
                 let Some((last_quote, _)) = text.iter().enumerate().rev().find(|x| *x.1 == b'\'')
                 else {
-                    bail!("Could not found ' in char literal.");
+                    bail!(span, "Could not found ' in char literal.");
                 };
                 let text = &text[first_quote + 1..last_quote];
-                let text = std::str::from_utf8(text)?;
-                let text = unescaper::unescape(text)?;
+                let Ok(text) = std::str::from_utf8(text) else {
+                    bail!(span, "Invalid utf8 in char literal");
+                };
+                let Ok(text) = unescaper::unescape(text) else {
+                    bail!(span, "Could not escape the char {text}");
+                };
                 LitKind::Char(text.as_bytes()[0] as char)
             }
             constants::NUMBER_LITERAL => {
-                let literal =
-                    std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])?
-                        .to_lowercase();
+                let Ok(literal) =
+                    std::str::from_utf8(&self.source_code[node.start_byte()..node.end_byte()])
+                else {
+                    bail!(span, "Invalid ut8 in number literal");
+                };
+                let literal = literal.to_lowercase();
 
                 let literal = if let Some(literal) = literal.strip_suffix("llu") {
                     literal
@@ -1046,28 +1092,45 @@ impl HirCtx<'_> {
                 };
 
                 if let Some(stripped_literal) = literal.strip_prefix("0x") {
-                    LitKind::Int(i128::from_str_radix(stripped_literal, 16)?)
+                    let Ok(int) = i128::from_str_radix(stripped_literal, 16) else {
+                        bail!(span, "Invalid hex literal");
+                    };
+                    LitKind::Int(int)
                 } else if let Some(stripped_literal) = literal.strip_prefix("0b") {
-                    LitKind::Int(i128::from_str_radix(stripped_literal, 2)?)
+                    let Ok(int) = i128::from_str_radix(stripped_literal, 2) else {
+                        bail!(span, "Invalid binary literal");
+                    };
+                    LitKind::Int(int)
                 } else if let Some(stripped_literal) = literal.strip_prefix("0") {
                     if stripped_literal.is_empty() {
                         LitKind::Int(0)
                     } else {
-                        LitKind::Int(i128::from_str_radix(stripped_literal, 8)?)
+                        let Ok(int) = i128::from_str_radix(stripped_literal, 8) else {
+                            bail!(span, "Invalid base 8 literal");
+                        };
+                        LitKind::Int(int)
                     }
                 } else if let Ok(value) = literal.parse() {
                     LitKind::Int(value)
                 } else {
-                    LitKind::Float(literal.parse()?)
+                    let Ok(float) = literal.parse() else {
+                        bail!(span, "Invalid float literal");
+                    };
+                    LitKind::Float(float)
                 }
             }
-            kind => bail!("Cannot lower '{kind}' to 'Lit'."),
+            kind => bail!(span, "Cannot lower '{kind}' to 'Lit'."),
         })
     }
 
     // TODO: this function is garbage. Break it into two. One for assignments and one for normal operators.
-    pub(crate) fn lower_to_bin_op(&self, node: Node) -> anyhow::Result<Option<BinOp>> {
+    pub(crate) fn lower_to_bin_op(&self, node: Node) -> azhdaha_errors::Result<Option<BinOp>> {
         trace!("[HIR/BinOp] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
 
         Ok(Some(match node.kind() {
             constants::ADD | constants::ASSIGN_ADD | constants::INC => BinOp::Add,
@@ -1089,12 +1152,17 @@ impl HirCtx<'_> {
             constants::GE => BinOp::Ge,
             constants::GT => BinOp::Gt,
             constants::ASSIGN => return Ok(None),
-            kind => bail!("Cannot lower '{kind}' to 'BinOp'."),
+            kind => bail!(span, "Cannot lower '{kind}' to 'BinOp'."),
         }))
     }
 
-    fn lower_to_un_op(&mut self, node: Node) -> anyhow::Result<UnOp> {
+    fn lower_to_un_op(&mut self, node: Node) -> azhdaha_errors::Result<UnOp> {
         trace!("[HIR/UnOp] Lowering '{}'", node.kind());
+
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
 
         Ok(match node.kind() {
             constants::NOT => UnOp::Not,
@@ -1103,21 +1171,27 @@ impl HirCtx<'_> {
             constants::POS => UnOp::Pos,
             constants::ADDR_OF => UnOp::AddrOf,
             constants::DEREF => UnOp::Deref,
-            kind => bail!("Cannot lower '{kind}' to 'UnOp'."),
+            kind => bail!(span, "Cannot lower '{kind}' to 'UnOp'."),
         })
     }
 
-    fn lower_to_designator(&self, node: Node<'_>) -> anyhow::Result<Designator> {
-        Ok(match node.kind() {
-            constants::SUBSCRIPT_DESIGNATOR => Designator::Subscript {
+    fn lower_to_designator(&self, node: Node<'_>) -> azhdaha_errors::Result<Designator> {
+        let span = Span {
+            lo: node.start_byte(),
+            hi: node.end_byte(),
+        };
+
+        let kind = match node.kind() {
+            constants::SUBSCRIPT_DESIGNATOR => DesignatorKind::Subscript {
                 value: self.const_eval_enum_value(node.child(1).unwrap())? as i128,
             },
-            constants::FIELD_DESIGNATOR => Designator::Field {
+            constants::FIELD_DESIGNATOR => DesignatorKind::Field {
                 name: self.lower_to_ident(node.child(1).unwrap())?.name,
             },
             kind => {
-                bail!("Cannot lower '{kind}' to 'Designator'")
+                bail!(span, "Cannot lower '{kind}' to 'Designator'")
             }
-        })
+        };
+        Ok(Designator { kind, span })
     }
 }

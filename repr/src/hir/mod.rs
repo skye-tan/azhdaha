@@ -2,7 +2,6 @@
 //! abstract syntax tree (AST) that is generated after parsing, macro expansion, and name resolution.
 //!
 
-use log::error;
 use tree_sitter::Node;
 
 use ast_utils::AstRepr;
@@ -33,12 +32,7 @@ pub use stmt::*;
 pub use ty::*;
 
 use crate::hir::resolver::Label;
-
-#[derive(Debug, Clone, Copy)]
-pub struct Span {
-    pub lo: usize,
-    pub hi: usize,
-}
+pub use azhdaha_errors::Span;
 
 #[derive(Default)]
 pub struct SwitchData {
@@ -85,6 +79,8 @@ impl<'hir> HirCtx<'hir> {
         }
     }
 
+    /// # Panics
+    /// This function panics if the source is not utf8.
     pub fn lower_to_hir(
         mut self,
     ) -> (
@@ -100,7 +96,7 @@ impl<'hir> HirCtx<'hir> {
                     self.items.push(item);
                 }
                 Err(error) => {
-                    error!("Failed to construct 'HIR' - {error:?}");
+                    error.report(std::str::from_utf8(self.source_code).unwrap());
                 }
             }
         }

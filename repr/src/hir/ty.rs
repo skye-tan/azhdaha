@@ -91,6 +91,22 @@ impl TyKind {
             _ => bail!(span, "Type error: type {:?} has no fields.", self),
         })
     }
+
+    fn evaluate_size(&self) -> usize {
+        match self {
+            TyKind::PrimTy(prim_ty_kind) => match prim_ty_kind {
+                PrimTyKind::Bool => 1,
+                PrimTyKind::Char => 1,
+                PrimTyKind::Int(bytes) => *bytes as usize,
+                PrimTyKind::Float(bytes) => *bytes as usize,
+                PrimTyKind::Void => 1,
+            },
+            TyKind::Struct(_) | TyKind::Union(_) => 5, // TODO: very wrong.
+            TyKind::Ptr { .. } => 8,
+            TyKind::Array { kind, size } => kind.evaluate_size() * size.unwrap(),
+            TyKind::Func { .. } | TyKind::InitializerList => 1,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -416,7 +432,7 @@ impl HirCtx<'_> {
         Ok(idx)
     }
 
-    pub(crate) fn const_eval_enum_value(&self, node: Node<'_>) -> azhdaha_errors::Result<i32> {
+    pub(crate) fn const_eval_enum_value(&mut self, node: Node<'_>) -> azhdaha_errors::Result<i32> {
         let span = Span {
             lo: node.start_byte(),
             hi: node.end_byte(),
@@ -439,6 +455,13 @@ impl HirCtx<'_> {
                 match self.symbol_resolver.get_data_by_res(&idx) {
                     SymbolKind::EnumVariant { value, span: _ } => Ok(*value),
                     _ => bail!(span, "Only enum variants can be evaluated at compile time."),
+                }
+            }
+            constants::SIZEOF_EXPRESSION => {
+                let size_of = self.lower_to_sizeof(node)?;
+                match size_of.kind {
+                    SizeofKind::Ty(ty) => Ok(ty.kind.evaluate_size() as i32),
+                    SizeofKind::Expr(expr) => Ok(expr.ty.kind.evaluate_size() as i32),
                 }
             }
             constants::CAST_EXPRESSION => {

@@ -172,12 +172,15 @@ impl HirCtx<'_> {
         }
 
         while decl_node.kind() != constants::FUNCTION_DECLARATOR
+            && decl_node.kind() != constants::ABSTRACT_FUNCTION_DECLARATOR
             && let Some(node) = decl_node.child_by_field_name("declarator")
         {
             decl_node = node;
         }
 
-        if decl_node.kind() != constants::FUNCTION_DECLARATOR {
+        if decl_node.kind() != constants::FUNCTION_DECLARATOR
+            && decl_node.kind() != constants::ABSTRACT_FUNCTION_DECLARATOR
+        {
             return Ok(Ty {
                 kind,
                 is_linear,
@@ -202,6 +205,13 @@ impl HirCtx<'_> {
 
         is_linear = false;
         quals = vec![];
+
+        if decl_node.kind() == constants::ABSTRACT_FUNCTION_DECLARATOR {
+            kind = TyKind::Ptr {
+                kind: Box::new(kind),
+                quals: vec![],
+            };
+        }
 
         while let Some(node) = decl_node.child_by_field_name("declarator") {
             decl_node = node;
@@ -344,6 +354,7 @@ impl HirCtx<'_> {
                     }
                 }
                 constants::FUNCTION_DECLARATOR
+                | constants::ABSTRACT_FUNCTION_DECLARATOR
                 | constants::PARAMETER_DECLARATION
                 | constants::FIELD_IDENTIFIER
                 | constants::TYPE_IDENTIFIER

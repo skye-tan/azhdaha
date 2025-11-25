@@ -62,6 +62,8 @@ pub(crate) const POINTER_DECLARATOR: &str = "pointer_declarator";
 pub(crate) const ABSTRACT_POINTER_DECLARATOR: &str = "abstract_pointer_declarator";
 /// An identifiers representing a declaration which is a function.
 pub(crate) const FUNCTION_DECLARATOR: &str = "function_declarator";
+/// An identifiers representing a declaration which is an unnamed function.
+pub(crate) const ABSTRACT_FUNCTION_DECLARATOR: &str = "abstract_function_declarator";
 /// An identifiers determining whether a function has variadic parameter or not.
 pub(crate) const VARIADIC_PARAMETER: &str = "variadic_parameter";
 /// An identifiers representing a declaration which is a parameter.

@@ -43,7 +43,7 @@ impl Error {
         let report = &[element];
 
         let renderer = Renderer::styled().decor_style(DecorStyle::Unicode);
-        println!("{}", renderer.render(report));
+        eprintln!("{}", renderer.render(report));
     }
 }
 

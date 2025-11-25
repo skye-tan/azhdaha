@@ -441,6 +441,14 @@ impl HirCtx<'_> {
                     _ => bail!(span, "Only enum variants can be evaluated at compile time."),
                 }
             }
+            constants::CAST_EXPRESSION => {
+                let child = node.child(3).unwrap();
+                self.const_eval_enum_value(child)
+            }
+            constants::PARENTHESIZED_EXPRESSION => {
+                let child = node.child(1).unwrap();
+                self.const_eval_enum_value(child)
+            }
             constants::BINARY_EXPRESSION => {
                 let lhs = self.const_eval_enum_value(node.child(0).unwrap())?;
 

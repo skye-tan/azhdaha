@@ -551,8 +551,16 @@ impl HirCtx<'_> {
             ["unsigned"] | ["unsigned", "int"] => Int(4),
 
             // long
-            ["long"] | ["long", "int"] | ["signed", "long"] | ["signed", "long", "int"] => Int(8),
-            ["unsigned", "long"] | ["unsigned", "long", "int"] => Int(8),
+            ["long"]
+            | ["long", "int"]
+            | ["signed", "long"]
+            | ["signed", "long", "int"]
+            | ["long", "signed"]
+            | ["long", "signed", "int"] => Int(8),
+            ["unsigned", "long"]
+            | ["unsigned", "long", "int"]
+            | ["long", "unsigned"]
+            | ["long", "unsigned", "int"] => Int(8),
 
             // long long
             ["long", "long"]

@@ -91,6 +91,22 @@ impl TyKind {
             _ => bail!(span, "Type error: type {:?} has no fields.", self),
         })
     }
+
+    fn evaluate_size(&self) -> usize {
+        match self {
+            TyKind::PrimTy(prim_ty_kind) => match prim_ty_kind {
+                PrimTyKind::Bool => 1,
+                PrimTyKind::Char => 1,
+                PrimTyKind::Int(bytes) => *bytes as usize,
+                PrimTyKind::Float(bytes) => *bytes as usize,
+                PrimTyKind::Void => 1,
+            },
+            TyKind::Struct(_) | TyKind::Union(_) => 5, // TODO: very wrong.
+            TyKind::Ptr { .. } => 8,
+            TyKind::Array { kind, size } => kind.evaluate_size() * size.unwrap(),
+            TyKind::Func { .. } | TyKind::InitializerList => 1,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -172,12 +188,15 @@ impl HirCtx<'_> {
         }
 
         while decl_node.kind() != constants::FUNCTION_DECLARATOR
+            && decl_node.kind() != constants::ABSTRACT_FUNCTION_DECLARATOR
             && let Some(node) = decl_node.child_by_field_name("declarator")
         {
             decl_node = node;
         }
 
-        if decl_node.kind() != constants::FUNCTION_DECLARATOR {
+        if decl_node.kind() != constants::FUNCTION_DECLARATOR
+            && decl_node.kind() != constants::ABSTRACT_FUNCTION_DECLARATOR
+        {
             return Ok(Ty {
                 kind,
                 is_linear,
@@ -202,6 +221,13 @@ impl HirCtx<'_> {
 
         is_linear = false;
         quals = vec![];
+
+        if decl_node.kind() == constants::ABSTRACT_FUNCTION_DECLARATOR {
+            kind = TyKind::Ptr {
+                kind: Box::new(kind),
+                quals: vec![],
+            };
+        }
 
         while let Some(node) = decl_node.child_by_field_name("declarator") {
             decl_node = node;
@@ -344,6 +370,7 @@ impl HirCtx<'_> {
                     }
                 }
                 constants::FUNCTION_DECLARATOR
+                | constants::ABSTRACT_FUNCTION_DECLARATOR
                 | constants::PARAMETER_DECLARATION
                 | constants::FIELD_IDENTIFIER
                 | constants::TYPE_IDENTIFIER
@@ -405,7 +432,7 @@ impl HirCtx<'_> {
         Ok(idx)
     }
 
-    pub(crate) fn const_eval_enum_value(&self, node: Node<'_>) -> azhdaha_errors::Result<i32> {
+    pub(crate) fn const_eval_enum_value(&mut self, node: Node<'_>) -> azhdaha_errors::Result<i32> {
         let span = Span {
             lo: node.start_byte(),
             hi: node.end_byte(),
@@ -429,6 +456,21 @@ impl HirCtx<'_> {
                     SymbolKind::EnumVariant { value, span: _ } => Ok(*value),
                     _ => bail!(span, "Only enum variants can be evaluated at compile time."),
                 }
+            }
+            constants::SIZEOF_EXPRESSION => {
+                let size_of = self.lower_to_sizeof(node)?;
+                match size_of.kind {
+                    SizeofKind::Ty(ty) => Ok(ty.kind.evaluate_size() as i32),
+                    SizeofKind::Expr(expr) => Ok(expr.ty.kind.evaluate_size() as i32),
+                }
+            }
+            constants::CAST_EXPRESSION => {
+                let child = node.child(3).unwrap();
+                self.const_eval_enum_value(child)
+            }
+            constants::PARENTHESIZED_EXPRESSION => {
+                let child = node.child(1).unwrap();
+                self.const_eval_enum_value(child)
             }
             constants::BINARY_EXPRESSION => {
                 let lhs = self.const_eval_enum_value(node.child(0).unwrap())?;
@@ -551,8 +593,16 @@ impl HirCtx<'_> {
             ["unsigned"] | ["unsigned", "int"] => Int(4),
 
             // long
-            ["long"] | ["long", "int"] | ["signed", "long"] | ["signed", "long", "int"] => Int(8),
-            ["unsigned", "long"] | ["unsigned", "long", "int"] => Int(8),
+            ["long"]
+            | ["long", "int"]
+            | ["signed", "long"]
+            | ["signed", "long", "int"]
+            | ["long", "signed"]
+            | ["long", "signed", "int"] => Int(8),
+            ["unsigned", "long"]
+            | ["unsigned", "long", "int"]
+            | ["long", "unsigned"]
+            | ["long", "unsigned", "int"] => Int(8),
 
             // long long
             ["long", "long"]

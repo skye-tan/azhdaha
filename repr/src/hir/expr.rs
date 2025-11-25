@@ -964,7 +964,7 @@ impl HirCtx<'_> {
         })
     }
 
-    fn lower_to_sizeof(&mut self, node: Node) -> azhdaha_errors::Result<Sizeof> {
+    pub(crate) fn lower_to_sizeof(&mut self, node: Node) -> azhdaha_errors::Result<Sizeof> {
         trace!("[HIR/SizeOf] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -1175,7 +1175,7 @@ impl HirCtx<'_> {
         })
     }
 
-    fn lower_to_designator(&self, node: Node<'_>) -> azhdaha_errors::Result<Designator> {
+    fn lower_to_designator(&mut self, node: Node<'_>) -> azhdaha_errors::Result<Designator> {
         let span = Span {
             lo: node.start_byte(),
             hi: node.end_byte(),

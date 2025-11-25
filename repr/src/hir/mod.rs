@@ -87,8 +87,10 @@ impl<'hir> HirCtx<'hir> {
         Vec<Item>,
         resolver::Resolver<resolver::SymbolKind>,
         resolver::Resolver<resolver::CompoundTypeData>,
+        bool,
     ) {
         let mut cursor = self.root.walk();
+        let mut had_errors = false;
 
         for child in self.root.children(&mut cursor) {
             match self.lower_to_item(child) {
@@ -96,11 +98,17 @@ impl<'hir> HirCtx<'hir> {
                     self.items.push(item);
                 }
                 Err(error) => {
+                    had_errors = true;
                     error.report(std::str::from_utf8(self.source_code).unwrap());
                 }
             }
         }
 
-        (self.items, self.symbol_resolver, self.type_tag_resolver)
+        (
+            self.items,
+            self.symbol_resolver,
+            self.type_tag_resolver,
+            had_errors,
+        )
     }
 }

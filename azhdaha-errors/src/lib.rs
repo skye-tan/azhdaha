@@ -24,7 +24,7 @@ pub struct Error {
 }
 
 impl Error {
-    #[allow(clippy::print_stdout)]
+    #[allow(clippy::print_stderr)]
     pub fn report(&self, source: &str) {
         let mut section = Snippet::source(source).annotation(
             AnnotationKind::Primary

@@ -634,8 +634,8 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-c"
-version = "0.23.5"
-source = "git+https://github.com/skye-tan/tree-sitter-c.git#c38eb30f8f2dd844cf9391b70a27b34b68825a32"
+version = "0.24.1"
+source = "git+https://github.com/HKalbasi/tree-sitter-c.git#b51cea7d5d7921e3f104ad5213ada45eb372ad0d"
 dependencies = [
  "cc",
  "tree-sitter-language",

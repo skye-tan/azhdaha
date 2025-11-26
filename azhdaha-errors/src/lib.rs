@@ -11,6 +11,8 @@ pub struct Span {
 }
 
 impl Span {
+    pub const DUMMY: Self = Self { lo: 0, hi: 0 };
+
     /// Convert span to a range.
     fn to_range(self) -> Range<usize> {
         self.lo..self.hi

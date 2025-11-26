@@ -31,7 +31,7 @@ pub use item::*;
 pub use stmt::*;
 pub use ty::*;
 
-use crate::hir::resolver::Label;
+use crate::hir::resolver::{CompoundTypeData, Label, Resolver, SymbolKind};
 pub use azhdaha_errors::Span;
 
 #[derive(Default)]
@@ -43,9 +43,9 @@ pub struct SwitchData {
 }
 
 pub struct HirCtx<'hir> {
-    pub symbol_resolver: resolver::Resolver<resolver::SymbolKind>,
-    pub type_tag_resolver: resolver::Resolver<resolver::CompoundTypeData>,
-    pub label_resolver: resolver::Resolver<()>,
+    pub symbol_resolver: Resolver<SymbolKind>,
+    pub type_tag_resolver: Resolver<CompoundTypeData>,
+    pub label_resolver: Resolver<()>,
 
     pub items: Vec<Item>,
 
@@ -59,12 +59,65 @@ pub struct HirCtx<'hir> {
     pub source_code: &'hir [u8],
 }
 
+fn default_symbol_resolver() -> Resolver<SymbolKind> {
+    let mut result = Resolver::new();
+    let list = [
+        ("__builtin_bswap16", 2),
+        ("__builtin_bswap32", 4),
+        ("__builtin_bswap64", 8),
+    ];
+
+    for (name, size) in list {
+        result.insert_symbol(
+            name.to_owned(),
+            SymbolKind::Var(VarDecl {
+                storage: None,
+                ident: Ident {
+                    name: name.to_owned(),
+                    span: Span::DUMMY,
+                },
+                ty: Ty {
+                    kind: TyKind::Func {
+                        sig: Box::new(FuncSig {
+                            ret_ty: Ty {
+                                kind: TyKind::PrimTy(PrimTyKind::Int(size)),
+                                is_linear: false,
+                                quals: vec![],
+                                span: Span::DUMMY,
+                            },
+                            params: vec![ParamDecl {
+                                storage: None,
+                                ident: None,
+                                ty: Ty {
+                                    kind: TyKind::PrimTy(PrimTyKind::Int(size)),
+                                    is_linear: false,
+                                    quals: vec![],
+                                    span: Span::DUMMY,
+                                },
+                                span: Span::DUMMY,
+                            }],
+                            variadic_param: false,
+                            span: Span::DUMMY,
+                        }),
+                    },
+                    is_linear: false,
+                    quals: vec![],
+                    span: Span::DUMMY,
+                },
+                init: None,
+                span: Span::DUMMY,
+            }),
+        );
+    }
+    result
+}
+
 impl<'hir> HirCtx<'hir> {
     pub fn new(ast_repr: &'hir AstRepr) -> Self {
         Self {
-            symbol_resolver: resolver::Resolver::new(),
-            type_tag_resolver: resolver::Resolver::new(),
-            label_resolver: resolver::Resolver::new(),
+            symbol_resolver: default_symbol_resolver(),
+            type_tag_resolver: Resolver::new(),
+            label_resolver: Resolver::new(),
 
             items: vec![],
 
@@ -85,8 +138,8 @@ impl<'hir> HirCtx<'hir> {
         mut self,
     ) -> (
         Vec<Item>,
-        resolver::Resolver<resolver::SymbolKind>,
-        resolver::Resolver<resolver::CompoundTypeData>,
+        Resolver<SymbolKind>,
+        Resolver<CompoundTypeData>,
         bool,
     ) {
         let mut cursor = self.root.walk();

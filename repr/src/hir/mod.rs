@@ -61,6 +61,15 @@ pub struct HirCtx<'hir> {
 
 fn default_symbol_resolver() -> Resolver<SymbolKind> {
     let mut result = Resolver::new();
+    result.insert_symbol(
+        "__builtin_va_list".to_owned(),
+        SymbolKind::TyDef(Ty {
+            kind: TyKind::VaList,
+            is_linear: false,
+            quals: vec![],
+            span: Span::DUMMY,
+        }),
+    );
     let list = [
         ("__builtin_bswap16", 2),
         ("__builtin_bswap32", 4),

@@ -268,6 +268,7 @@ impl MirDisplay for TyKind {
             }
             TyKind::Array { kind, .. } => format!("{}[]", kind.mir_display(body)),
             TyKind::Func { .. } => "function pointer".to_owned(),
+            TyKind::VaList => "va_list".to_owned(),
             TyKind::InitializerList => "initializer list".to_owned(),
         }
     }

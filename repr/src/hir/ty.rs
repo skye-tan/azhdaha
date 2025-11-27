@@ -454,12 +454,15 @@ impl HirCtx<'_> {
         };
 
         match node.kind() {
-            constants::NUMBER_LITERAL => {
+            constants::NUMBER_LITERAL | constants::CHAR_LITERAL => {
                 let lit = self.lower_to_lit(node)?;
-                let LitKind::Int(value) = lit.kind else {
-                    bail!(span, "Invalid literal {lit:?} for enum value.");
-                };
-                Ok(value as i32)
+                Ok(match lit.kind {
+                    LitKind::Int(value) => value as i32,
+                    LitKind::Char(value) => value as i32,
+                    _ => {
+                        bail!(span, "Invalid literal {lit:?} for enum value.");
+                    }
+                })
             }
             constants::IDENTIFIER => {
                 let ident = self.lower_to_ident(node)?;

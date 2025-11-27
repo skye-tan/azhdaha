@@ -2,6 +2,7 @@
 
 use std::{collections::HashMap, fmt::Debug};
 
+use azhdaha_errors::bail;
 use la_arena::{Arena, Idx};
 
 use crate::hir::*;
@@ -33,8 +34,8 @@ pub enum CompoundTypeData {
 }
 
 impl SymbolKind {
-    pub(crate) fn ty(&self) -> Ty {
-        match self {
+    pub(crate) fn ty(&self) -> azhdaha_errors::Result<Ty> {
+        Ok(match self {
             SymbolKind::Var(var_decl) => var_decl.ty.clone(),
             SymbolKind::Func(func_decl) => Ty {
                 kind: TyKind::Func {
@@ -45,14 +46,16 @@ impl SymbolKind {
                 span: func_decl.span,
             },
             SymbolKind::Param(param_decl) => param_decl.ty.clone(),
-            SymbolKind::TyDef(_) => panic!("Symbol is not a expression position symbol."),
+            SymbolKind::TyDef(ty_def) => {
+                bail!(ty_def.span, "Symbol is not a expression position symbol.")
+            }
             &SymbolKind::EnumVariant { value: _, span } => Ty {
                 kind: TyKind::PrimTy(PrimTyKind::Int(4)),
                 is_linear: false,
                 quals: vec![],
                 span,
             },
-        }
+        })
     }
 }
 

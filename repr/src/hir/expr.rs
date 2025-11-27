@@ -309,6 +309,10 @@ impl HirCtx<'_> {
         }
         self.array_to_pointer_decay_if_array(&mut rhs);
 
+        if BinOp::SHORT_CIRCUITS.contains(&bin_op) {
+            self.condify(&mut lhs);
+            self.condify(&mut rhs);
+        }
         if BinOp::COMPARISONS.contains(&bin_op) {
             self.pointer_to_address_decay_if_pointer(&mut lhs);
             self.pointer_to_address_decay_if_pointer(&mut rhs);

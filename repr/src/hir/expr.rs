@@ -419,6 +419,23 @@ impl HirCtx<'_> {
     }
 
     fn pointer_to_address_decay_if_pointer(&mut self, expr: &mut Expr) {
+        if expr.ty.kind.is_fn() {
+            let ty = Ty {
+                kind: TyKind::Ptr {
+                    kind: Box::new(expr.ty.kind.clone()),
+                    quals: vec![],
+                },
+                is_linear: false,
+                quals: vec![],
+                span: expr.span,
+            };
+
+            *expr = Expr {
+                span: expr.span,
+                kind: ExprKind::Cast(Box::new(expr.take())),
+                ty,
+            };
+        }
         if !expr.ty.kind.is_ptr() {
             return;
         }

@@ -286,6 +286,10 @@ impl HirCtx<'_> {
             cursor.goto_next_sibling();
         }
 
+        if params.is_empty() {
+            variadic_param = true;
+        }
+
         if params.len() == 1 && params[0].ty.kind.is_void() {
             params = vec![];
         }

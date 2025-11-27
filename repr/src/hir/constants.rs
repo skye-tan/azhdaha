@@ -70,6 +70,8 @@ pub(crate) const VARIADIC_PARAMETER: &str = "variadic_parameter";
 pub(crate) const PARAMETER_DECLARATION: &str = "parameter_declaration";
 /// An identifiers representing a declaration which is a inside parenthesizes.
 pub(crate) const PARENTHESIZED_DECLARATOR: &str = "parenthesized_declarator";
+/// An identifiers representing a declaration which is a inside parenthesizes.
+pub(crate) const ABSTRACT_PARENTHESIZED_DECLARATOR: &str = "abstract_parenthesized_declarator";
 
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Lit`].  
 pub(crate) const LITERAL: &str = "literal";

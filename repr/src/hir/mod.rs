@@ -59,6 +59,7 @@ pub struct HirCtx<'hir> {
     pub source_code: &'hir [u8],
 }
 
+/// A resolver containing intrinsic functions used by GNU's libc.
 fn default_symbol_resolver() -> Resolver<SymbolKind> {
     let mut result = Resolver::new();
     result.insert_symbol(
@@ -67,6 +68,27 @@ fn default_symbol_resolver() -> Resolver<SymbolKind> {
             kind: TyKind::VaList,
             is_linear: false,
             quals: vec![],
+            span: Span::DUMMY,
+        }),
+    );
+    result.insert_symbol(
+        "nullptr".to_owned(),
+        SymbolKind::Var(VarDecl {
+            storage: None,
+            ident: Ident {
+                name: "nullptr".to_owned(),
+                span: Span::DUMMY,
+            },
+            ty: Ty {
+                kind: TyKind::Ptr {
+                    kind: Box::new(TyKind::PrimTy(PrimTyKind::Void)),
+                    quals: vec![],
+                },
+                is_linear: false,
+                quals: vec![],
+                span: Span::DUMMY,
+            },
+            init: None,
             span: Span::DUMMY,
         }),
     );

@@ -158,6 +158,8 @@ pub(crate) const TYPE_IDENTIFIER: &str = "type_identifier";
 pub(crate) const PRIMITIVE_TYPE: &str = "primitive_type";
 /// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
 pub(crate) const SIZED_TYPE_SPECIFIER: &str = "sized_type_specifier";
+/// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
+pub(crate) const MACRO_TYPE_SPECIFIER: &str = "macro_type_specifier";
 /// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::Struct`].
 pub(crate) const STRUCT_SPECIFIER: &str = "struct_specifier";
 /// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::Union`].

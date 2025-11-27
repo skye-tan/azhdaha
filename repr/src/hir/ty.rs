@@ -286,7 +286,17 @@ impl HirCtx<'_> {
 
         let mut ty_node = node;
 
+        let mut is_typeof = false;
+
         while let Some(child) = ty_node.child_by_field_name("type") {
+            if ty_node.kind() == constants::MACRO_TYPE_SPECIFIER {
+                let ident = self.lower_to_ident(ty_node.child_by_field_name("name").unwrap())?;
+                if ident.name == "typeof" || ident.name == "__typeof__" {
+                    is_typeof = true;
+                } else {
+                    bail!(ident.span, "Unexpanded macro found in type definition.");
+                }
+            }
             ty_node = child;
             if ty_node.kind() == constants::SIZED_TYPE_SPECIFIER {
                 break;
@@ -311,7 +321,13 @@ impl HirCtx<'_> {
 
                 match symbol_kind {
                     SymbolKind::TyDef(ty) => ty.kind.clone(),
-                    _ => bail!(span, "Use of invalid type identifier '{}'.", &ident.name),
+                    _ => {
+                        if is_typeof {
+                            symbol_kind.ty()?.kind.clone()
+                        } else {
+                            bail!(span, "Use of invalid type identifier '{}'.", &ident.name)
+                        }
+                    }
                 }
             }
             constants::SIZED_TYPE_SPECIFIER | constants::PRIMITIVE_TYPE => {

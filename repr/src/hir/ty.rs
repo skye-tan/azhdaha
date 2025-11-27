@@ -627,6 +627,12 @@ impl HirCtx<'_> {
             ["float"] => Float(4),
             ["double"] => Float(8),
             ["long", "double"] => Float(8), // Not really correct.
+            ["_Float16"] => Float(2),
+            ["_Float32"] => Float(4),
+            ["_Float64"] => Float(8),
+            ["_Float128"] => Float(16),
+            ["_Float32x"] => Float(8),
+            ["_Float64x"] => Float(16),
 
             // ---- Special ----
             ["_Bool"] | ["bool"] => Bool,

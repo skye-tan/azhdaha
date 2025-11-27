@@ -225,13 +225,6 @@ impl HirCtx<'_> {
         is_linear = false;
         quals = vec![];
 
-        if decl_node.kind() == constants::ABSTRACT_FUNCTION_DECLARATOR {
-            kind = TyKind::Ptr {
-                kind: Box::new(kind),
-                quals: vec![],
-            };
-        }
-
         while let Some(node) = decl_node.child_by_field_name("declarator") {
             decl_node = node;
 
@@ -265,7 +258,8 @@ impl HirCtx<'_> {
                         size,
                     }
                 }
-                constants::PARENTHESIZED_DECLARATOR => continue,
+                constants::PARENTHESIZED_DECLARATOR
+                | constants::ABSTRACT_PARENTHESIZED_DECLARATOR => continue,
                 _ => break,
             }
         }
@@ -380,7 +374,9 @@ impl HirCtx<'_> {
                 | constants::IDENTIFIER => {
                     break;
                 }
-                constants::PARENTHESIZED_DECLARATOR | constants::INIT_DECLARATOR => (),
+                constants::PARENTHESIZED_DECLARATOR
+                | constants::ABSTRACT_PARENTHESIZED_DECLARATOR
+                | constants::INIT_DECLARATOR => (),
                 kind => bail!(
                     span,
                     "Cannot lower '{kind}' to 'TyKind' <todo: wrong message>."

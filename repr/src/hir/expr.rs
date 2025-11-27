@@ -501,10 +501,15 @@ impl HirCtx<'_> {
                         TyKind::Func { sig } => sig,
                         _ => bail!(
                             span,
-                            "Type error: invalid call to pointer of non function type."
+                            "Type error: invalid call to pointer of non function type {}.",
+                            path.ty,
                         ),
                     },
-                    _ => bail!(span, "Type error: invalid call to non function type."),
+                    _ => bail!(
+                        span,
+                        "Type error: invalid call to non function type {}.",
+                        path.ty,
+                    ),
                 };
 
                 let mut arguments = vec![];
@@ -742,16 +747,9 @@ impl HirCtx<'_> {
 
                 let decl_node = cast_node.child_by_field_name("declarator");
 
-                let ty_kind = self.lower_to_ty_kind(cast_node, decl_node)?;
+                let ty = self.lower_to_ty(cast_node, decl_node)?;
 
                 let target = self.lower_to_expr(node.child(3).unwrap())?;
-
-                let ty = Ty {
-                    kind: ty_kind.clone(),
-                    is_linear: false, // TODO: who knows?
-                    quals: vec![],
-                    span,
-                };
 
                 (ExprKind::Cast(Box::new(target)), ty)
             }

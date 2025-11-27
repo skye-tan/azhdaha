@@ -485,7 +485,9 @@ impl HirCtx<'_> {
                         format!("Use of undefined identifier '{}'.", &ident.name)
                     })?;
 
-                let ty = self.symbol_resolver.arena[symbol].ty();
+                let ty = self.symbol_resolver.arena[symbol]
+                    .ty()
+                    .context(span, "Identifier used here as expression.")?;
 
                 (ExprKind::Local(symbol), ty)
             }

@@ -43,6 +43,8 @@ pub enum TyKind {
     Func {
         sig: Box<FuncSig>,
     },
+    /// Type of arguments in functions with varargs.
+    VaList,
     /// This type does not exist in C, it is an imaginary type for compiler proposes.
     InitializerList,
 }
@@ -104,6 +106,7 @@ impl TyKind {
             TyKind::Struct(_) | TyKind::Union(_) => 5, // TODO: very wrong.
             TyKind::Ptr { .. } => 8,
             TyKind::Array { kind, size } => kind.evaluate_size() * size.unwrap(),
+            TyKind::VaList => 8,
             TyKind::Func { .. } | TyKind::InitializerList => 1,
         }
     }

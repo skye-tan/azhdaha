@@ -86,6 +86,16 @@ impl ExprKind {
 }
 
 #[derive(Debug)]
+pub enum BuiltinMacro {
+    OffsetOf,
+    VaStart,
+    VaArg,
+    VaEnd,
+    AtomicLoad,
+    AtomicStore,
+}
+
+#[derive(Debug)]
 pub struct Sizeof {
     pub kind: SizeofKind,
     pub span: Span,
@@ -223,6 +233,18 @@ impl HirCtx<'_> {
         let (kind, ty) = self.lower_to_expr_kind(node, expected_ty)?;
 
         Ok(Expr { kind, ty, span })
+    }
+
+    fn lower_to_builtin_macro(&self, path_node: Node<'_>) -> Option<BuiltinMacro> {
+        match path_node.utf8_text(self.source_code).unwrap() {
+            "__builtin_offsetof" => Some(BuiltinMacro::OffsetOf),
+            "__builtin_c23_va_start" => Some(BuiltinMacro::VaStart),
+            "__builtin_va_arg" => Some(BuiltinMacro::VaArg),
+            "__builtin_va_end" => Some(BuiltinMacro::VaEnd),
+            "__atomic_load_n" => Some(BuiltinMacro::AtomicLoad),
+            "__atomic_store_n" => Some(BuiltinMacro::AtomicStore),
+            _ => None,
+        }
     }
 
     /// This function is for when parser parsed a type as an expression, e.g. for typedefs in sizeof.
@@ -554,6 +576,18 @@ impl HirCtx<'_> {
                 }
 
                 drop(cursor); // Make sure no one use it after this.
+
+                if let Some(_builtin) = self.lower_to_builtin_macro(path_node) {
+                    return Ok((
+                        ExprKind::Empty,
+                        Ty {
+                            kind: TyKind::PrimTy(PrimTyKind::Int(4)),
+                            is_linear: false,
+                            quals: vec![],
+                            span,
+                        },
+                    ));
+                }
 
                 let path = match self.lower_to_expr_or_type(path_node)? {
                     Either::Left(path) => path,

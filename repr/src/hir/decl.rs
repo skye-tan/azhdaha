@@ -94,6 +94,17 @@ impl HirCtx<'_> {
             };
 
             let init = if decl_node.kind() == constants::INIT_DECLARATOR {
+                let saved_map = self.symbol_resolver.open_new_scope();
+                self.symbol_resolver.insert_symbol(
+                    ident.name.clone(),
+                    SymbolKind::Var(VarDecl {
+                        storage: storage.clone(),
+                        ident: ident.clone(),
+                        ty: ty.clone(),
+                        init: None,
+                        span,
+                    }),
+                );
                 let mut init = self
                     .lower_to_expr_with_expected_type(
                         decl_node.child(decl_node.child_count() - 1).unwrap(),
@@ -102,6 +113,7 @@ impl HirCtx<'_> {
                     .with_context(span, || {
                         format!("Fail to lower initializer of {}", ident.name)
                     })?;
+                self.symbol_resolver.restore_prev_scope(saved_map);
 
                 if ty.kind.is_array() {
                     let mut temp = &init;

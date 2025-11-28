@@ -143,6 +143,29 @@ impl BinOp {
         BinOp::Ne,
     ];
     const SHORT_CIRCUITS: &[Self] = &[BinOp::And, BinOp::Or];
+
+    fn to_un_op(self) -> Option<UnOp> {
+        match self {
+            BinOp::Add => Some(UnOp::Pos),
+            BinOp::Sub => Some(UnOp::Neg),
+            BinOp::Mul => Some(UnOp::Deref),
+            BinOp::And => Some(UnOp::AddrOf),
+            BinOp::Div
+            | BinOp::Rem
+            | BinOp::Or
+            | BinOp::BitOr
+            | BinOp::BitXor
+            | BinOp::BitAnd
+            | BinOp::Eq
+            | BinOp::Lt
+            | BinOp::Le
+            | BinOp::Ne
+            | BinOp::Ge
+            | BinOp::Gt
+            | BinOp::Shl
+            | BinOp::Shr => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -202,7 +225,7 @@ impl HirCtx<'_> {
         Ok(Expr { kind, ty, span })
     }
 
-    /// This function is for sizeof when it didn't detect type at parse level, e.g. for typedefs.
+    /// This function is for when parser parsed a type as an expression, e.g. for typedefs in sizeof.
     pub(crate) fn lower_to_expr_or_type(
         &mut self,
         node: Node,
@@ -516,7 +539,32 @@ impl HirCtx<'_> {
                 let mut cursor = node.walk();
                 cursor.goto_first_child();
 
-                let path = self.lower_to_expr(cursor.node())?;
+                let path_node = cursor.node();
+
+                let mut argument_nodes = vec![];
+
+                cursor.goto_next_sibling();
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                while cursor.node().kind() != ")" {
+                    argument_nodes.push(cursor.node());
+                    cursor.goto_next_sibling();
+                    cursor.goto_next_sibling();
+                }
+
+                drop(cursor); // Make sure no one use it after this.
+
+                let path = match self.lower_to_expr_or_type(path_node)? {
+                    Either::Left(path) => path,
+                    Either::Right(casted_ty) => match argument_nodes.as_slice() {
+                        [node] => {
+                            let expr = self.lower_to_expr(*node)?;
+                            return Ok((ExprKind::Cast(Box::new(expr)), casted_ty));
+                        }
+                        _ => bail!(span, "I bet no one use comma operator with cast."),
+                    },
+                };
 
                 let sig = match &path.ty.kind {
                     TyKind::Func { sig } => sig,
@@ -537,17 +585,12 @@ impl HirCtx<'_> {
 
                 let mut arguments = vec![];
 
-                cursor.goto_next_sibling();
-                cursor.goto_first_child();
-                cursor.goto_next_sibling();
-
-                while cursor.node().kind() != ")" {
+                for node in argument_nodes {
                     if let Some(param) = sig.params.get(arguments.len()) {
-                        arguments.push(
-                            self.lower_to_expr_with_expected_type(cursor.node(), param.ty.clone())?,
-                        );
+                        arguments
+                            .push(self.lower_to_expr_with_expected_type(node, param.ty.clone())?);
                     } else if sig.variadic_param {
-                        let mut expr = self.lower_to_expr(cursor.node())?;
+                        let mut expr = self.lower_to_expr(node)?;
                         match &expr.ty.kind {
                             TyKind::PrimTy(prim_ty_kind) => {
                                 let target = match prim_ty_kind {
@@ -589,8 +632,6 @@ impl HirCtx<'_> {
                     } else {
                         bail!(span, "Type error - too many arguments to call {sig:?}");
                     }
-                    cursor.goto_next_sibling();
-                    cursor.goto_next_sibling();
                 }
 
                 let ty = sig.ret_ty.clone();
@@ -598,7 +639,7 @@ impl HirCtx<'_> {
                 (ExprKind::Call(Box::new(path), arguments), ty)
             }
             constants::BINARY_EXPRESSION => {
-                let lhs = self.lower_to_expr(node.child(0).unwrap())?;
+                let lhs = self.lower_to_expr_or_type(node.child(0).unwrap())?;
 
                 let bin_op = self
                     .lower_to_bin_op(node.child(1).unwrap())?
@@ -606,7 +647,16 @@ impl HirCtx<'_> {
 
                 let rhs = self.lower_to_expr(node.child(2).unwrap())?;
 
-                self.lower_bin_op(lhs, rhs, bin_op, span, false)?
+                match lhs {
+                    Either::Left(lhs) => self.lower_bin_op(lhs, rhs, bin_op, span, false)?,
+                    Either::Right(casted_ty) => {
+                        let un_op = bin_op
+                            .to_un_op()
+                            .context(span, "Can not apply binary operation to type")?;
+                        let (kind, ty) = self.lower_un_op(rhs, un_op, span)?;
+                        (ExprKind::Cast(Box::new(Expr { kind, ty, span })), casted_ty)
+                    }
+                }
             }
             constants::UPDATE_EXPRESSION => {
                 let (lhs, bin_op, return_semantic) =

@@ -152,9 +152,13 @@ impl InitializerCursor {
             TyKind::Union(_) => {
                 self.go_next(ttr);
             }
-            TyKind::Array { .. } => {
+            TyKind::Array { kind: _, size } => {
                 last.0 += 1;
-                self.stack.push(last);
+                if Some(last.0) == *size {
+                    self.go_next(ttr);
+                } else {
+                    self.stack.push(last);
+                }
             }
             _ => panic!("Being in child of a primitive is impossible."),
         }

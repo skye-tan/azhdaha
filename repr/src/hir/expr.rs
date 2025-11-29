@@ -74,6 +74,7 @@ pub enum ExprKind {
     InitializerList(Box<InitializerTree>),
     Comma(Vec<Expr>),
     Sizeof(Sizeof),
+    VaArg(Box<Expr>, Ty),
     OffsetOf,
     Cond(Box<Expr>, Box<Expr>, Box<Expr>),
     GnuBlock(Block),
@@ -991,6 +992,13 @@ impl HirCtx<'_> {
                     span,
                 },
             ),
+            constants::VA_ARG_EXPRESSION => {
+                let arg_ty_node = node.child_by_field_name("type").unwrap();
+                let arg_ty =
+                    self.lower_to_ty(arg_ty_node, arg_ty_node.child_by_field_name("declarator"))?;
+                let va_list = self.lower_to_expr(node.child_by_field_name("value").unwrap())?;
+                (ExprKind::VaArg(Box::new(va_list), arg_ty.clone()), arg_ty)
+            }
             constants::SEMICOLON => (
                 ExprKind::Empty,
                 Ty {

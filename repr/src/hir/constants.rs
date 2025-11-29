@@ -105,8 +105,10 @@ pub(crate) const INITIALIZER_PAIR: &str = "initializer_pair";
 pub(crate) const COMMA_EXPRESSION: &str = "comma_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Cond`].  
 pub(crate) const CONDITIONAL_EXPRESSION: &str = "conditional_expression";
-/// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::SizeOf`].  
+/// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Sizeof`].  
 pub(crate) const SIZEOF_EXPRESSION: &str = "sizeof_expression";
+/// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::VaArg`].  
+pub(crate) const VA_ARG_EXPRESSION: &str = "va_arg_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Empty`].  
 pub(crate) const SEMICOLON: &str = ";";
 

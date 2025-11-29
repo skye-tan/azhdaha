@@ -122,7 +122,8 @@ impl LinearCtx<'_> {
                             statement,
                         );
                     }
-                    mir::Rvalue::CompoundInitializing(..)
+                    mir::Rvalue::VaArg(..)
+                    | mir::Rvalue::CompoundInitializing(..)
                     | mir::Rvalue::AddrOf(_)
                     | mir::Rvalue::AddrOfStatic(_)
                     | mir::Rvalue::Empty => {}

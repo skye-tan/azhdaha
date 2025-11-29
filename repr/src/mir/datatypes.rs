@@ -272,6 +272,7 @@ pub enum Rvalue {
         to_type: TyKind,
     },
     CompoundInitializing(TyKind, MirInitializerTree),
+    VaArg(Operand, Ty),
     Empty,
 }
 

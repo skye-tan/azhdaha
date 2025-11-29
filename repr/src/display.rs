@@ -156,6 +156,13 @@ impl MirDisplay for Rvalue {
                     value.mir_display(body),
                 )
             }
+            Rvalue::VaArg(value, arg_ty) => {
+                format!(
+                    "va_arg({}, {})",
+                    value.mir_display(body),
+                    arg_ty.mir_display(body),
+                )
+            }
             Rvalue::CompoundInitializing(_, _) => "initializer tree".to_owned(),
             Rvalue::Empty => String::new(),
         }

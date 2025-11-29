@@ -173,6 +173,7 @@ impl<'mir> MirCtx<'mir> {
             | hir::ExprKind::AssignPtrOffset(..)
             | hir::ExprKind::Cond(..)
             | hir::ExprKind::Sizeof(..)
+            | hir::ExprKind::OffsetOf
             | hir::ExprKind::Field(..) => Rvalue::Use(self.lower_to_operand(expr, bb, stmt_span)),
         }
     }

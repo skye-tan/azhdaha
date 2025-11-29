@@ -74,6 +74,7 @@ pub enum ExprKind {
     InitializerList(Box<InitializerTree>),
     Comma(Vec<Expr>),
     Sizeof(Sizeof),
+    OffsetOf,
     Cond(Box<Expr>, Box<Expr>, Box<Expr>),
     GnuBlock(Block),
     Empty,
@@ -577,16 +578,27 @@ impl HirCtx<'_> {
 
                 drop(cursor); // Make sure no one use it after this.
 
-                if let Some(_builtin) = self.lower_to_builtin_macro(path_node) {
-                    return Ok((
-                        ExprKind::Empty,
-                        Ty {
-                            kind: TyKind::PrimTy(PrimTyKind::Int(4)),
-                            is_linear: false,
-                            quals: vec![],
-                            span,
-                        },
-                    ));
+                if let Some(builtin) = self.lower_to_builtin_macro(path_node) {
+                    return Ok(match builtin {
+                        BuiltinMacro::OffsetOf => (
+                            ExprKind::OffsetOf,
+                            Ty {
+                                kind: TyKind::PrimTy(PrimTyKind::Int(4)),
+                                is_linear: false,
+                                quals: vec![],
+                                span,
+                            },
+                        ),
+                        _ => (
+                            ExprKind::Empty,
+                            Ty {
+                                kind: TyKind::PrimTy(PrimTyKind::Int(4)),
+                                is_linear: false,
+                                quals: vec![],
+                                span,
+                            },
+                        ),
+                    });
                 }
 
                 let path = match self.lower_to_expr_or_type(path_node)? {

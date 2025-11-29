@@ -467,6 +467,7 @@ impl HirCtx<'_> {
                 SymbolKind::EnumVariant { value, span: _ } => Ok(*value),
                 _ => bail!(span, "Only enum variants can be evaluated at compile time."),
             },
+            ExprKind::OffsetOf => Ok(5),
             ExprKind::Sizeof(size_of) => match size_of.kind {
                 SizeofKind::Ty(ty) => Ok(ty.kind.evaluate_size() as i32),
                 SizeofKind::Expr(expr) => Ok(expr.ty.kind.evaluate_size() as i32),

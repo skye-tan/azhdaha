@@ -1231,7 +1231,9 @@ impl HirCtx<'_> {
                         bail!(span, "Invalid binary literal");
                     };
                     LitKind::Int(int)
-                } else if let Some(stripped_literal) = literal.strip_prefix("0") {
+                } else if let Some(stripped_literal) = literal.strip_prefix("0")
+                    && !stripped_literal.starts_with(".")
+                {
                     if stripped_literal.is_empty() {
                         LitKind::Int(0)
                     } else {

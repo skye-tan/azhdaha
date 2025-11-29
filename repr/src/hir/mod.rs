@@ -171,10 +171,10 @@ impl<'hir> HirCtx<'hir> {
         Vec<Item>,
         Resolver<SymbolKind>,
         Resolver<CompoundTypeData>,
-        bool,
+        u32,
     ) {
         let mut cursor = self.root.walk();
-        let mut had_errors = false;
+        let mut error_count = 0;
 
         for child in self.root.children(&mut cursor) {
             match self.lower_to_item(child) {
@@ -182,7 +182,7 @@ impl<'hir> HirCtx<'hir> {
                     self.items.push(item);
                 }
                 Err(error) => {
-                    had_errors = true;
+                    error_count += 1;
                     error.report(std::str::from_utf8(self.source_code).unwrap());
                 }
             }
@@ -192,7 +192,7 @@ impl<'hir> HirCtx<'hir> {
             self.items,
             self.symbol_resolver,
             self.type_tag_resolver,
-            had_errors,
+            error_count,
         )
     }
 }

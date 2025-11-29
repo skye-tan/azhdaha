@@ -498,6 +498,13 @@ impl HirCtx<'_> {
                     BinOp::Shr => lhs >> rhs,
                 })
             }
+            ExprKind::Cond(cond, if_true, if_false) => {
+                if self.const_eval_expr(*cond)? == 0 {
+                    self.const_eval_expr(*if_false)
+                } else {
+                    self.const_eval_expr(*if_true)
+                }
+            }
             kind => bail!(span, "Cannot const eval node of type '{kind:?}'"),
         }
     }

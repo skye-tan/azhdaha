@@ -465,6 +465,26 @@ impl HirCtx<'_> {
     }
 
     fn pointer_to_address_decay_if_pointer(&mut self, expr: &mut Expr) {
+        self.function_to_pointer_decay_if_function(expr);
+        if !expr.ty.kind.is_ptr() {
+            return;
+        }
+
+        let ty = Ty {
+            kind: TyKind::PrimTy(PrimTyKind::Int(8)),
+            is_linear: false,
+            quals: vec![],
+            span: expr.span,
+        };
+
+        *expr = Expr {
+            span: expr.span,
+            kind: ExprKind::Cast(Box::new(expr.take())),
+            ty,
+        };
+    }
+
+    fn function_to_pointer_decay_if_function(&mut self, expr: &mut Expr) {
         if expr.ty.kind.is_fn() {
             let ty = Ty {
                 kind: TyKind::Ptr {
@@ -482,22 +502,6 @@ impl HirCtx<'_> {
                 ty,
             };
         }
-        if !expr.ty.kind.is_ptr() {
-            return;
-        }
-
-        let ty = Ty {
-            kind: TyKind::PrimTy(PrimTyKind::Int(8)),
-            is_linear: false,
-            quals: vec![],
-            span: expr.span,
-        };
-
-        *expr = Expr {
-            span: expr.span,
-            kind: ExprKind::Cast(Box::new(expr.take())),
-            ty,
-        };
     }
 
     fn array_to_pointer_decay_if_array(&mut self, expr: &mut Expr) {
@@ -910,9 +914,13 @@ impl HirCtx<'_> {
             constants::CONDITIONAL_EXPRESSION => {
                 let cond_expr = self.lower_to_cond_expr(node.child(0).unwrap())?;
 
-                let body_expr = self.lower_to_expr(node.child(2).unwrap())?;
+                let mut body_expr = self.lower_to_expr(node.child(2).unwrap())?;
+                let mut else_expr = self.lower_to_expr(node.child(4).unwrap())?;
 
-                let else_expr = self.lower_to_expr(node.child(4).unwrap())?;
+                self.array_to_pointer_decay_if_array(&mut body_expr);
+                self.array_to_pointer_decay_if_array(&mut else_expr);
+                self.function_to_pointer_decay_if_function(&mut body_expr);
+                self.function_to_pointer_decay_if_function(&mut else_expr);
 
                 let ty = match (&body_expr.ty.kind, &else_expr.ty.kind) {
                     (TyKind::PrimTy(prim_l), TyKind::PrimTy(prim_r)) => {
@@ -942,7 +950,12 @@ impl HirCtx<'_> {
                     (TyKind::InitializerList, TyKind::InitializerList) => {
                         bail!(span, "Initializer list is invalid in ternary.")
                     }
-                    _ => bail!(span, "Incompatible types in ternary."),
+                    _ => bail!(
+                        span,
+                        "Incompatible types in ternary {} vs {}.",
+                        body_expr.ty,
+                        else_expr.ty
+                    ),
                 };
 
                 let ty = Ty {

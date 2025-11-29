@@ -43,6 +43,8 @@ pub enum TyKind {
     Func {
         sig: Box<FuncSig>,
     },
+    /// Type of arguments in functions with varargs.
+    VaList,
     /// This type does not exist in C, it is an imaginary type for compiler proposes.
     InitializerList,
 }
@@ -90,6 +92,23 @@ impl TyKind {
             }
             _ => bail!(span, "Type error: type {:?} has no fields.", self),
         })
+    }
+
+    fn evaluate_size(&self) -> usize {
+        match self {
+            TyKind::PrimTy(prim_ty_kind) => match prim_ty_kind {
+                PrimTyKind::Bool => 1,
+                PrimTyKind::Char => 1,
+                PrimTyKind::Int(bytes) => *bytes as usize,
+                PrimTyKind::Float(bytes) => *bytes as usize,
+                PrimTyKind::Void => 1,
+            },
+            TyKind::Struct(_) | TyKind::Union(_) => 5, // TODO: very wrong.
+            TyKind::Ptr { .. } => 8,
+            TyKind::Array { kind, size } => kind.evaluate_size() * size.unwrap(),
+            TyKind::VaList => 8,
+            TyKind::Func { .. } | TyKind::InitializerList => 1,
+        }
     }
 }
 
@@ -172,12 +191,15 @@ impl HirCtx<'_> {
         }
 
         while decl_node.kind() != constants::FUNCTION_DECLARATOR
+            && decl_node.kind() != constants::ABSTRACT_FUNCTION_DECLARATOR
             && let Some(node) = decl_node.child_by_field_name("declarator")
         {
             decl_node = node;
         }
 
-        if decl_node.kind() != constants::FUNCTION_DECLARATOR {
+        if decl_node.kind() != constants::FUNCTION_DECLARATOR
+            && decl_node.kind() != constants::ABSTRACT_FUNCTION_DECLARATOR
+        {
             return Ok(Ty {
                 kind,
                 is_linear,
@@ -236,7 +258,8 @@ impl HirCtx<'_> {
                         size,
                     }
                 }
-                constants::PARENTHESIZED_DECLARATOR => continue,
+                constants::PARENTHESIZED_DECLARATOR
+                | constants::ABSTRACT_PARENTHESIZED_DECLARATOR => continue,
                 _ => break,
             }
         }
@@ -263,7 +286,17 @@ impl HirCtx<'_> {
 
         let mut ty_node = node;
 
+        let mut is_typeof = false;
+
         while let Some(child) = ty_node.child_by_field_name("type") {
+            if ty_node.kind() == constants::MACRO_TYPE_SPECIFIER {
+                let ident = self.lower_to_ident(ty_node.child_by_field_name("name").unwrap())?;
+                if ident.name == "typeof" || ident.name == "__typeof__" {
+                    is_typeof = true;
+                } else {
+                    bail!(ident.span, "Unexpanded macro found in type definition.");
+                }
+            }
             ty_node = child;
             if ty_node.kind() == constants::SIZED_TYPE_SPECIFIER {
                 break;
@@ -288,7 +321,13 @@ impl HirCtx<'_> {
 
                 match symbol_kind {
                     SymbolKind::TyDef(ty) => ty.kind.clone(),
-                    _ => bail!(span, "Use of invalid type identifier '{}'.", &ident.name),
+                    _ => {
+                        if is_typeof {
+                            symbol_kind.ty()?.kind.clone()
+                        } else {
+                            bail!(span, "Use of invalid type identifier '{}'.", &ident.name)
+                        }
+                    }
                 }
             }
             constants::SIZED_TYPE_SPECIFIER | constants::PRIMITIVE_TYPE => {
@@ -344,13 +383,16 @@ impl HirCtx<'_> {
                     }
                 }
                 constants::FUNCTION_DECLARATOR
+                | constants::ABSTRACT_FUNCTION_DECLARATOR
                 | constants::PARAMETER_DECLARATION
                 | constants::FIELD_IDENTIFIER
                 | constants::TYPE_IDENTIFIER
                 | constants::IDENTIFIER => {
                     break;
                 }
-                constants::PARENTHESIZED_DECLARATOR | constants::INIT_DECLARATOR => (),
+                constants::PARENTHESIZED_DECLARATOR
+                | constants::ABSTRACT_PARENTHESIZED_DECLARATOR
+                | constants::INIT_DECLARATOR => (),
                 kind => bail!(
                     span,
                     "Cannot lower '{kind}' to 'TyKind' <todo: wrong message>."
@@ -405,39 +447,35 @@ impl HirCtx<'_> {
         Ok(idx)
     }
 
-    pub(crate) fn const_eval_enum_value(&self, node: Node<'_>) -> azhdaha_errors::Result<i32> {
-        let span = Span {
-            lo: node.start_byte(),
-            hi: node.end_byte(),
-        };
+    pub(crate) fn const_eval_enum_value(&mut self, node: Node<'_>) -> azhdaha_errors::Result<i32> {
+        let expr = self.lower_to_expr(node)?;
+        self.const_eval_expr(expr)
+    }
 
-        match node.kind() {
-            constants::NUMBER_LITERAL => {
-                let lit = self.lower_to_lit(node)?;
-                let LitKind::Int(value) = lit.kind else {
+    pub(crate) fn const_eval_expr(&mut self, expr: Expr) -> azhdaha_errors::Result<i32> {
+        let span = expr.span;
+
+        match expr.kind {
+            ExprKind::Lit(lit) => Ok(match lit.kind {
+                LitKind::Int(value) => value as i32,
+                LitKind::Char(value) => value as i32,
+                _ => {
                     bail!(span, "Invalid literal {lit:?} for enum value.");
-                };
-                Ok(value as i32)
-            }
-            constants::IDENTIFIER => {
-                let ident = self.lower_to_ident(node)?;
-                let idx = self
-                    .symbol_resolver
-                    .get_res_by_name(&ident.name)
-                    .context(span, "Fail to resolve ident.")?;
-                match self.symbol_resolver.get_data_by_res(&idx) {
-                    SymbolKind::EnumVariant { value, span: _ } => Ok(*value),
-                    _ => bail!(span, "Only enum variants can be evaluated at compile time."),
                 }
-            }
-            constants::BINARY_EXPRESSION => {
-                let lhs = self.const_eval_enum_value(node.child(0).unwrap())?;
-
-                let bin_op = self
-                    .lower_to_bin_op(node.child(1).unwrap())?
-                    .context(span, "Assignment isn't valid in consteval")?;
-
-                let rhs = self.const_eval_enum_value(node.child(2).unwrap())?;
+            }),
+            ExprKind::Local(idx) => match self.symbol_resolver.get_data_by_res(&idx) {
+                SymbolKind::EnumVariant { value, span: _ } => Ok(*value),
+                _ => bail!(span, "Only enum variants can be evaluated at compile time."),
+            },
+            ExprKind::OffsetOf => Ok(5),
+            ExprKind::Sizeof(size_of) => match size_of.kind {
+                SizeofKind::Ty(ty) => Ok(ty.kind.evaluate_size() as i32),
+                SizeofKind::Expr(expr) => Ok(expr.ty.kind.evaluate_size() as i32),
+            },
+            ExprKind::Cast(inner) => self.const_eval_expr(*inner),
+            ExprKind::Binary(bin_op, lhs, rhs) => {
+                let lhs = self.const_eval_expr(*lhs)?;
+                let rhs = self.const_eval_expr(*rhs)?;
 
                 Ok(match bin_op {
                     BinOp::Add => lhs + rhs,
@@ -460,7 +498,14 @@ impl HirCtx<'_> {
                     BinOp::Shr => lhs >> rhs,
                 })
             }
-            kind => bail!(span, "Cannot const eval node of type '{kind}'"),
+            ExprKind::Cond(cond, if_true, if_false) => {
+                if self.const_eval_expr(*cond)? == 0 {
+                    self.const_eval_expr(*if_false)
+                } else {
+                    self.const_eval_expr(*if_true)
+                }
+            }
+            kind => bail!(span, "Cannot const eval node of type '{kind:?}'"),
         }
     }
 
@@ -531,7 +576,15 @@ impl HirCtx<'_> {
             bail!(span, "Invalid utf8 in type literal");
         };
         let ty = ty.trim();
-        let tokens: Vec<&str> = ty.split_whitespace().collect();
+        let mut tokens: Vec<&str> = ty.split_whitespace().collect();
+
+        for token in &mut tokens {
+            *token = match *token {
+                "__signed__" => "signed",
+                "__unsigned__" => "unsigned",
+                _ => *token,
+            };
+        }
 
         use PrimTyKind::*;
 
@@ -551,8 +604,16 @@ impl HirCtx<'_> {
             ["unsigned"] | ["unsigned", "int"] => Int(4),
 
             // long
-            ["long"] | ["long", "int"] | ["signed", "long"] | ["signed", "long", "int"] => Int(8),
-            ["unsigned", "long"] | ["unsigned", "long", "int"] => Int(8),
+            ["long"]
+            | ["long", "int"]
+            | ["signed", "long"]
+            | ["signed", "long", "int"]
+            | ["long", "signed"]
+            | ["long", "signed", "int"] => Int(8),
+            ["unsigned", "long"]
+            | ["unsigned", "long", "int"]
+            | ["long", "unsigned"]
+            | ["long", "unsigned", "int"] => Int(8),
 
             // long long
             ["long", "long"]
@@ -560,6 +621,10 @@ impl HirCtx<'_> {
             | ["signed", "long", "long"]
             | ["signed", "long", "long", "int"] => Int(8),
             ["unsigned", "long", "long"] | ["unsigned", "long", "long", "int"] => Int(8),
+
+            // __int128
+            ["__int128"] | ["signed", "__int128"] => Int(16),
+            ["unsigned", "__int128"] => Int(16),
 
             // size_t, ptrdiff_t, etc. (target dependent; assuming 64-bit)
             ["size_t"] => Int(8),
@@ -574,6 +639,12 @@ impl HirCtx<'_> {
             ["float"] => Float(4),
             ["double"] => Float(8),
             ["long", "double"] => Float(8), // Not really correct.
+            ["_Float16"] => Float(2),
+            ["_Float32"] => Float(4),
+            ["_Float64"] => Float(8),
+            ["_Float128"] => Float(16),
+            ["_Float32x"] => Float(8),
+            ["_Float64x"] => Float(16),
 
             // ---- Special ----
             ["_Bool"] | ["bool"] => Bool,

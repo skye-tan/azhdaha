@@ -31,7 +31,7 @@ pub use item::*;
 pub use stmt::*;
 pub use ty::*;
 
-use crate::hir::resolver::Label;
+use crate::hir::resolver::{CompoundTypeData, Label, Resolver, SymbolKind};
 pub use azhdaha_errors::Span;
 
 #[derive(Default)]
@@ -43,9 +43,9 @@ pub struct SwitchData {
 }
 
 pub struct HirCtx<'hir> {
-    pub symbol_resolver: resolver::Resolver<resolver::SymbolKind>,
-    pub type_tag_resolver: resolver::Resolver<resolver::CompoundTypeData>,
-    pub label_resolver: resolver::Resolver<()>,
+    pub symbol_resolver: Resolver<SymbolKind>,
+    pub type_tag_resolver: Resolver<CompoundTypeData>,
+    pub label_resolver: Resolver<()>,
 
     pub items: Vec<Item>,
 
@@ -59,12 +59,96 @@ pub struct HirCtx<'hir> {
     pub source_code: &'hir [u8],
 }
 
+/// A resolver containing intrinsic functions used by GNU's libc.
+fn default_symbol_resolver() -> Resolver<SymbolKind> {
+    let mut result = Resolver::new();
+    result.insert_symbol(
+        "__builtin_va_list".to_owned(),
+        SymbolKind::TyDef(Ty {
+            kind: TyKind::VaList,
+            is_linear: false,
+            quals: vec![],
+            span: Span::DUMMY,
+        }),
+    );
+    result.insert_symbol(
+        "nullptr".to_owned(),
+        SymbolKind::Var(VarDecl {
+            storage: None,
+            ident: Ident {
+                name: "nullptr".to_owned(),
+                span: Span::DUMMY,
+            },
+            ty: Ty {
+                kind: TyKind::Ptr {
+                    kind: Box::new(TyKind::PrimTy(PrimTyKind::Void)),
+                    quals: vec![],
+                },
+                is_linear: false,
+                quals: vec![],
+                span: Span::DUMMY,
+            },
+            init: None,
+            span: Span::DUMMY,
+        }),
+    );
+    let list = [
+        ("__builtin_bswap16", 2),
+        ("__builtin_bswap32", 4),
+        ("__builtin_bswap64", 8),
+    ];
+
+    for (name, size) in list {
+        result.insert_symbol(
+            name.to_owned(),
+            SymbolKind::Var(VarDecl {
+                storage: None,
+                ident: Ident {
+                    name: name.to_owned(),
+                    span: Span::DUMMY,
+                },
+                ty: Ty {
+                    kind: TyKind::Func {
+                        sig: Box::new(FuncSig {
+                            ret_ty: Ty {
+                                kind: TyKind::PrimTy(PrimTyKind::Int(size)),
+                                is_linear: false,
+                                quals: vec![],
+                                span: Span::DUMMY,
+                            },
+                            params: vec![ParamDecl {
+                                storage: None,
+                                ident: None,
+                                ty: Ty {
+                                    kind: TyKind::PrimTy(PrimTyKind::Int(size)),
+                                    is_linear: false,
+                                    quals: vec![],
+                                    span: Span::DUMMY,
+                                },
+                                span: Span::DUMMY,
+                            }],
+                            variadic_param: false,
+                            span: Span::DUMMY,
+                        }),
+                    },
+                    is_linear: false,
+                    quals: vec![],
+                    span: Span::DUMMY,
+                },
+                init: None,
+                span: Span::DUMMY,
+            }),
+        );
+    }
+    result
+}
+
 impl<'hir> HirCtx<'hir> {
     pub fn new(ast_repr: &'hir AstRepr) -> Self {
         Self {
-            symbol_resolver: resolver::Resolver::new(),
-            type_tag_resolver: resolver::Resolver::new(),
-            label_resolver: resolver::Resolver::new(),
+            symbol_resolver: default_symbol_resolver(),
+            type_tag_resolver: Resolver::new(),
+            label_resolver: Resolver::new(),
 
             items: vec![],
 
@@ -85,10 +169,12 @@ impl<'hir> HirCtx<'hir> {
         mut self,
     ) -> (
         Vec<Item>,
-        resolver::Resolver<resolver::SymbolKind>,
-        resolver::Resolver<resolver::CompoundTypeData>,
+        Resolver<SymbolKind>,
+        Resolver<CompoundTypeData>,
+        u32,
     ) {
         let mut cursor = self.root.walk();
+        let mut error_count = 0;
 
         for child in self.root.children(&mut cursor) {
             match self.lower_to_item(child) {
@@ -96,11 +182,17 @@ impl<'hir> HirCtx<'hir> {
                     self.items.push(item);
                 }
                 Err(error) => {
+                    error_count += 1;
                     error.report(std::str::from_utf8(self.source_code).unwrap());
                 }
             }
         }
 
-        (self.items, self.symbol_resolver, self.type_tag_resolver)
+        (
+            self.items,
+            self.symbol_resolver,
+            self.type_tag_resolver,
+            error_count,
+        )
     }
 }

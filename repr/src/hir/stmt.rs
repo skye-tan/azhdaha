@@ -506,7 +506,13 @@ impl HirCtx<'_> {
                 StmtKind::Noop
             }
             constants::SEMICOLON => StmtKind::Noop,
-            kind => bail!(span, "Cannot lower '{kind}' to 'StmtKind'."),
+            kind => {
+                let text = node.utf8_text(self.source_code).unwrap();
+                if text == "__attribute__((fallthrough))" {
+                    return Ok(StmtKind::Noop);
+                }
+                bail!(span, "Cannot lower '{kind}' to 'StmtKind'.")
+            }
         })
     }
 }

@@ -164,6 +164,10 @@ impl<'mir> MirCtx<'mir> {
                 panic!("Using initializer lists as expression is invalid.");
             }
             hir::ExprKind::Empty => Rvalue::Empty,
+            hir::ExprKind::VaArg(va_list, arg_ty) => Rvalue::VaArg(
+                self.lower_to_operand(va_list, bb, stmt_span),
+                arg_ty.clone(),
+            ),
             hir::ExprKind::GnuBlock(_)
             | hir::ExprKind::PtrOffset(..)
             | hir::ExprKind::Lit(..)
@@ -173,6 +177,7 @@ impl<'mir> MirCtx<'mir> {
             | hir::ExprKind::AssignPtrOffset(..)
             | hir::ExprKind::Cond(..)
             | hir::ExprKind::Sizeof(..)
+            | hir::ExprKind::OffsetOf
             | hir::ExprKind::Field(..) => Rvalue::Use(self.lower_to_operand(expr, bb, stmt_span)),
         }
     }

@@ -219,9 +219,7 @@ impl HirCtx<'_> {
         self.return_ty = None;
 
         // Restore resolvers and bail later to not break subsequent functions in case of failure.
-        let body = body.with_context(span, || {
-            format!("Fail to lower function {}", func_decl.ident.name)
-        })?;
+        let body = body.context(func_decl.ident.span, "Failed to lower function body")?;
 
         Ok(FuncDef {
             label_resolver,

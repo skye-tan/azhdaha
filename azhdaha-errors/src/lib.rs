@@ -11,6 +11,8 @@ pub struct Span {
 }
 
 impl Span {
+    pub const DUMMY: Self = Self { lo: 0, hi: 0 };
+
     /// Convert span to a range.
     fn to_range(self) -> Range<usize> {
         self.lo..self.hi
@@ -24,7 +26,7 @@ pub struct Error {
 }
 
 impl Error {
-    #[allow(clippy::print_stdout)]
+    #[allow(clippy::print_stderr)]
     pub fn report(&self, source: &str) {
         let mut section = Snippet::source(source).annotation(
             AnnotationKind::Primary
@@ -43,7 +45,7 @@ impl Error {
         let report = &[element];
 
         let renderer = Renderer::styled().decor_style(DecorStyle::Unicode);
-        println!("{}", renderer.render(report));
+        eprintln!("{}", renderer.render(report));
     }
 }
 

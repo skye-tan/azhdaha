@@ -156,6 +156,13 @@ impl MirDisplay for Rvalue {
                     value.mir_display(body),
                 )
             }
+            Rvalue::VaArg(value, arg_ty) => {
+                format!(
+                    "va_arg({}, {})",
+                    value.mir_display(body),
+                    arg_ty.mir_display(body),
+                )
+            }
             Rvalue::CompoundInitializing(_, _) => "initializer tree".to_owned(),
             Rvalue::Empty => String::new(),
         }
@@ -268,6 +275,7 @@ impl MirDisplay for TyKind {
             }
             TyKind::Array { kind, .. } => format!("{}[]", kind.mir_display(body)),
             TyKind::Func { .. } => "function pointer".to_owned(),
+            TyKind::VaList => "va_list".to_owned(),
             TyKind::InitializerList => "initializer list".to_owned(),
         }
     }

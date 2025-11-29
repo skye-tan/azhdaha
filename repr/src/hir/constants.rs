@@ -62,12 +62,16 @@ pub(crate) const POINTER_DECLARATOR: &str = "pointer_declarator";
 pub(crate) const ABSTRACT_POINTER_DECLARATOR: &str = "abstract_pointer_declarator";
 /// An identifiers representing a declaration which is a function.
 pub(crate) const FUNCTION_DECLARATOR: &str = "function_declarator";
+/// An identifiers representing a declaration which is an unnamed function.
+pub(crate) const ABSTRACT_FUNCTION_DECLARATOR: &str = "abstract_function_declarator";
 /// An identifiers determining whether a function has variadic parameter or not.
 pub(crate) const VARIADIC_PARAMETER: &str = "variadic_parameter";
 /// An identifiers representing a declaration which is a parameter.
 pub(crate) const PARAMETER_DECLARATION: &str = "parameter_declaration";
 /// An identifiers representing a declaration which is a inside parenthesizes.
 pub(crate) const PARENTHESIZED_DECLARATOR: &str = "parenthesized_declarator";
+/// An identifiers representing a declaration which is a inside parenthesizes.
+pub(crate) const ABSTRACT_PARENTHESIZED_DECLARATOR: &str = "abstract_parenthesized_declarator";
 
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Lit`].  
 pub(crate) const LITERAL: &str = "literal";
@@ -101,8 +105,10 @@ pub(crate) const INITIALIZER_PAIR: &str = "initializer_pair";
 pub(crate) const COMMA_EXPRESSION: &str = "comma_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Cond`].  
 pub(crate) const CONDITIONAL_EXPRESSION: &str = "conditional_expression";
-/// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::SizeOf`].  
+/// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Sizeof`].  
 pub(crate) const SIZEOF_EXPRESSION: &str = "sizeof_expression";
+/// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::VaArg`].  
+pub(crate) const VA_ARG_EXPRESSION: &str = "va_arg_expression";
 /// An identifiers used for [`ExprKind`]'s construction representing an [`ExprKind::Empty`].  
 pub(crate) const SEMICOLON: &str = ";";
 
@@ -154,6 +160,8 @@ pub(crate) const TYPE_IDENTIFIER: &str = "type_identifier";
 pub(crate) const PRIMITIVE_TYPE: &str = "primitive_type";
 /// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
 pub(crate) const SIZED_TYPE_SPECIFIER: &str = "sized_type_specifier";
+/// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::PrimTy`].
+pub(crate) const MACRO_TYPE_SPECIFIER: &str = "macro_type_specifier";
 /// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::Struct`].
 pub(crate) const STRUCT_SPECIFIER: &str = "struct_specifier";
 /// An identifiers used for [`TyKind`]'s construction representing a [`TyKind::Union`].

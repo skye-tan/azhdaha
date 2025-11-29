@@ -74,6 +74,8 @@ pub enum ExprKind {
     InitializerList(Box<InitializerTree>),
     Comma(Vec<Expr>),
     Sizeof(Sizeof),
+    VaArg(Box<Expr>, Ty),
+    OffsetOf,
     Cond(Box<Expr>, Box<Expr>, Box<Expr>),
     GnuBlock(Block),
     Empty,
@@ -83,6 +85,16 @@ impl ExprKind {
     fn take(&mut self) -> ExprKind {
         std::mem::replace(self, ExprKind::Empty)
     }
+}
+
+#[derive(Debug)]
+pub enum BuiltinMacro {
+    OffsetOf,
+    VaStart,
+    VaArg,
+    VaEnd,
+    AtomicLoad,
+    AtomicStore,
 }
 
 #[derive(Debug)]
@@ -143,6 +155,29 @@ impl BinOp {
         BinOp::Ne,
     ];
     const SHORT_CIRCUITS: &[Self] = &[BinOp::And, BinOp::Or];
+
+    fn to_un_op(self) -> Option<UnOp> {
+        match self {
+            BinOp::Add => Some(UnOp::Pos),
+            BinOp::Sub => Some(UnOp::Neg),
+            BinOp::Mul => Some(UnOp::Deref),
+            BinOp::And => Some(UnOp::AddrOf),
+            BinOp::Div
+            | BinOp::Rem
+            | BinOp::Or
+            | BinOp::BitOr
+            | BinOp::BitXor
+            | BinOp::BitAnd
+            | BinOp::Eq
+            | BinOp::Lt
+            | BinOp::Le
+            | BinOp::Ne
+            | BinOp::Ge
+            | BinOp::Gt
+            | BinOp::Shl
+            | BinOp::Shr => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -202,7 +237,19 @@ impl HirCtx<'_> {
         Ok(Expr { kind, ty, span })
     }
 
-    /// This function is for sizeof when it didn't detect type at parse level, e.g. for typedefs.
+    fn lower_to_builtin_macro(&self, path_node: Node<'_>) -> Option<BuiltinMacro> {
+        match path_node.utf8_text(self.source_code).unwrap() {
+            "__builtin_offsetof" => Some(BuiltinMacro::OffsetOf),
+            "__builtin_c23_va_start" => Some(BuiltinMacro::VaStart),
+            "__builtin_va_arg" => Some(BuiltinMacro::VaArg),
+            "__builtin_va_end" => Some(BuiltinMacro::VaEnd),
+            "__atomic_load_n" => Some(BuiltinMacro::AtomicLoad),
+            "__atomic_store_n" => Some(BuiltinMacro::AtomicStore),
+            _ => None,
+        }
+    }
+
+    /// This function is for when parser parsed a type as an expression, e.g. for typedefs in sizeof.
     pub(crate) fn lower_to_expr_or_type(
         &mut self,
         node: Node,
@@ -309,6 +356,10 @@ impl HirCtx<'_> {
         }
         self.array_to_pointer_decay_if_array(&mut rhs);
 
+        if BinOp::SHORT_CIRCUITS.contains(&bin_op) {
+            self.condify(&mut lhs);
+            self.condify(&mut rhs);
+        }
         if BinOp::COMPARISONS.contains(&bin_op) {
             self.pointer_to_address_decay_if_pointer(&mut lhs);
             self.pointer_to_address_decay_if_pointer(&mut rhs);
@@ -415,6 +466,7 @@ impl HirCtx<'_> {
     }
 
     fn pointer_to_address_decay_if_pointer(&mut self, expr: &mut Expr) {
+        self.function_to_pointer_decay_if_function(expr);
         if !expr.ty.kind.is_ptr() {
             return;
         }
@@ -431,6 +483,26 @@ impl HirCtx<'_> {
             kind: ExprKind::Cast(Box::new(expr.take())),
             ty,
         };
+    }
+
+    fn function_to_pointer_decay_if_function(&mut self, expr: &mut Expr) {
+        if expr.ty.kind.is_fn() {
+            let ty = Ty {
+                kind: TyKind::Ptr {
+                    kind: Box::new(expr.ty.kind.clone()),
+                    quals: vec![],
+                },
+                is_linear: false,
+                quals: vec![],
+                span: expr.span,
+            };
+
+            *expr = Expr {
+                span: expr.span,
+                kind: ExprKind::Cast(Box::new(expr.take())),
+                ty,
+            };
+        }
     }
 
     fn array_to_pointer_decay_if_array(&mut self, expr: &mut Expr) {
@@ -485,7 +557,9 @@ impl HirCtx<'_> {
                         format!("Use of undefined identifier '{}'.", &ident.name)
                     })?;
 
-                let ty = self.symbol_resolver.arena[symbol].ty();
+                let ty = self.symbol_resolver.arena[symbol]
+                    .ty()
+                    .context(span, "Identifier used here as expression.")?;
 
                 (ExprKind::Local(symbol), ty)
             }
@@ -493,7 +567,55 @@ impl HirCtx<'_> {
                 let mut cursor = node.walk();
                 cursor.goto_first_child();
 
-                let path = self.lower_to_expr(cursor.node())?;
+                let path_node = cursor.node();
+
+                let mut argument_nodes = vec![];
+
+                cursor.goto_next_sibling();
+                cursor.goto_first_child();
+                cursor.goto_next_sibling();
+
+                while cursor.node().kind() != ")" {
+                    argument_nodes.push(cursor.node());
+                    cursor.goto_next_sibling();
+                    cursor.goto_next_sibling();
+                }
+
+                drop(cursor); // Make sure no one use it after this.
+
+                if let Some(builtin) = self.lower_to_builtin_macro(path_node) {
+                    return Ok(match builtin {
+                        BuiltinMacro::OffsetOf => (
+                            ExprKind::OffsetOf,
+                            Ty {
+                                kind: TyKind::PrimTy(PrimTyKind::Int(4)),
+                                is_linear: false,
+                                quals: vec![],
+                                span,
+                            },
+                        ),
+                        _ => (
+                            ExprKind::Empty,
+                            Ty {
+                                kind: TyKind::PrimTy(PrimTyKind::Int(4)),
+                                is_linear: false,
+                                quals: vec![],
+                                span,
+                            },
+                        ),
+                    });
+                }
+
+                let path = match self.lower_to_expr_or_type(path_node)? {
+                    Either::Left(path) => path,
+                    Either::Right(casted_ty) => match argument_nodes.as_slice() {
+                        [node] => {
+                            let expr = self.lower_to_expr(*node)?;
+                            return Ok((ExprKind::Cast(Box::new(expr)), casted_ty));
+                        }
+                        _ => bail!(span, "I bet no one use comma operator with cast."),
+                    },
+                };
 
                 let sig = match &path.ty.kind {
                     TyKind::Func { sig } => sig,
@@ -501,25 +623,25 @@ impl HirCtx<'_> {
                         TyKind::Func { sig } => sig,
                         _ => bail!(
                             span,
-                            "Type error: invalid call to pointer of non function type."
+                            "Type error: invalid call to pointer of non function type {}.",
+                            path.ty,
                         ),
                     },
-                    _ => bail!(span, "Type error: invalid call to non function type."),
+                    _ => bail!(
+                        span,
+                        "Type error: invalid call to non function type {}.",
+                        path.ty,
+                    ),
                 };
 
                 let mut arguments = vec![];
 
-                cursor.goto_next_sibling();
-                cursor.goto_first_child();
-                cursor.goto_next_sibling();
-
-                while cursor.node().kind() != ")" {
+                for node in argument_nodes {
                     if let Some(param) = sig.params.get(arguments.len()) {
-                        arguments.push(
-                            self.lower_to_expr_with_expected_type(cursor.node(), param.ty.clone())?,
-                        );
+                        arguments
+                            .push(self.lower_to_expr_with_expected_type(node, param.ty.clone())?);
                     } else if sig.variadic_param {
-                        let mut expr = self.lower_to_expr(cursor.node())?;
+                        let mut expr = self.lower_to_expr(node)?;
                         match &expr.ty.kind {
                             TyKind::PrimTy(prim_ty_kind) => {
                                 let target = match prim_ty_kind {
@@ -561,8 +683,6 @@ impl HirCtx<'_> {
                     } else {
                         bail!(span, "Type error - too many arguments to call {sig:?}");
                     }
-                    cursor.goto_next_sibling();
-                    cursor.goto_next_sibling();
                 }
 
                 let ty = sig.ret_ty.clone();
@@ -570,7 +690,7 @@ impl HirCtx<'_> {
                 (ExprKind::Call(Box::new(path), arguments), ty)
             }
             constants::BINARY_EXPRESSION => {
-                let lhs = self.lower_to_expr(node.child(0).unwrap())?;
+                let lhs = self.lower_to_expr_or_type(node.child(0).unwrap())?;
 
                 let bin_op = self
                     .lower_to_bin_op(node.child(1).unwrap())?
@@ -578,7 +698,16 @@ impl HirCtx<'_> {
 
                 let rhs = self.lower_to_expr(node.child(2).unwrap())?;
 
-                self.lower_bin_op(lhs, rhs, bin_op, span, false)?
+                match lhs {
+                    Either::Left(lhs) => self.lower_bin_op(lhs, rhs, bin_op, span, false)?,
+                    Either::Right(casted_ty) => {
+                        let un_op = bin_op
+                            .to_un_op()
+                            .context(span, "Can not apply binary operation to type")?;
+                        let (kind, ty) = self.lower_un_op(rhs, un_op, span)?;
+                        (ExprKind::Cast(Box::new(Expr { kind, ty, span })), casted_ty)
+                    }
+                }
             }
             constants::UPDATE_EXPRESSION => {
                 let (lhs, bin_op, return_semantic) =
@@ -742,16 +871,9 @@ impl HirCtx<'_> {
 
                 let decl_node = cast_node.child_by_field_name("declarator");
 
-                let ty_kind = self.lower_to_ty_kind(cast_node, decl_node)?;
+                let ty = self.lower_to_ty(cast_node, decl_node)?;
 
                 let target = self.lower_to_expr(node.child(3).unwrap())?;
-
-                let ty = Ty {
-                    kind: ty_kind.clone(),
-                    is_linear: false, // TODO: who knows?
-                    quals: vec![],
-                    span,
-                };
 
                 (ExprKind::Cast(Box::new(target)), ty)
             }
@@ -793,9 +915,13 @@ impl HirCtx<'_> {
             constants::CONDITIONAL_EXPRESSION => {
                 let cond_expr = self.lower_to_cond_expr(node.child(0).unwrap())?;
 
-                let body_expr = self.lower_to_expr(node.child(2).unwrap())?;
+                let mut body_expr = self.lower_to_expr(node.child(2).unwrap())?;
+                let mut else_expr = self.lower_to_expr(node.child(4).unwrap())?;
 
-                let else_expr = self.lower_to_expr(node.child(4).unwrap())?;
+                self.array_to_pointer_decay_if_array(&mut body_expr);
+                self.array_to_pointer_decay_if_array(&mut else_expr);
+                self.function_to_pointer_decay_if_function(&mut body_expr);
+                self.function_to_pointer_decay_if_function(&mut else_expr);
 
                 let ty = match (&body_expr.ty.kind, &else_expr.ty.kind) {
                     (TyKind::PrimTy(prim_l), TyKind::PrimTy(prim_r)) => {
@@ -825,7 +951,12 @@ impl HirCtx<'_> {
                     (TyKind::InitializerList, TyKind::InitializerList) => {
                         bail!(span, "Initializer list is invalid in ternary.")
                     }
-                    _ => bail!(span, "Incompatible types in ternary."),
+                    _ => bail!(
+                        span,
+                        "Incompatible types in ternary {} vs {}.",
+                        body_expr.ty,
+                        else_expr.ty
+                    ),
                 };
 
                 let ty = Ty {
@@ -861,6 +992,13 @@ impl HirCtx<'_> {
                     span,
                 },
             ),
+            constants::VA_ARG_EXPRESSION => {
+                let arg_ty_node = node.child_by_field_name("type").unwrap();
+                let arg_ty =
+                    self.lower_to_ty(arg_ty_node, arg_ty_node.child_by_field_name("declarator"))?;
+                let va_list = self.lower_to_expr(node.child_by_field_name("value").unwrap())?;
+                (ExprKind::VaArg(Box::new(va_list), arg_ty.clone()), arg_ty)
+            }
             constants::SEMICOLON => (
                 ExprKind::Empty,
                 Ty {
@@ -964,7 +1102,7 @@ impl HirCtx<'_> {
         })
     }
 
-    fn lower_to_sizeof(&mut self, node: Node) -> azhdaha_errors::Result<Sizeof> {
+    pub(crate) fn lower_to_sizeof(&mut self, node: Node) -> azhdaha_errors::Result<Sizeof> {
         trace!("[HIR/SizeOf] Lowering '{}'", node.kind());
 
         let span = Span {
@@ -1101,7 +1239,9 @@ impl HirCtx<'_> {
                         bail!(span, "Invalid binary literal");
                     };
                     LitKind::Int(int)
-                } else if let Some(stripped_literal) = literal.strip_prefix("0") {
+                } else if let Some(stripped_literal) = literal.strip_prefix("0")
+                    && !stripped_literal.starts_with(".")
+                {
                     if stripped_literal.is_empty() {
                         LitKind::Int(0)
                     } else {
@@ -1175,7 +1315,7 @@ impl HirCtx<'_> {
         })
     }
 
-    fn lower_to_designator(&self, node: Node<'_>) -> azhdaha_errors::Result<Designator> {
+    fn lower_to_designator(&mut self, node: Node<'_>) -> azhdaha_errors::Result<Designator> {
         let span = Span {
             lo: node.start_byte(),
             hi: node.end_byte(),

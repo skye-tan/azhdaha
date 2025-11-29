@@ -576,7 +576,15 @@ impl HirCtx<'_> {
             bail!(span, "Invalid utf8 in type literal");
         };
         let ty = ty.trim();
-        let tokens: Vec<&str> = ty.split_whitespace().collect();
+        let mut tokens: Vec<&str> = ty.split_whitespace().collect();
+
+        for token in &mut tokens {
+            *token = match *token {
+                "__signed__" => "signed",
+                "__unsigned__" => "unsigned",
+                _ => *token,
+            };
+        }
 
         use PrimTyKind::*;
 
@@ -613,6 +621,10 @@ impl HirCtx<'_> {
             | ["signed", "long", "long"]
             | ["signed", "long", "long", "int"] => Int(8),
             ["unsigned", "long", "long"] | ["unsigned", "long", "long", "int"] => Int(8),
+
+            // __int128
+            ["__int128"] | ["signed", "__int128"] => Int(16),
+            ["unsigned", "__int128"] => Int(16),
 
             // size_t, ptrdiff_t, etc. (target dependent; assuming 64-bit)
             ["size_t"] => Int(8),
